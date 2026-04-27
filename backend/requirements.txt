@@ -1,0 +1,8 @@
+django==6.0.4
+djangorestframework==3.17.1
+django-cors-headers==4.9.0
+psycopg2-binary==2.9.12
+django-filter==25.2
+djangorestframework-gis==1.1
+requests==2.32.3
+# GeoDjango dependencies (usually installed via system packages in Docker)

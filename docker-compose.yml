@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: land_db
+    environment:
+      POSTGRES_USER: landuser
+      POSTGRES_PASSWORD: landpassword
+      POSTGRES_DB: land_records
+    ports:
+      - "5432:5432"
+    volumes:
+      - land_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U landuser -d land_records"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: land_backend
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgis://landuser:landpassword@db:5432/land_records
+    depends_on:
+      db:
+        condition: service_healthy
+
+  geoserver:
+    image: docker.osgeo.org/geoserver:2.24.1
+    container_name: land_geoserver
+    ports:
+      - "8081:8080"
+    environment:
+      - GEOSERVER_ADMIN_PASSWORD=geoserver
+      - INSTALL_EXTENSIONS=true
+      - COMMUNITY_EXTENSIONS=gwc-s3-plugin
+    volumes:
+      - geoserver_data:/opt/geoserver_data
+    depends_on:
+      - db
+
+  adminer:
+    image: adminer
+    container_name: land_adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  land_db_data:
+  geoserver_data:

@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --color-gov-blue: #0052cc;
+  --color-gov-green: #36b37e;
+  --color-gov-red: #ff5630;
+  --color-gov-bg: #f4f5f7;
+  --color-card-bg: #ffffff;
+  --font-jakarta: "Plus Jakarta Sans", sans-serif;
+}
+
+body {
+  background-color: var(--color-gov-bg);
+  color: #1e293b; /* slate-800 */
+  font-family: var(--font-jakarta);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+.enterprise-card {
+  background-color: white;
+  border: 1px solid #e2e8f0; /* slate-200 */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border-radius: 0.75rem; /* rounded-xl */
+}
+
+.sidebar-item-active {
+  background-color: #eff6ff; /* blue-50 */
+  color: var(--color-gov-blue);
+  border-right: 4px solid var(--color-gov-blue);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f4f5f7;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #dfe1e6;
+  border-radius: 10px;
+}
+
+/* Reset Map for Light Mode */
+.leaflet-container {
+  background: #f4f5f7 !important;
+  filter: none !important;
+}
+
+.leaflet-tile {
+  filter: none !important;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes shine {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shine 3s infinite;
+}
+
+.glass-card {
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.hud-corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: #3b82f6;
+  border-style: solid;
+}
+
+.hud-tl { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
+.hud-tr { top: 8px; right: 8px; border-width: 2px 2px 0 0; }
+.hud-bl { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; }
+.hud-br { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+
+.scanline {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.05) 50%, transparent);
+  animation: scan 3s linear infinite;
+  pointer-events: none;
+}
+
+.digital-grain {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+}
+
+.neon-glow {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, #2563eb, #4f46e5); /* blue-600 to indigo-600 */
+}
