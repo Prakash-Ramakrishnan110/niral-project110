@@ -113,7 +113,7 @@ const MENU_STRUCTURE = {
    INSPECTOR: [
       { type: 'header', label: 'Field Operations' },
       { id: 'dashboard', icon: LayoutDashboard, label: 'Inspector Dashboard' },
-      { id: 'tasks', icon: ClipboardCheck, label: 'Assigned Surveys', badge: '3' },
+      { id: 'tasks', icon: ClipboardCheck, label: 'Assigned Surveys' },
       { id: 'map', icon: Navigation, label: 'Field Navigation' },
       { id: 'camera', icon: Camera, label: 'Evidence Capture' },
       { id: 'field-reports', icon: FileText, label: 'Submit Reports' },
@@ -2548,15 +2548,15 @@ export default function App() {
                   ...f.properties,
                   position: [f.geometry.coordinates[1], f.geometry.coordinates[0]],
                   survey_number: f.properties.parcel_details,
-                  status: f.properties.status || 'NEW',
+                  status: (f.properties.status || 'NEW').toUpperCase(),
                   img: assignedImg
                };
             }) || [];
             setAlerts(prev => {
                const newAlerts = alertsData.length > 0 ? alertsData : [
-                  { id: 'm1', position: [11.6655, 78.1472], confidence_score: 0.94, alert_type: 'Illegal Wall Construction', parcel_details: '142/A', taluk: 'Salem West', img: field1, status: 'NEW' },
-                  { id: 'm2', position: [11.6698, 78.1412], confidence_score: 0.88, alert_type: 'Illegal Shopping Complex', parcel_details: '211/B', taluk: 'Mettur', img: field2, status: 'NEW' },
-                  { id: 'm3', position: [11.6612, 78.1512], confidence_score: 0.92, alert_type: 'Unordered Settlement Cluster', parcel_details: '88/C', taluk: 'Omalur', img: field3, status: 'NEW' },
+                  { id: 'm1', position: [11.6655, 78.1472], confidence_score: 0.94, alert_type: 'Illegal Wall Construction', parcel_details: '142/A', taluk: 'Salem West', img: field1, status: 'TAHSILDAR_ACCEPTED' },
+                  { id: 'm2', position: [11.6698, 78.1412], confidence_score: 0.88, alert_type: 'Illegal Shopping Complex', parcel_details: '211/B', taluk: 'Mettur', img: field2, status: 'TAHSILDAR_ACCEPTED' },
+                  { id: 'm3', position: [11.6612, 78.1512], confidence_score: 0.92, alert_type: 'Unordered Settlement Cluster', parcel_details: '88/C', taluk: 'Omalur', img: field3, status: 'TAHSILDAR_ACCEPTED' },
                   { id: 'm4', position: [11.6755, 78.1492], confidence_score: 0.97, alert_type: 'Agricultural Incursion', parcel_details: '55/D', taluk: 'Attur', img: field4, status: 'NEW' },
                   { id: 'm5', position: [11.6555, 78.1372], confidence_score: 0.85, alert_type: 'Religious Structure Encroachment', parcel_details: '10/E', taluk: 'Salem South', img: field1, status: 'NEW' }
                ];
@@ -2577,10 +2577,10 @@ export default function App() {
                 { id: 1, survey_number: '142/A', owner: 'Govt - Revenue', classification: 'Public', status: 'Encroached', area: '1.2 Ha', coordinates: [[11.6643, 78.1460], [11.6663, 78.1460], [11.6663, 78.1480], [11.6643, 78.1480], [11.6643, 78.1460]] }
              ]);
              setAlerts([
-                { id: 'f1', position: [11.6643, 78.1460], confidence_score: 0.98, alert_type: 'Unauthorized Brick Construction', parcel_details: '142/A', taluk: 'Salem West', img: field1, status: 'NEW' },
-                { id: 'f2', position: [11.6700, 78.1500], confidence_score: 0.85, alert_type: 'Temporary Shed Detection', parcel_details: '88/4', taluk: 'Mettur', img: field2, status: 'NEW' },
-                { id: 'f3', position: [11.6600, 78.1400], confidence_score: 0.92, alert_type: 'Illegal Material Dumping', parcel_details: '12/B', taluk: 'Omalur', img: field3, status: 'NEW' },
-                { id: 'f4', position: [11.6800, 78.1600], confidence_score: 0.96, alert_type: 'Boundary Marker Tampering', parcel_details: '561/1', taluk: 'Attur', img: field4, status: 'NEW' },
+                { id: 'f1', position: [11.6643, 78.1460], confidence_score: 0.98, alert_type: 'Unauthorized Brick Construction', parcel_details: '142/A', taluk: 'Salem West', img: field1, status: 'TAHSILDAR_ACCEPTED' },
+                { id: 'f2', position: [11.6700, 78.1500], confidence_score: 0.85, alert_type: 'Temporary Shed Detection', parcel_details: '88/4', taluk: 'Mettur', img: field2, status: 'TAHSILDAR_ACCEPTED' },
+                { id: 'f3', position: [11.6600, 78.1400], confidence_score: 0.92, alert_type: 'Illegal Material Dumping', parcel_details: '12/B', taluk: 'Omalur', img: field3, status: 'RESOLVED' },
+                { id: 'f4', position: [11.6800, 78.1600], confidence_score: 0.96, alert_type: 'Boundary Marker Tampering', parcel_details: '561/1', taluk: 'Attur', img: field4, status: 'TAHSILDAR_ACCEPTED' },
                 { id: 'f5', position: [11.6500, 78.1300], confidence_score: 0.95, alert_type: 'Commercial Extension', parcel_details: '99/C', taluk: 'Salem South', img: field1, status: 'NEW' }
              ]);
           }
@@ -2724,17 +2724,29 @@ export default function App() {
                <button className="lg:hidden p-1 text-slate-400 hover:text-slate-800" onClick={() => setIsSidebarOpen(false)}><X size={20} /></button>
             </div>
             <nav className="flex-1 overflow-y-auto custom-scrollbar pb-10">
-               {MENU_STRUCTURE[user.role].map((item, idx) => (
-                  item.type === 'header' ? (
-                     <p key={idx} className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-6 mb-2 px-6">{item.label}</p>
-                  ) : (
-                     <button key={item.id} onClick={() => { setActiveTab(item.id); setSubView(null); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-6 py-3.5 transition-all duration-200 group relative ${activeTab === item.id ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <item.icon size={18} className={activeTab === item.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'} />
-                        <span className="flex-1 text-left text-[11px] uppercase tracking-wider">{item.label}</span>
-                        {item.badge && <span className="bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">{item.badge}</span>}
-                     </button>
-                  )
-               ))}
+                {MENU_STRUCTURE[user.role].map((item, idx) => {
+                   let dynamicBadge = item.badge;
+                   if (user.role === 'INSPECTOR' && item.id === 'tasks') {
+                      const missionCount = alerts.filter(a => (a.status === 'COLLECTOR_ACCEPTED' || a.status === 'TAHSILDAR_ACCEPTED')).length;
+                      if (missionCount > 0) dynamicBadge = missionCount.toString();
+                   } else if (user.role === 'TAHSILDAR' && item.id === 'alerts') {
+                      const tCount = alerts.filter(a => a.status === 'COLLECTOR_ACCEPTED').length;
+                      if (tCount > 0) dynamicBadge = tCount.toString();
+                   } else if (user.role === 'COLLECTOR' && item.id === 'alerts') {
+                      const cCount = alerts.filter(a => a.status === 'NEW' || a.status === 'PENDING').length;
+                      if (cCount > 0) dynamicBadge = cCount.toString();
+                   }
+
+                   return item.type === 'header' ? (
+                      <p key={idx} className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-6 mb-2 px-6">{item.label}</p>
+                   ) : (
+                      <button key={item.id} onClick={() => { setActiveTab(item.id); setSubView(null); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-6 py-3.5 transition-all duration-200 group relative ${activeTab === item.id ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-600 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                         <item.icon size={18} className={activeTab === item.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'} />
+                         <span className="flex-1 text-left text-[11px] uppercase tracking-wider">{item.label}</span>
+                         {dynamicBadge && <span className="bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">{dynamicBadge}</span>}
+                      </button>
+                   );
+                })}
             </nav>
             <div className="p-4 border-t border-slate-100 mt-auto bg-slate-50">
                <div className="flex items-center gap-3 mb-4 px-2">

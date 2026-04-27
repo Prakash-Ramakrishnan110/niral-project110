@@ -85,7 +85,7 @@ def simulate_ai_scan():
         "parcel": parcel_id,
         "confidence_score": round(random.uniform(0.92, 0.99), 2) if "Warning" not in tactical_type else round(random.uniform(0.75, 0.88), 2),
         "alert_type": tactical_type,
-        "status": "Pending",
+        "status": "TAHSILDAR_ACCEPTED" if random.random() > 0.7 else "Pending",
         "alert_geom": {
             "type": "Point",
             "coordinates": [coords[0] + (random.uniform(-0.0003, 0.0003)), coords[1] + (random.uniform(-0.0003, 0.0003))]

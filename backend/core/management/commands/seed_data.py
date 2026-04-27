@@ -40,12 +40,20 @@ class Command(BaseCommand):
             
             # Initial alerts for variety
             if p['class'] in ['Government', 'Waterbody', 'Forest']:
+                r = random.random()
+                if r > 0.8:
+                    s = "Resolved"
+                elif r > 0.5:
+                    s = "TAHSILDAR_ACCEPTED"
+                else:
+                    s = "Pending"
+                
                 EncroachmentAlert.objects.create(
                     parcel=parcel,
                     confidence_score=round(random.uniform(0.85, 0.98), 2),
                     alert_type=f"{p['class']} Alert",
-                    status="Resolved" if random.random() > 0.8 else "Pending",
-                    resolution_notes="Pre-verified field inspection: All clear." if random.random() > 0.8 else "",
+                    status=s,
+                    resolution_notes="Pre-verified field inspection: All clear." if s == "Resolved" else "",
                     alert_geom=Point(lon + 0.001, lat + 0.001)
                 )
 
