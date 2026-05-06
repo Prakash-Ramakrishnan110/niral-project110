@@ -8,6 +8,7 @@ class LandParcel(models.Model):
         ('Waterbody', 'Waterbody'),
         ('Temple', 'Temple'),
         ('Forest', 'Forest'),
+        ('Roadside', 'Roadside'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -16,7 +17,9 @@ class LandParcel(models.Model):
     patta_number = models.CharField(max_length=50, blank=True, null=True)
     owner_name = models.CharField(max_length=255, blank=True, null=True)
     classification = models.CharField(max_length=50, choices=CLASSIFICATION_CHOICES, default='Government')
-    village_code = models.CharField(max_length=20)
+    village_code = models.CharField(max_length=50)
+    taluk = models.CharField(max_length=50, default='Salem West')
+    district = models.CharField(max_length=50, default='Salem')
     
     # Spatial Field
     geom = models.PolygonField(srid=4326)
@@ -33,6 +36,10 @@ class EncroachmentAlert(models.Model):
         ('Confirmed', 'Confirmed'),
         ('False-Positive', 'False-Positive'),
         ('Resolved', 'Resolved'),
+        ('NEW', 'NEW'),
+        ('COLLECTOR_ACCEPTED', 'COLLECTOR_ACCEPTED'),
+        ('TAHSILDAR_ACCEPTED', 'TAHSILDAR_ACCEPTED'),
+        ('VAO_ASSIGNED', 'VAO_ASSIGNED'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -55,9 +62,43 @@ class FieldVerification(models.Model):
     officer_name = models.CharField(max_length=255)
     gps_lat = models.FloatField()
     gps_lon = models.FloatField()
-    photo_url = models.URLField(max_length=500, blank=True, null=True)
+    photos = models.JSONField(default=list, blank=True, null=True)
     remarks = models.TextField()
+    action_plan = models.TextField(blank=True, null=True)
+    implementation_details = models.TextField(blank=True, null=True)
     verified_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Verification for {self.alert.id}"
+
+class RegistryProposal(models.Model):
+    TYPE_CHOICES = [
+        ('UPDATE', 'Update Details'),
+        ('CORRECTION', 'Registry Correction'),
+        ('NEW', 'New Entry'),
+    ]
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+        ('ACTION_REQUIRED', 'Action Required'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    parcel = models.ForeignKey(LandParcel, on_delete=models.SET_NULL, null=True, blank=True, related_name='proposals')
+    proposal_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='UPDATE')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    
+    # Proposed changes as JSON
+    proposed_data = models.JSONField()
+    
+    proposed_by = models.CharField(max_length=100) # Role or Username
+    approved_by = models.CharField(max_length=100, null=True, blank=True)
+    
+    remarks = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.proposal_type} for {self.parcel} - {self.status}"
+

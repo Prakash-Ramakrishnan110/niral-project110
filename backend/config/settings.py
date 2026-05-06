@@ -25,7 +25,8 @@ SECRET_KEY = 'django-insecure-#l(d4tazr^)es&#+vl4w(t1mue11(jc-oha&^18tkqu(39f_bb
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+
 
 
 # Application definition
@@ -90,6 +91,7 @@ DATABASES = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_HEADERS = True
 
 
 # Password validation
@@ -127,3 +129,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ]
+}
+
+# TNGIS Configuration
+TNGIS_DEMO_MODE = True  # Set to False once API permissions are obtained

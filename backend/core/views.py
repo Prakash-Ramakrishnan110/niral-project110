@@ -2,8 +2,12 @@ from rest_framework import viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import LandParcel, EncroachmentAlert, FieldVerification
-from .serializers import LandParcelSerializer, EncroachmentAlertSerializer, FieldVerificationSerializer
+from rest_framework.decorators import action
+from .models import LandParcel, EncroachmentAlert, FieldVerification, RegistryProposal
+from .serializers import (
+    LandParcelSerializer, EncroachmentAlertSerializer, 
+    FieldVerificationSerializer, RegistryProposalSerializer
+)
 from .tngis_service import TNGISService
 
 class LandParcelViewSet(viewsets.ModelViewSet):
@@ -23,11 +27,81 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
     queryset = FieldVerification.objects.all()
     serializer_class = FieldVerificationSerializer
 
+    def perform_create(self, serializer):
+        # Use update_or_create to prevent UniqueConstraint crash on re-submission
+        alert_id = self.request.data.get('alert')
+        try:
+            existing = FieldVerification.objects.get(alert_id=alert_id)
+            # Update the existing record
+            for attr, value in serializer.validated_data.items():
+                setattr(existing, attr, value)
+            existing.save()
+            verification = existing
+        except FieldVerification.DoesNotExist:
+            verification = serializer.save()
+        
+        # Mark alert as Resolved (title-case to match STATUS_CHOICES)
+        # For Roadside land, auto-escalate to Collector instead of resolving
+        alert = verification.alert
+        try:
+            parcel_classification = alert.parcel.classification
+        except Exception:
+            parcel_classification = ''
+
+        if parcel_classification == 'Roadside':
+            alert.status = 'COLLECTOR_ACCEPTED'
+            alert.resolution_notes = 'Auto-escalated: Roadside encroachment requires Collector review.'
+        else:
+            alert.status = 'Resolved'
+        alert.save()
+
+class RegistryProposalViewSet(viewsets.ModelViewSet):
+    queryset = RegistryProposal.objects.all().order_by('-created_at')
+    serializer_class = RegistryProposalSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['status', 'proposal_type']
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        proposal = self.get_object()
+        if proposal.status != 'PENDING':
+            return Response({"error": "Only pending proposals can be approved"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Apply changes to LandParcel
+        parcel = proposal.parcel
+        if not parcel and proposal.proposal_type == 'NEW':
+            # Handle creation of new parcel if needed
+            # For now, we assume updates/corrections to existing ones
+            pass
+        
+        if parcel:
+            data = proposal.proposed_data
+            for key, value in data.items():
+                if hasattr(parcel, key):
+                    setattr(parcel, key, value)
+            parcel.save()
+        
+        proposal.status = 'APPROVED'
+        proposal.approved_by = request.data.get('approver_role', 'COLLECTOR')
+        proposal.save()
+        
+        return Response({"status": "Proposal approved and registry updated"})
+
+
 class TNGISProxyView(APIView):
     """
     Proxy view to forward requests to TNGIS Generic APIs.
     """
     def post(self, request, action):
+        if action == 'admin_dropdown':
+            case = request.data.get('case')
+            if not case:
+                return Response({"error": "case parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+            district = request.data.get('district')
+            taluk = request.data.get('taluk')
+            result = TNGISService.get_admin_dropdown(case, district, taluk)
+            return Response(result)
+
         lat = request.data.get('latitude')
         lon = request.data.get('longitude')
         
@@ -36,7 +110,9 @@ class TNGISProxyView(APIView):
 
         if action == 'attributes':
             layer_id = request.data.get('layer_id', 29)
-            result = TNGISService.get_attributes(lat, lon, layer_id)
+            case = request.data.get('case', 'gis_attributes')
+            buffer_distance = request.data.get('buffer_distance')
+            result = TNGISService.get_attributes(lat, lon, layer_id, case, buffer_distance)
         elif action == 'inside_boundary':
             layer_id = request.data.get('layer_id')
             attr_col = request.data.get('attribute_column')

@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 
 // ─── COLORS ──────────────────────────────────────────────────────────────────
 const kBg       = Color(0xFFEEF2F7);
@@ -169,31 +172,84 @@ class ShellPage extends StatefulWidget {
 class _ShellPageState extends State<ShellPage> {
   int _idx = 0;
   List<dynamic> _alerts = [];
-  bool _loading = false; // Start empty — tap refresh to load
+  bool _loading = false;
+  String? _errorMsg;
 
   @override
-  void initState() { super.initState(); } // Data loads only when officer taps refresh
+  void initState() { 
+    super.initState(); 
+    _fetch(); // Auto-load on login
+  }
 
   Future<void> _fetch() async {
+    setState(() { _errorMsg = null; });
     try {
-      final res = await http.get(Uri.parse('http://localhost:8000/api/alerts/'));
+      http.Response res;
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      try {
+        res = await http.get(Uri.parse('http://10.116.75.33:8000/api/alerts/?_t=$ts'));
+      } catch (e) {
+        print("Primary host failed, trying fallback...");
+        res = await http.get(Uri.parse('http://10.0.2.2:8000/api/alerts/?_t=$ts'));
+      }
+      
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final features = (data['features'] as List?) ?? [];
+        List<dynamic> features = [];
+        if (data is Map && data.containsKey('features')) {
+          features = data['features'];
+        } else if (data is List) {
+          features = data;
+        }
+
         final seen = <String>{};
         final parsed = features.map((f) {
-          final p = f['properties'];
+          final isMap = f is Map;
+          final isFeature = isMap && f['type'] == 'Feature';
+          final p = isFeature ? (f['properties'] ?? {}) : (isMap ? f : {});
+          final geom = isFeature ? f['geometry'] : null;
+          
+          double lat = 0.0;
+          double lng = 0.0;
+
+          if (isFeature && geom != null && geom['coordinates'] != null) {
+            final coords = geom['coordinates'];
+            try {
+              lat = (coords[1] as num).toDouble();
+              lng = (coords[0] as num).toDouble();
+            } catch (e) { print("Coord error: $e"); }
+          } else if (isMap) {
+            lat = (p['latitude'] ?? p['lat'] ?? 0.0).toDouble();
+            lng = (p['longitude'] ?? p['lng'] ?? 0.0).toDouble();
+          }
+          
           return {
-            'id': f['id'].toString(),
+            'id': (isMap ? (f['id'] ?? p['id'] ?? '0') : '0').toString(),
             'alert_type': p['alert_type'] ?? 'Unknown',
-            'status': p['status'] ?? '',
-            'confidence_score': p['confidence_score'] ?? 0.0,
-            'position': [f['geometry']['coordinates'][1], f['geometry']['coordinates'][0]],
+            'status': (p['status'] ?? '').toString(),
+            'confidence_score': (p['confidence_score'] ?? 0.0).toDouble(),
+            'position': [lat, lng],
           };
-        }).where((a) => seen.add(a['id'] as String)).toList(); // Deduplicate by ID
+        }).where((a) {
+          final status = (a['status'] as String).toUpperCase().trim();
+          final id = a['id'] as String;
+          return seen.add(id) && (status == 'VAO_ASSIGNED' || status == 'IN-VERIFICATION' || status == 'PENDING' || status == 'NEW' || status == 'COLLECTOR_ACCEPTED' || status == 'TAHSILDAR_ACCEPTED' || status == '');
+        }).toList();
+        
         setState(() { _alerts = parsed; _loading = false; });
+      } else {
+        setState(() { 
+          _loading = false; 
+          _errorMsg = "HTTP Error ${res.statusCode}: ${res.body}";
+        });
       }
-    } catch (_) { setState(() => _loading = false); }
+
+    } catch (e) { 
+      setState(() { 
+        _loading = false; 
+        _errorMsg = "Network/Parsing Error: ${e.toString()}";
+      });
+    }
   }
 
   final _labels = ['Home', 'Map', 'Tasks', 'Profile'];
@@ -255,9 +311,10 @@ class _ShellPageState extends State<ShellPage> {
                 await _fetch();
               },
               child: IndexedStack(index: _idx, children: [
-                _HomeTab(alerts: _alerts, name: widget.user['name']),
+                _HomeTab(alerts: _alerts, name: widget.user['name'], errorMsg: _errorMsg),
                 _MapTab(alerts: _alerts),
-                _TasksTab(alerts: _alerts),
+                _TasksTab(alerts: _alerts, onRefresh: _fetch),
+
                 _ProfileTab(user: widget.user),
               ]),
             ),
@@ -288,11 +345,23 @@ class _ShellPageState extends State<ShellPage> {
 class _HomeTab extends StatelessWidget {
   final List<dynamic> alerts;
   final String name;
-  const _HomeTab({required this.alerts, required this.name});
+  final String? errorMsg;
+  const _HomeTab({required this.alerts, required this.name, this.errorMsg});
 
   @override
   Widget build(BuildContext context) {
     return ListView(padding: const EdgeInsets.all(20), children: [
+      if (errorMsg != null)
+        Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: kDanger.withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: kDanger.withOpacity(0.3))),
+          child: Row(children: [
+            const Icon(LucideIcons.alertOctagon, color: kDanger),
+            const SizedBox(width: 12),
+            Expanded(child: Text(errorMsg!, style: GoogleFonts.inter(color: kDanger, fontSize: 13, fontWeight: FontWeight.w600))),
+          ]),
+        ),
       // Greeting banner
       Container(
         padding: const EdgeInsets.all(20),
@@ -369,7 +438,11 @@ class _MapTab extends StatelessWidget {
     FlutterMap(
       options: const MapOptions(initialCenter: LatLng(11.6643, 78.1460), initialZoom: 13),
       children: [
-        TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.geocommand.officer_app',
+        ),
+
         MarkerLayer(markers: alerts.map<Marker>((a) => Marker(
           point: LatLng((a['position'] as List)[0], (a['position'] as List)[1]),
           width: 44, height: 44,
@@ -397,34 +470,58 @@ class _MapTab extends StatelessWidget {
 // ─── TASKS TAB ────────────────────────────────────────────────────────────────
 class _TasksTab extends StatelessWidget {
   final List<dynamic> alerts;
-  const _TasksTab({required this.alerts});
+  final VoidCallback onRefresh;
+  const _TasksTab({required this.alerts, required this.onRefresh});
 
-  void _simulateSync(BuildContext context, dynamic alert) {
+  void _openReportForm(BuildContext context, dynamic alert) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 24),
-          const Icon(LucideIcons.cloudLightning, color: kPrimary, size: 48),
-          const SizedBox(height: 16),
-          Text('Evidence Sync in Progress', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Text('Uploading geotagged intelligence for Survey ${alert['parcel_details']}...', textAlign: TextAlign.center, style: GoogleFonts.inter(color: kMuted, fontSize: 13)),
-          const SizedBox(height: 24),
-          const LinearProgressIndicator(backgroundColor: Color(0xFFF1F5F9), valueColor: AlwaysStoppedAnimation<Color>(kPrimary)),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: kPrimary, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: Text('Dismiss', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-          ),
-        ]),
-      ),
+      builder: (context) => _ReportForm(alert: alert, onSuccess: () {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification submitted successfully!'), backgroundColor: kAccent));
+        onRefresh(); // Refresh list after submission
+      }),
     );
+  }
+
+  Future<void> _quickComplete(BuildContext context, dynamic alert) async {
+    final payload = {
+      "alert": alert['id'],
+      "officer_name": "Prakash Ramakrishnan",
+      "gps_lat": (alert['position'] as List)[0],
+      "gps_lon": (alert['position'] as List)[1],
+      "photos": [],
+      "remarks": "Quick completion from task list.",
+      "action_plan": "None",
+      "implementation_details": "Completed"
+    };
+
+    try {
+      http.Response res;
+      try {
+        res = await http.post(
+          Uri.parse('http://10.116.75.33:8000/api/verifications/'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(payload)
+        );
+      } catch (e) {
+        res = await http.post(
+          Uri.parse('http://10.0.2.2:8000/api/verifications/'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(payload)
+        );
+      }
+
+      if (res.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Mission #${alert['id']} completed.'), backgroundColor: kAccent));
+        onRefresh();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${res.body}')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+    }
   }
 
   @override
@@ -453,16 +550,14 @@ class _TasksTab extends StatelessWidget {
             const SizedBox(height: 16),
             Row(children: [
               Expanded(child: OutlinedButton.icon(
-                onPressed: () => _simulateSync(context, a),
+                onPressed: () => _openReportForm(context, a),
                 icon: const Icon(LucideIcons.camera, size: 16),
                 label: Text('Report', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
                 style: OutlinedButton.styleFrom(foregroundColor: kPrimary, side: const BorderSide(color: kPrimary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
               )),
               const SizedBox(width: 10),
               Expanded(child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Mission #${a['id']} verification submitted.'), backgroundColor: kAccent));
-                },
+                onPressed: () => _quickComplete(context, a),
                 icon: const Icon(LucideIcons.checkCircle, size: 16),
                 label: Text('Complete', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(backgroundColor: kAccent, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
@@ -474,6 +569,7 @@ class _TasksTab extends StatelessWidget {
     );
   }
 }
+
 
 // ─── PROFILE TAB ──────────────────────────────────────────────────────────────
 class _ProfileTab extends StatelessWidget {
@@ -533,3 +629,238 @@ Widget _emptyState(String msg) => Center(child: Padding(
     Text(msg, style: GoogleFonts.inter(color: kMuted, fontWeight: FontWeight.w500)),
   ]),
 ));
+
+// ─── REPORT FORM ──────────────────────────────────────────────────────────────
+class _ReportForm extends StatefulWidget {
+  final dynamic alert;
+  final VoidCallback onSuccess;
+  const _ReportForm({required this.alert, required this.onSuccess});
+
+  @override
+  State<_ReportForm> createState() => _ReportFormState();
+}
+
+class _ReportFormState extends State<_ReportForm> {
+  final _notesCtrl = TextEditingController();
+  final _planCtrl = TextEditingController();
+  final _implCtrl = TextEditingController();
+  
+  List<XFile> _images = [];
+  bool _loading = false;
+  Position? _pos;
+
+  @override
+  void initState() {
+    super.initState();
+    _getLocation();
+  }
+
+  Future<void> _getLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      _pos = await Geolocator.getCurrentPosition();
+      setState(() {});
+    } catch (e) {
+      print("Geolocation error: $e");
+    }
+  }
+
+  Future<void> _pickImage() async {
+    if (_images.length >= 5) return;
+    final picker = ImagePicker();
+    final img = await picker.pickImage(source: ImageSource.camera, imageQuality: 50);
+    if (img != null) setState(() => _images.add(img));
+  }
+
+  Future<void> _submit() async {
+    setState(() => _loading = true);
+    try {
+      // Read images as base64
+      List<String> b64Images = [];
+      for (var img in _images) {
+        final bytes = await img.readAsBytes();
+        b64Images.add("data:${img.mimeType ?? 'image/jpeg'};base64,${base64Encode(bytes)}");
+      }
+
+      final payload = {
+        "alert": widget.alert['id'],
+        "officer_name": "Prakash Ramakrishnan", // In a real app, from auth state
+        "gps_lat": _pos?.latitude ?? (widget.alert['position'] as List)[0],
+        "gps_lon": _pos?.longitude ?? (widget.alert['position'] as List)[1],
+        "photos": b64Images,
+        "remarks": _notesCtrl.text.isEmpty ? "No remarks provided" : _notesCtrl.text,
+        "action_plan": _planCtrl.text,
+        "implementation_details": _implCtrl.text
+      };
+
+      http.Response res;
+      try {
+        res = await http.post(Uri.parse('http://10.116.75.33:8000/api/verifications/'),
+          headers: {'Content-Type': 'application/json'}, body: jsonEncode(payload));
+      } catch (e) {
+        res = await http.post(Uri.parse('http://10.0.2.2:8000/api/verifications/'),
+          headers: {'Content-Type': 'application/json'}, body: jsonEncode(payload));
+      }
+
+      if (res.statusCode == 201) {
+        Navigator.pop(context);
+        widget.onSuccess();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${res.body}')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(top: 24, left: 24, right: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+        const SizedBox(height: 24),
+        Row(children: [
+          const Icon(LucideIcons.shieldAlert, color: kPrimary),
+          const SizedBox(width: 12),
+          Text('Evidence Capture', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800)),
+        ]),
+        const SizedBox(height: 8),
+        Text('Mission ID: #${widget.alert['id']}', style: GoogleFonts.inter(color: kMuted, fontSize: 12, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 24),
+        
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Geo-Tagged Site Proofs', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13, color: kText)),
+            Text('${_images.length} / 3 Captured', style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 11, color: _images.length >= 3 ? kAccent : kPrimary)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Tactical Photo Grid
+        SizedBox(
+          height: 100,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              ..._images.asMap().entries.map((entry) {
+                int idx = entry.key;
+                XFile img = entry.value;
+                return Container(
+                  width: 100,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    color: kBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: kAccent, width: 2),
+                    image: DecorationImage(
+                      image: File(img.path).existsSync() 
+                        ? FileImage(File(img.path)) as ImageProvider
+                        : NetworkImage(img.path), 
+                      fit: BoxFit.cover
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: 4, right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(color: kAccent, shape: BoxShape.circle),
+                          child: const Icon(LucideIcons.check, color: Colors.white, size: 10),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Container(
+                          width: double.infinity,
+                          color: Colors.black54,
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text('PHOTO ${idx + 1}', textAlign: TextAlign.center, style: GoogleFonts.inter(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              if (_images.length < 3)
+                InkWell(
+                  onTap: _pickImage,
+                  child: Container(
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: kPrimary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: kPrimary.withOpacity(0.2), style: BorderStyle.solid),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(LucideIcons.camera, color: kPrimary, size: 28),
+                        const SizedBox(height: 4),
+                        Text('CAPTURE', style: GoogleFonts.inter(color: kPrimary, fontSize: 9, fontWeight: FontWeight.w800)),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+        _input('Field Observation Notes', _notesCtrl, 3),
+        const SizedBox(height: 16),
+        _input('Required Action Plan', _planCtrl, 2),
+        const SizedBox(height: 24),
+
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: ElevatedButton(
+            onPressed: (_loading || _images.isEmpty) ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kPrimary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: _loading 
+              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(LucideIcons.shieldCheck, size: 18),
+                    const SizedBox(width: 10),
+                    Text('Finalize & Submit Report', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.5)),
+                  ],
+                ),
+          ),
+        ),
+      ])),
+    );
+  }
+
+  Widget _input(String lbl, TextEditingController c, int lines) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text(lbl, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
+    const SizedBox(height: 8),
+    TextField(
+      controller: c, maxLines: lines,
+      style: GoogleFonts.inter(fontSize: 14),
+      decoration: InputDecoration(
+        filled: true, fillColor: kBg,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.all(12),
+      ),
+    ),
+  ]);
+}

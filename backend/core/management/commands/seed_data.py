@@ -14,47 +14,56 @@ class Command(BaseCommand):
         # Salem Center Coordinates
         base_lat, base_lon = 11.6643, 78.1460
         
-        parcels_data = [
-            {"survey": "412/1A", "class": "Government", "village": "Salem West", "offset": [0.001, 0.001]},
-            {"survey": "88/4", "class": "Waterbody", "village": "Mettur Node", "offset": [0.045, -0.035]},
-            {"survey": "12/9B", "class": "Temple", "village": "Omalur Hub", "offset": [0.055, 0.015]},
-            {"survey": "225/C", "class": "Government", "village": "Attur Gateway", "offset": [-0.025, 0.085]},
-            {"survey": "19/3", "class": "Waterbody", "village": "Salem South", "offset": [-0.015, -0.012]},
-            {"survey": "502/Z", "class": "Forest", "village": "Yercaud Hills", "offset": [0.085, 0.065]},
-            {"survey": "77/1", "class": "Government", "village": "Edappadi Center", "offset": [0.015, -0.075]},
+        taluks = [
+            {"name": "Salem West", "villages": ["Kandhampatty", "Suramangalam", "Jagir Ammapalayam"]},
+            {"name": "Salem South", "villages": ["Dadagapatty", "Annathanapatty", "Linemedu"]},
+            {"name": "Mettur", "villages": ["Mettur Dam", "Kolathur", "Mecheri"]},
+            {"name": "Omalur", "villages": ["Omalur North", "Omalur South", "Tharamangalam"]},
+            {"name": "Attur", "villages": ["Attur Town", "Narasingapuram", "Thalaivasal"]},
+            {"name": "Edappadi", "villages": ["Edappadi Town", "Poolampatti", "Konganapuram"]},
+            {"name": "Yercaud", "villages": ["Yercaud Town", "Kiliyur", "Nagallur"]},
+            {"name": "Sankagiri", "villages": ["Sankagiri Town", "Thevur", "Macdonalds Choultry"]},
         ]
 
-        for p in parcels_data:
-            lat, lon = base_lat + p['offset'][0], base_lon + p['offset'][1]
-            
-            # Create a small square polygon for the parcel
-            poly = Polygon.from_bbox((lon, lat, lon + 0.002, lat + 0.002))
-            
-            parcel = LandParcel.objects.create(
-                survey_number=p['survey'],
-                owner_name="TN Revenue Dept" if p['class'] == 'Government' else "Public Trust",
-                classification=p['class'],
-                village_code=p['village'],
-                geom=poly
-            )
-            
-            # Initial alerts for variety
-            if p['class'] in ['Government', 'Waterbody', 'Forest']:
-                r = random.random()
-                if r > 0.8:
-                    s = "Resolved"
-                elif r > 0.5:
-                    s = "TAHSILDAR_ACCEPTED"
-                else:
-                    s = "Pending"
-                
-                EncroachmentAlert.objects.create(
-                    parcel=parcel,
-                    confidence_score=round(random.uniform(0.85, 0.98), 2),
-                    alert_type=f"{p['class']} Alert",
-                    status=s,
-                    resolution_notes="Pre-verified field inspection: All clear." if s == "Resolved" else "",
-                    alert_geom=Point(lon + 0.001, lat + 0.001)
-                )
+        classifications = ["Government", "Waterbody", "Forest", "Temple", "Roadside"]
 
-        self.stdout.write(self.style.SUCCESS('Successfully seeded distributed SALEM District land records'))
+        for t in taluks:
+            for v in t['villages']:
+                # Create 3-5 parcels per village
+                num_parcels = random.randint(3, 5)
+                for i in range(num_parcels):
+                    lat_off = random.uniform(-0.05, 0.05)
+                    lon_off = random.uniform(-0.05, 0.05)
+                    lat, lon = base_lat + lat_off, base_lon + lon_off
+                    
+                    cls = random.choice(classifications)
+                    survey = f"{random.randint(10, 500)}/{random.choice(['1A', '2', 'B', '4C', '9'])}"
+                    
+                    poly = Polygon.from_bbox((lon, lat, lon + 0.002, lat + 0.002))
+                    
+                    parcel = LandParcel.objects.create(
+                        survey_number=survey,
+                        owner_name="TN Revenue Dept" if cls != 'Temple' else "Public Trust",
+                        classification=cls,
+                        village_code=v,
+                        taluk=t['name'],
+                        district="Salem",
+                        geom=poly
+                    )
+                    
+                    # Update the record with taluk and district if those fields exist or in the future
+                    # For now, we use village_code as the primary filter key in our current implementation
+                    
+                    # Random Alerts
+                    if random.random() > 0.6:
+                        s = random.choice(["Resolved", "COLLECTOR_ACCEPTED", "TAHSILDAR_ACCEPTED", "NEW", "PENDING"])
+                        EncroachmentAlert.objects.create(
+                            parcel=parcel,
+                            confidence_score=round(random.uniform(0.75, 0.99), 2),
+                            alert_type=f"{cls} Threat Detection",
+                            status=s,
+                            resolution_notes="Field investigation notes logged." if s == "Resolved" else "",
+                            alert_geom=Point(lon + 0.001, lat + 0.001)
+                        )
+
+        self.stdout.write(self.style.SUCCESS('Successfully seeded 100+ distributed SALEM District land records across all Taluks and Villages.'))
