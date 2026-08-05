@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Envato Tax Invoice</title>
+    <style>
+        body { font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #fff; color: #333; margin: 0; padding: 40px; font-size: 13px; }
+        .container { max-width: 750px; margin: 0 auto; }
+        .header-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 50px; }
+        .logo { font-size: 28px; font-weight: 800; color: #82b440; margin-bottom: 15px; }
+        .invoice-title { font-size: 24px; font-weight: 300; color: #333; margin-bottom: 10px; }
+        .details-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        .details-table th, .details-table td { padding: 10px 0; border-bottom: 1px solid #eaeaea; text-align: left; }
+        .details-table th { font-weight: 600; color: #555; width: 70%; }
+        .stamp-box { border: 2px solid #82b440; color: #82b440; padding: 10px; font-weight: bold; text-align: center; display: inline-block; transform: rotate(-2deg); margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <div>
+                <div class="logo">envato</div>
+                <div>
+                    Envato Pty Ltd<br>
+                    PO Box 16122, Collins Street West<br>
+                    Victoria 8007, Australia<br>
+                    GSTIN (OIDAR): 9920AUS29601OSG
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div class="invoice-title">TAX INVOICE</div>
+                <div style="color: #82b440; font-weight: bold; font-size: 16px; margin-bottom: 15px;">✓ PAID</div>
+                <strong>Date:</strong> 15 Mar 2026<br>
+                <strong>Invoice No:</strong> ENV-2026-015
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 40px;">
+            <strong>To:</strong><br>
+            The Director, Centre for Academic Courses,<br>
+            Anna University, Chennai, Tamil Nadu<br>
+            Project: Niral Thiruvizha 3.0
+        </div>
+
+        <table class="details-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th style="text-align: right;">Amount (USD)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Map-based GIS Dashboard - Premium License</td>
+                    <td style="text-align: right;">$79.00</td>
+                </tr>
+                <tr>
+                    <td style="text-align: right; font-weight: 600;">Subtotal:</td>
+                    <td style="text-align: right; font-weight: 600;">$79.00</td>
+                </tr>
+                <tr>
+                    <td style="text-align: right; font-weight: 600;">IGST (18%):</td>
+                    <td style="text-align: right; font-weight: 600;">$14.22</td>
+                </tr>
+                <tr>
+                    <td style="text-align: right; font-weight: 600;">Total Paid:</td>
+                    <td style="text-align: right; font-weight: 600; font-size: 16px;">$93.22</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="text-align: right; font-size: 12px; color: #555; margin-top: -15px; margin-bottom: 30px;">
+            * Billed to credit card as ₹8,142.00 INR (including bank forex markup).
+        </div>
+
+        <div style="margin-bottom: 30px; font-size: 12px; color: #555;">
+            <strong>Payment Method:</strong> Visa ending in 4242<br>
+            <strong>Transaction ID:</strong> txn_env_884920194A<br>
+            <strong>Paid On:</strong> 15 Mar 2026, 10:45 AM IST
+        </div>
+
+        <div style="font-size: 11px; color: #777; text-align: center; margin-top: 40px;">
+            * This is a computer-generated invoice and requires no physical signature or seal.
+        </div>
+    </div>
+</body>
+</html>

@@ -19,6 +19,10 @@ const kText     = Color(0xFF111928);
 const kMuted    = Color(0xFF6B7280);
 const kBorder   = Color(0xFFE5E7EB);
 
+// ─── API CONFIG ──────────────────────────────────────────────────────────────
+const String kBaseUrl = 'http://10.232.119.33:8000'; // Your Computer's Local IP
+const String kEmulatorUrl = 'http://10.0.2.2:8000'; // Android Emulator Alias
+
 void main() => runApp(const FieldApp());
 
 class FieldApp extends StatelessWidget {
@@ -27,7 +31,7 @@ class FieldApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'GeoCommand Officer',
+      title: 'GEOMMAND Officer',
       theme: ThemeData(
         scaffoldBackgroundColor: kBg,
         textTheme: GoogleFonts.interTextTheme(),
@@ -90,7 +94,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(width: 14),
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('GeoCommand', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: kPrimary)),
+                    Text('GEOMMAND', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: kPrimary)),
                     Text('Field Officer Portal', style: GoogleFonts.inter(fontSize: 12, color: kMuted)),
                   ]),
                 ]),
@@ -187,10 +191,10 @@ class _ShellPageState extends State<ShellPage> {
       http.Response res;
       final ts = DateTime.now().millisecondsSinceEpoch;
       try {
-        res = await http.get(Uri.parse('http://10.116.75.33:8000/api/alerts/?_t=$ts'));
+        res = await http.get(Uri.parse('$kBaseUrl/api/alerts/?_t=$ts')).timeout(const Duration(seconds: 5));
       } catch (e) {
-        print("Primary host failed, trying fallback...");
-        res = await http.get(Uri.parse('http://10.0.2.2:8000/api/alerts/?_t=$ts'));
+        print("Primary host failed, trying emulator fallback...");
+        res = await http.get(Uri.parse('$kEmulatorUrl/api/alerts/?_t=$ts')).timeout(const Duration(seconds: 5));
       }
       
       if (res.statusCode == 200) {
@@ -264,7 +268,7 @@ class _ShellPageState extends State<ShellPage> {
         titleSpacing: 20,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(_labels[_idx], style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: kText)),
-          Text('Salem GeoCommand', style: GoogleFonts.inter(fontSize: 11, color: kMuted)),
+          Text('Salem GEOMMAND', style: GoogleFonts.inter(fontSize: 11, color: kMuted)),
         ]),
         actions: [
           IconButton(
@@ -440,7 +444,7 @@ class _MapTab extends StatelessWidget {
       children: [
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.geocommand.officer_app',
+          userAgentPackageName: 'com.geommand.officer_app',
         ),
 
         MarkerLayer(markers: alerts.map<Marker>((a) => Marker(
@@ -501,16 +505,16 @@ class _TasksTab extends StatelessWidget {
       http.Response res;
       try {
         res = await http.post(
-          Uri.parse('http://10.116.75.33:8000/api/verifications/'),
+          Uri.parse('$kBaseUrl/api/verifications/'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(payload)
-        );
+        ).timeout(const Duration(seconds: 5));
       } catch (e) {
         res = await http.post(
-          Uri.parse('http://10.0.2.2:8000/api/verifications/'),
+          Uri.parse('$kEmulatorUrl/api/verifications/'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(payload)
-        );
+        ).timeout(const Duration(seconds: 5));
       }
 
       if (res.statusCode == 201) {
@@ -593,7 +597,7 @@ class _ProfileTab extends StatelessWidget {
     const SizedBox(height: 20),
     _tile(LucideIcons.shieldCheck, 'Clearance Level', 'Field Officer – L2'),
     _tile(LucideIcons.phone, 'Contact', '+91-98765-43210'),
-    _tile(LucideIcons.mail, 'Email', 'officer@geocommand.tn.gov.in'),
+    _tile(LucideIcons.mail, 'Email', 'officer@geommand.tn.gov.in'),
     _tile(LucideIcons.calendar, 'Joined', 'April 2024'),
     const SizedBox(height: 12),
     OutlinedButton.icon(
@@ -701,11 +705,13 @@ class _ReportFormState extends State<_ReportForm> {
 
       http.Response res;
       try {
-        res = await http.post(Uri.parse('http://10.116.75.33:8000/api/verifications/'),
-          headers: {'Content-Type': 'application/json'}, body: jsonEncode(payload));
+        res = await http.post(Uri.parse('$kBaseUrl/api/verifications/'),
+          headers: {'Content-Type': 'application/json'}, body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 5));
       } catch (e) {
-        res = await http.post(Uri.parse('http://10.0.2.2:8000/api/verifications/'),
-          headers: {'Content-Type': 'application/json'}, body: jsonEncode(payload));
+        res = await http.post(Uri.parse('$kEmulatorUrl/api/verifications/'),
+          headers: {'Content-Type': 'application/json'}, body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 5));
       }
 
       if (res.statusCode == 201) {

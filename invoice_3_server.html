@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AWS Tax Invoice</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #fff; color: #000; margin: 0; padding: 30px; font-size: 12px; }
+        .doc-container { max-width: 800px; margin: 0 auto; border: 1px solid #000; padding: 2px; }
+        .inner-border { border: 1px solid #000; padding: 30px; }
+        .aws-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+        .aws-logo { font-size: 40px; font-weight: 900; letter-spacing: -2px; }
+        .aws-logo span { color: #FF9900; }
+        .invoice-meta { width: 100%; display: table; margin-bottom: 30px; }
+        .meta-col { display: table-cell; width: 50%; vertical-align: top; }
+        .meta-title { font-weight: bold; background: #e5e5e5; padding: 5px; margin-bottom: 10px; border: 1px solid #ccc; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th { background: #000; color: #fff; padding: 8px; text-align: left; font-size: 11px; }
+        td { padding: 8px; border-bottom: 1px solid #ccc; }
+        .stamp { font-size: 16px; font-weight: bold; color: #000; border: 3px double #000; padding: 10px; text-align: center; margin-bottom: 20px; text-transform: uppercase; display: inline-block;}
+        .totals { float: right; width: 300px; margin-bottom: 40px; }
+        .totals-row { display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="doc-container">
+        <div class="inner-border">
+            <div class="aws-header">
+                <div class="aws-logo">aws<span>.</span></div>
+                <div style="font-size: 24px;">TAX INVOICE</div>
+            </div>
+            
+            <div style="text-align: right; margin-bottom: 20px;">
+                <span style="font-size: 18px; font-weight: bold; color: #000; text-transform: uppercase;">Status: PAID</span>
+            </div>
+
+            <div class="invoice-meta">
+                <div class="meta-col" style="padding-right: 15px;">
+                    <div class="meta-title">ISSUED BY:</div>
+                    Amazon Web Services India Private Limited<br>
+                    Block E, International Trade Tower, Nehru Place,<br>
+                    New Delhi, Delhi 110019<br>
+                    GSTIN: 07AAJCA9880A1ZL<br>
+                    Invoice Number: AWS-2026-044<br>
+                    Invoice Date: 28 May 2026
+                </div>
+                <div class="meta-col" style="padding-left: 15px;">
+                    <div class="meta-title">BILLED TO:</div>
+                    The Director, Centre for Academic Courses,<br>
+                    Anna University, Chennai, Tamil Nadu<br>
+                    Project: Niral Thiruvizha 3.0
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Detail</th>
+                        <th style="text-align: right;">Amount (INR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Amazon Elastic Compute Cloud (EC2) - t3.medium instance usage<br>Amazon Relational Database Service (RDS) - db.t3.micro usage</td>
+                        <td style="text-align: right;">2,353.69</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="totals">
+                <div class="totals-row">
+                    <span>Charges before tax:</span>
+                    <span>2,353.69</span>
+                </div>
+                <div class="totals-row">
+                    <span>IGST (18%):</span>
+                    <span>423.67</span>
+                </div>
+                <div class="totals-row" style="margin-top: 10px;">
+                    <strong>Total Amount:</strong>
+                    <strong>2,777.36</strong>
+                </div>
+            </div>
+            <div style="clear: both;"></div>
+
+            <div style="margin-bottom: 20px; font-size: 11px; padding: 10px; background: #f9f9f9; border: 1px solid #ccc;">
+                <strong>PAYMENT DETAILS:</strong><br>
+                Card Type: Visa (**** **** **** 1094)<br>
+                Transaction Ref: AWS-IN-88991002<br>
+                Date/Time: 28 May 2026, 09:15 AM IST
+            </div>
+
+            <div style="font-size: 10px; color: #666; text-align: center; border-top: 1px dashed #ccc; padding-top: 10px;">
+                * This is a computer-generated tax invoice and does not require a physical signature or official seal.
+            </div>
+        </div>
+    </div>
+</body>
+</html>

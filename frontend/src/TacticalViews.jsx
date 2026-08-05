@@ -1,8 +1,23 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { 
   Zap, Monitor, MapPin, Activity, Users, Truck, CheckCircle2, 
   Globe, Target, Navigation, History, Camera, Cpu, ArrowRight, ChevronLeft, Map 
 } from 'lucide-react';
+import site1 from './assets/site1.png';
+import site2 from './assets/site2.png';
+import site3 from './assets/site3.png';
+import site4 from './assets/site4.png';
+import enc1 from './assets/encroachment_1_1776786774942.png';
+import enc2 from './assets/encroachment_2_1776786789882.png';
+import enc3 from './assets/encroachment_3_1776786808071.png';
+import enc4 from './assets/encroachment_4_1776786823398.png';
+
+const SECTORS = [
+   { id: 'S1', name: 'Salem West - Sector A', before: site1, after: enc1, coords: '11.6643° N, 78.1460° E' },
+   { id: 'S2', name: 'Mettur Dam - North', before: site2, after: enc2, coords: '11.7865° N, 77.8012° E' },
+   { id: 'S3', name: 'Omalur Junction', before: site3, after: enc3, coords: '11.7452° N, 78.0432° E' },
+   { id: 'S4', name: 'Attur Bypass', before: site4, after: enc4, coords: '11.5982° N, 78.6011° E' },
+];
 
 // --- SHARED COMPONENTS ---
 const Badge = ({ children, variant = 'info', className = '' }) => {
@@ -34,6 +49,125 @@ const Card = ({ children, title, icon: Icon, action, className = "" }) => (
    </div>
 );
 
+// --- SATELLITE COMPARISON SLIDER ---
+const SatelliteComparisonSlider = () => {
+   const [sliderPos, setSliderPos] = useState(50);
+   const [activeSector, setActiveSector] = useState(SECTORS[0]);
+   const containerRef = useRef(null);
+   const dragging = useRef(false);
+
+   const handleMove = (clientX) => {
+      if (!dragging.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      setSliderPos((x / rect.width) * 100);
+   };
+
+   return (
+      <div className="space-y-4">
+         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+               <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-blue-600 rounded-none inline-block"></span>
+                  Active Sector: {activeSector.name}
+               </p>
+               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-4">{activeSector.coords} · LATEST_SYNC: 2M AGO</p>
+            </div>
+            <div className="flex bg-slate-100 p-1 rounded-none border border-slate-200">
+               {SECTORS.map(s => (
+                  <button 
+                     key={s.id} 
+                     onClick={() => setActiveSector(s)}
+                     className={`px-3 py-1 text-[8px] font-black uppercase tracking-widest transition-all ${activeSector.id === s.id ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'}`}
+                  >
+                     {s.id}
+                  </button>
+               ))}
+            </div>
+         </div>
+
+         <div className="flex justify-between items-center bg-slate-50 border-x border-t border-slate-200 px-4 py-2">
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse inline-block"></span>
+               Temporal Intelligence Analysis · Drag to Compare
+            </p>
+            <div className="flex gap-4 text-[8px] font-black uppercase">
+               <span className="text-slate-400 flex items-center gap-1.5"><div className="w-2.5 h-1.5 bg-slate-400"></div>2023 BASELINE</span>
+               <span className="text-blue-600 flex items-center gap-1.5"><div className="w-2.5 h-1.5 bg-blue-600"></div>CURRENT SCAN</span>
+            </div>
+         </div>
+
+         <div
+            ref={containerRef}
+            className="relative aspect-video bg-slate-900 overflow-hidden cursor-col-resize select-none rounded-none border-2 border-slate-900 shadow-2xl"
+            onMouseMove={(e) => handleMove(e.clientX)}
+            onMouseUp={() => { dragging.current = false; }}
+            onMouseLeave={() => { dragging.current = false; }}
+            onTouchMove={(e) => { dragging.current = true; handleMove(e.touches[0].clientX); }}
+            onTouchEnd={() => { dragging.current = false; }}
+         >
+            {/* AFTER image — full base layer */}
+            <img src={activeSector.after} className="absolute inset-0 w-full h-full object-cover" alt="After" />
+            <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+               <div className="bg-blue-600/90 backdrop-blur text-white px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border border-blue-400/30 shadow-2xl">
+                  ⚠ CURRENT · CHANGE DETECTED
+               </div>
+               <div className="bg-black/80 backdrop-blur text-white px-2 py-1 text-[7px] font-mono uppercase tracking-widest border border-white/5">
+                  PROBABILITY: 94.2%
+               </div>
+            </div>
+
+            {/* BEFORE image — clipped to left side of slider */}
+            <div
+               className="absolute inset-0 overflow-hidden"
+               style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
+            >
+               <img src={activeSector.before} className="w-full h-full object-cover filter grayscale brightness-90 contrast-125" alt="Before" />
+               <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur text-white px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border border-white/10 shadow-2xl">
+                  ARCHIVE · 2023 BASELINE
+               </div>
+               {/* Grid overlay for tactical feel */}
+               <div className="absolute inset-0 pointer-events-none opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+               <div className="absolute inset-0 pointer-events-none" style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px)' }}></div>
+            </div>
+
+            {/* Slider handle */}
+            <div
+               className="absolute inset-y-0 z-20 flex flex-col items-center justify-center"
+               style={{ left: `${sliderPos}%`, transform: 'translateX(-50%)' }}
+               onMouseDown={() => { dragging.current = true; }}
+               onTouchStart={() => { dragging.current = true; }}
+            >
+               <div className="w-0.5 h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.8)]"></div>
+               <div className="absolute w-12 h-12 bg-white rounded-none shadow-2xl flex flex-col items-center justify-center border-4 border-slate-900 cursor-col-resize hover:scale-110 transition-all">
+                  <div className="flex gap-0.5">
+                     <div className="w-1 h-4 bg-blue-600"></div>
+                     <div className="w-1 h-4 bg-blue-600"></div>
+                  </div>
+               </div>
+            </div>
+
+            {/* Tactical Metadata Overlays */}
+            <div className="absolute bottom-4 left-4 z-10 flex gap-2">
+               <div className="bg-black/90 px-3 py-2 border-l-2 border-blue-600">
+                  <p className="text-[7px] font-black text-blue-400 uppercase tracking-widest">Spectral_Band</p>
+                  <p className="text-[10px] font-black text-white uppercase tracking-tighter">B04_RED_EDGE</p>
+               </div>
+               <div className="bg-black/90 px-3 py-2 border-l-2 border-green-500">
+                  <p className="text-[7px] font-black text-green-400 uppercase tracking-widest">Resolution</p>
+                  <p className="text-[10px] font-black text-white uppercase tracking-tighter">0.3M_GSD</p>
+               </div>
+            </div>
+
+            <div className="absolute bottom-4 right-4 z-10 bg-black/90 px-4 py-2 border border-white/10 text-right">
+               <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Sentinel-2 Uplink</p>
+               <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest animate-pulse">● AI_LIVE_STREAM</p>
+            </div>
+         </div>
+      </div>
+   );
+};
+
 // --- AI DETECTION LOGIC VIEW ---
 export const AIDetectionLogicView = () => {
    const steps = [
@@ -44,7 +178,15 @@ export const AIDetectionLogicView = () => {
    ];
 
    return (
-      <div className="grid grid-cols-12 gap-6 animate-in fade-in zoom-in-95 duration-500">
+      <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+         {/* Satellite Temporal Comparison */}
+         <Card title="Temporal Satellite Change Detection · Drag Slider to Compare" icon={Globe}>
+            <div className="p-4">
+               <SatelliteComparisonSlider />
+            </div>
+         </Card>
+
+         <div className="grid grid-cols-12 gap-6">
          <div className="col-span-12 lg:col-span-8 space-y-6">
             <Card title="Live AI Inference Pipeline" icon={Cpu}>
                <div className="p-6 bg-slate-900 aspect-video relative flex items-center justify-center overflow-hidden">
@@ -105,6 +247,7 @@ export const AIDetectionLogicView = () => {
                <p className="text-lg font-bold leading-tight">Authorize field drone dispatch for high-resolution visual evidence.</p>
                <button className="mt-4 w-full py-2 bg-white text-blue-600 font-black text-[9px] uppercase tracking-widest shadow-lg hover:bg-slate-100 transition-all">Dispatch Node</button>
             </div>
+         </div>
          </div>
       </div>
    );

@@ -27,21 +27,41 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
     queryset = FieldVerification.objects.all()
     serializer_class = FieldVerificationSerializer
 
+    def create(self, request, *args, **kwargs):
+        alert_id = request.data.get('alert')
+        if alert_id:
+            try:
+                existing = FieldVerification.objects.get(alert_id=alert_id)
+                # Do a partial update of the existing record instead of creating a new one
+                serializer = self.get_serializer(existing, data=request.data, partial=True)
+                serializer.is_valid(raise_exception=True)
+                verification = serializer.save()
+                
+                # Custom logic for alert status update
+                alert = verification.alert
+                try:
+                    parcel_classification = alert.parcel.classification
+                except Exception:
+                    parcel_classification = ''
+
+                if parcel_classification == 'Roadside':
+                    alert.status = 'COLLECTOR_ACCEPTED'
+                    alert.resolution_notes = 'Auto-escalated: Roadside encroachment requires Collector review.'
+                else:
+                    alert.status = 'Resolved'
+                alert.save()
+                
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            except FieldVerification.DoesNotExist:
+                pass
+                
+        # If no existing record, fall back to standard create logic
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
-        # Use update_or_create to prevent UniqueConstraint crash on re-submission
-        alert_id = self.request.data.get('alert')
-        try:
-            existing = FieldVerification.objects.get(alert_id=alert_id)
-            # Update the existing record
-            for attr, value in serializer.validated_data.items():
-                setattr(existing, attr, value)
-            existing.save()
-            verification = existing
-        except FieldVerification.DoesNotExist:
-            verification = serializer.save()
+        verification = serializer.save()
         
-        # Mark alert as Resolved (title-case to match STATUS_CHOICES)
-        # For Roadside land, auto-escalate to Collector instead of resolving
         alert = verification.alert
         try:
             parcel_classification = alert.parcel.classification

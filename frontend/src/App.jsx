@@ -98,7 +98,7 @@ const MENU_STRUCTURE = {
       { type: 'header', label: 'INTELLIGENCE' },
       { id: 'health', icon: HeartPulse, label: 'System Health' },
       { id: 'ai-monitoring', icon: Cpu, label: 'AI Engine Status' },
-      { id: 'detection-logic', icon: Zap, label: 'Detection Logic' },
+      { id: 'detection-logic', icon: Zap, label: 'Satellite Timeline', badge: 'LIVE' },
       { id: 'reports', icon: BarChart3, label: 'Strategic Reports' },
       { type: 'header', label: 'SYSTEM' },
       { id: 'system-config', icon: Settings, label: 'Advanced Config' },
@@ -108,6 +108,7 @@ const MENU_STRUCTURE = {
       { type: 'header', label: 'STRATEGIC COMMAND' },
       { id: 'dashboard', icon: LayoutDashboard, label: 'Executive Hub' },
       { id: 'map', icon: Globe, label: 'District Tactical Hub' },
+      { id: 'detection-logic', icon: Zap, label: 'Satellite Timeline', badge: 'LIVE' },
       { id: 'analytics', icon: BarChart3, label: 'Operational Analytics' },
       { type: 'header', label: 'TACTICAL OPERATIONS' },
       { id: 'field-ops', icon: Monitor, label: 'Tactical Operations Hub' },
@@ -125,6 +126,7 @@ const MENU_STRUCTURE = {
       { type: 'header', label: 'TALUK COMMAND' },
       { id: 'dashboard', icon: LayoutDashboard, label: 'Taluk Intelligence' },
       { id: 'map', icon: Globe, label: 'GIS Zoning Matrix' },
+      { id: 'detection-logic', icon: Zap, label: 'Satellite Timeline', badge: 'LIVE' },
       { type: 'header', label: 'TACTICAL OPERATIONS' },
       { id: 'field-monitor', icon: Monitor, label: 'Village Ops Monitor' },
       { id: 'alerts', icon: AlertTriangle, label: 'Tactical Queue' },
@@ -722,7 +724,7 @@ const CameraView = ({ alerts = [] }) => {
             {/* Strategic Intelligence Sidebar */}
             <div className="col-span-12 lg:col-span-4">
                {selectedEvidence ? (
-                  <div className="bg-white rounded-none p-6 shadow-2xl border border-slate-100 sticky top-6 animate-in slide-in-from-right-10 duration-700">
+                  <div className="bg-white rounded-none p-6 shadow-2xl border border-slate-100 sticky top-6 animate-in slide-in-from-right-10 duration-700 max-h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar">
                      <div className="flex justify-between items-center mb-8">
                         <div className="flex items-center gap-3">
                            <div className="w-10 h-10 bg-slate-50 rounded-none flex items-center justify-center text-blue-600 border border-slate-100"><Layers size={20} /></div>
@@ -745,10 +747,11 @@ const CameraView = ({ alerts = [] }) => {
                         </div>
                         <div className="grid grid-cols-1 gap-3">
                            {[
+                              { l: 'Administrative Zone', v: `${selectedEvidence.village || 'N/A'} Village, ${selectedEvidence.taluk || 'N/A'} Taluk`, i: MapPin },
                               { l: 'Survey Coordinate', v: `Section ${selectedEvidence.parcel_details}`, i: Target },
-                              { l: 'Geo-spatial Lock', v: `${selectedEvidence.position[0].toFixed(4)}° N, ${selectedEvidence.position[1].toFixed(4)}° E`, i: Navigation },
+                              { l: 'Geo-spatial Lock', v: `${selectedEvidence.position[0].toFixed(6)}° N, ${selectedEvidence.position[1].toFixed(6)}° E`, i: Navigation },
+                              { l: 'Mission Status', v: selectedEvidence.status, i: AlertCircle },
                               { l: 'AI Match Accuracy', v: `${(selectedEvidence.confidence_score * 100).toFixed(1)}% Confidence`, i: Cpu },
-                              { l: 'Security Hash', v: 'TN-GEOM-882X-ALPHA', i: Lock }
                            ].map((item, i) => (
                               <div key={i} className="flex items-center gap-4 p-6 bg-slate-50 rounded-none border border-slate-100 hover:border-blue-100 transition-all group">
                                  <div className="p-2 bg-white rounded-none text-slate-400 group-hover:text-blue-600 transition-all shadow-sm"><item.i size={14} /></div>
@@ -759,6 +762,26 @@ const CameraView = ({ alerts = [] }) => {
                               </div>
                            ))}
                         </div>
+
+                        {selectedEvidence.verification && (
+                           <div className="p-6 bg-green-50/50 rounded-none border border-green-100 space-y-4 shadow-sm">
+                              <p className="text-[8px] font-black uppercase tracking-widest text-green-700">Field Evidence Submitted</p>
+                              <div className="grid grid-cols-2 gap-4">
+                                 <div>
+                                    <p className="text-[6px] text-slate-400 uppercase font-bold mb-1">Field Officer</p>
+                                    <p className="text-[10px] font-black text-slate-900">{selectedEvidence.verification.officer_name}</p>
+                                 </div>
+                                 <div>
+                                    <p className="text-[6px] text-slate-400 uppercase font-bold mb-1">Time of Submission</p>
+                                    <p className="text-[10px] font-black text-slate-900">{new Date(selectedEvidence.verification.verified_at).toLocaleString()}</p>
+                                 </div>
+                              </div>
+                              <div className="pt-2">
+                                 <p className="text-[6px] text-slate-400 uppercase font-bold mb-1">Officer Notes</p>
+                                 <p className="text-[9px] leading-relaxed text-slate-700 italic">"{selectedEvidence.verification.remarks}"</p>
+                              </div>
+                           </div>
+                        )}
 
                         {/* Tactical Analysis Suite */}
                         <div className="p-6 bg-slate-900 rounded-none text-white space-y-4 shadow-xl border border-white/5">
@@ -786,7 +809,62 @@ const CameraView = ({ alerts = [] }) => {
 
                         <div className="pt-6 border-t border-slate-50 flex gap-3">
                            <button className="flex-1 py-4 bg-blue-600 text-white rounded-none font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-blue-700 transition-all">Submit Evidence</button>
-                           <button className="p-4 bg-slate-100 text-slate-600 rounded-none hover:bg-slate-200 transition-all"><Download size={18} /></button>
+                           <button 
+                              onClick={() => {
+                                 const pdf = new jsPDF('p', 'mm', 'a4');
+                                 pdf.setFont("helvetica", "bold");
+                                 pdf.setFontSize(22);
+                                 pdf.text("GOVERNMENT OF TAMIL NADU", 105, 20, { align: "center" });
+                                 pdf.setFontSize(14);
+                                 pdf.text("Department of Revenue and Disaster Management", 105, 28, { align: "center" });
+                                 
+                                 pdf.setLineWidth(0.5);
+                                 pdf.line(20, 35, 190, 35);
+                                 
+                                 pdf.setFontSize(16);
+                                 pdf.text("FIELD INTELLIGENCE DOSSIER", 105, 45, { align: "center" });
+                                 
+                                 pdf.setFont("helvetica", "normal");
+                                 pdf.setFontSize(10);
+                                 pdf.text(`Dossier ID: TN-GEOM-${selectedEvidence.id.slice(0, 8).toUpperCase()}`, 20, 60);
+                                 pdf.text(`Date Generated: ${new Date().toLocaleString('en-GB')}`, 20, 67);
+                                 pdf.text(`Classification: CONFIDENTIAL`, 20, 74);
+                                 
+                                 pdf.setFont("helvetica", "bold");
+                                 pdf.text("PART I: THREAT INTELLIGENCE", 20, 90);
+                                 pdf.setFont("helvetica", "normal");
+                                 pdf.text(`Threat Classification : ${selectedEvidence.alert_type}`, 25, 100);
+                                 pdf.text(`Detection Confidence: ${(selectedEvidence.confidence_score * 100).toFixed(2)}%`, 25, 107);
+                                 pdf.text(`Current Status      : ${selectedEvidence.status}`, 25, 114);
+                                 
+                                 pdf.setFont("helvetica", "bold");
+                                 pdf.text("PART II: GEOSPATIAL DATA", 20, 130);
+                                 pdf.setFont("helvetica", "normal");
+                                 pdf.text(`District      : Salem`, 25, 140);
+                                 pdf.text(`Taluk         : ${selectedEvidence.taluk || 'Unknown'}`, 25, 147);
+                                 pdf.text(`Village       : ${selectedEvidence.village || 'Unknown'}`, 25, 154);
+                                 pdf.text(`Survey Number : ${selectedEvidence.parcel_details || 'Unsurveyed Land'}`, 25, 161);
+                                 pdf.text(`Coordinates   : ${selectedEvidence.position?.[0]?.toFixed(6) || 'N/A'} N, ${selectedEvidence.position?.[1]?.toFixed(6) || 'N/A'} E`, 25, 168);
+
+                                 if (selectedEvidence.verification) {
+                                    pdf.setFont("helvetica", "bold");
+                                    pdf.text("PART III: FIELD VERIFICATION", 20, 185);
+                                    pdf.setFont("helvetica", "normal");
+                                    pdf.text(`Officer Name: ${selectedEvidence.verification.officer_name}`, 25, 195);
+                                    pdf.text(`Verified On: ${new Date(selectedEvidence.verification.verified_at).toLocaleString()}`, 25, 202);
+                                    pdf.text(`Remarks: ${selectedEvidence.verification.remarks}`, 25, 209);
+                                 }
+                                 
+                                 pdf.setFont("helvetica", "italic");
+                                 pdf.setFontSize(8);
+                                 pdf.text("This is a system-generated document. Unauthorized distribution is prohibited.", 105, 280, { align: "center" });
+                                 
+                                 pdf.save(`Intelligence_Record_TN_${selectedEvidence.id.slice(0, 8)}.pdf`);
+                              }}
+                              className="p-4 bg-slate-100 text-slate-600 rounded-none hover:bg-slate-200 transition-all"
+                           >
+                              <Download size={18} />
+                           </button>
                         </div>
                      </div>
                 </div>
@@ -808,6 +886,13 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
    const [selectedAlert, setSelectedAlert] = useState(null);
    const [filterStatus, setFilterStatus] = useState('ACTIVE');
    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+   useEffect(() => {
+      if (selectedAlert) {
+         const updated = alerts.find(a => String(a.id) === String(selectedAlert.id));
+         if (updated) setSelectedAlert(updated);
+      }
+   }, [alerts]);
 
    const activeDetections = alerts.filter(a => a.status !== 'RESOLVED' && a.status !== 'Resolved');
 
@@ -862,13 +947,7 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                      selectedPosition={selectedPosition} 
                   />
                   
-                  {/* Floating Action Overlay */}
-                  <div className="absolute bottom-6 left-6 right-6 z-[1000] flex justify-between items-end">
-                     <div className="p-4 bg-white/95 backdrop-blur-md rounded-none border border-slate-200 shadow-2xl min-w-[200px]">
-                        <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center gap-2"><MapPin size={10} className="text-blue-600" /> View: {selectedDistrict}</p>
-                        <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-none bg-red-500 animate-pulse"></div><span className="text-[8px] font-bold text-slate-500 uppercase">Detection Hotspot</span></div>
-                     </div>
-                  </div>
+
                </div>
             </div>
 
@@ -1069,7 +1148,7 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                            <div className="border border-slate-300 break-inside-avoid">
                               <div className="bg-slate-100 border-b border-slate-300 px-4 py-2 flex justify-between items-center">
                                  <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Part II: Automated AI Diagnostics</h3>
-                                 <span className="text-[8px] font-black text-blue-600 bg-blue-100 px-2 py-0.5 rounded-none uppercase">GeoCommand v4.2</span>
+                                 <span className="text-[8px] font-black text-blue-600 bg-blue-100 px-2 py-0.5 rounded-none uppercase">GEOMMAND v4.2</span>
                               </div>
                               <div className="grid grid-cols-3">
                                  <div className="p-3 border-r border-slate-200">
@@ -1240,7 +1319,7 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                         
                         {/* Print Footer */}
                         <div className="mt-8 pt-4 border-t border-slate-300 text-center flex justify-between items-center">
-                           <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em]">GeoCommand AI Engine • Highly Confidential</p>
+                           <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em]">GEOMMAND AI Engine • Highly Confidential</p>
                            <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em]">Page 1 of 1</p>
                         </div>
                      </div>
@@ -1665,11 +1744,7 @@ const VillageExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus }) =
                <div className="w-2 h-2 bg-green-500 animate-pulse"></div>
                <p className="text-[10px] font-black uppercase text-slate-800 tracking-widest">Tactical Village Overview • Suramangalam Grid</p>
             </div>
-            <div className="absolute bottom-6 right-6 z-[1000] p-4 bg-slate-900/90 backdrop-blur-md text-white border border-white/10 shadow-2xl space-y-2 min-w-[160px] opacity-0 group-hover:opacity-100 transition-all duration-500">
-               <p className="text-[9px] font-black uppercase tracking-widest border-b border-white/10 pb-2 mb-2">Legend</p>
-               <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 bg-blue-500"></div><span className="text-[8px] font-bold uppercase">Govt Land</span></div>
-               <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 bg-red-500"></div><span className="text-[8px] font-bold uppercase">Encroached</span></div>
-            </div>
+
             <MapView parcels={parcels} alerts={alerts} onMapClick={() => {}} />
          </div>
          <OfficerAssignmentModal isOpen={assignmentModal.open} alertId={assignmentModal.alertId} type="FIELD_OFFICER" onClose={() => setAssignmentModal({ open: false, alertId: null })} onAssign={confirmAssignment} />
@@ -1705,13 +1780,7 @@ const VillageMapHubView = ({ parcels = [], alerts = [] }) => {
                </div>
                <MapView parcels={parcels} alerts={alerts} onMapClick={() => {}} />
                
-               {/* Village Specific Legend Overlay */}
-               <div className="absolute bottom-6 right-6 z-[1000] p-4 bg-slate-900/90 backdrop-blur-md text-white border border-white/10 shadow-2xl space-y-3 min-w-[200px]">
-                  <p className="text-[10px] font-black uppercase tracking-widest border-b border-white/10 pb-2">Village Legend</p>
-                  <div className="flex items-center gap-3"><div className="w-3 h-3 bg-blue-500"></div><span className="text-[9px] font-bold uppercase">Public Water Tank Area</span></div>
-                  <div className="flex items-center gap-3"><div className="w-3 h-3 bg-red-500"></div><span className="text-[9px] font-bold uppercase">Encroachment Cluster A</span></div>
-                  <div className="flex items-center gap-3"><div className="w-3 h-3 bg-green-500"></div><span className="text-[9px] font-bold uppercase">Proposed Park Site</span></div>
-               </div>
+
             </div>
 
             <div className="col-span-12 lg:col-span-3 space-y-6">
@@ -3350,7 +3419,7 @@ const SettingsView = () => {
                {activeTab === 'general' && (
                   <div className="space-y-6">
                      <div className="grid grid-cols-2 gap-8">
-                        <div><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Platform Name</label><input type="text" defaultValue="GeoCommand District Node" className="w-full bg-slate-50 border border-slate-200 rounded-none px-4 py-3 text-xs font-bold text-slate-800 focus:border-blue-500 outline-none" /></div>
+                        <div><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Platform Name</label><input type="text" defaultValue="GEOMMAND District Node" className="w-full bg-slate-50 border border-slate-200 rounded-none px-4 py-3 text-xs font-bold text-slate-800 focus:border-blue-500 outline-none" /></div>
                         <div><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">District ID</label><input type="text" defaultValue="SLM-781" className="w-full bg-slate-50 border border-slate-200 rounded-none px-4 py-3 text-xs font-bold text-slate-800 focus:border-blue-500 outline-none" /></div>
                      </div>
                      <div><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Operational Timezone</label><select className="w-full bg-slate-50 border border-slate-200 rounded-none px-4 py-3 text-xs font-bold text-slate-800 focus:border-blue-500 outline-none"><option>IST (UTC +5:30)</option><option>UTC</option></select></div>
@@ -3529,14 +3598,7 @@ const DistrictMapView = React.memo(({ parcels, alerts, onExport, onMapClick, sel
                   </div>
                   <MapView parcels={parcels} alerts={alerts} onParcelClick={() => { }} onMapClick={onMapClick} selectedPosition={selectedPosition} />
                   
-                  {/* Classification Legend */}
-                  <div className="absolute bottom-6 left-6 z-[1000] p-4 bg-white/95 backdrop-blur-md rounded-none border border-white/20 shadow-2xl space-y-2.5 min-w-[180px]">
-                     <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2 flex items-center gap-2"><MapPin size={10} className="text-blue-600" /> Tactical Legend</p>
-                     <div className="flex items-center gap-3"><div className="w-3 h-3 rounded-none bg-blue-600"></div><span className="text-[9px] font-bold text-slate-600 uppercase">Government Poramboke</span></div>
-                     <div className="flex items-center gap-3"><div className="w-3 h-3 rounded-none bg-green-600"></div><span className="text-[9px] font-bold text-slate-600 uppercase">Reserve Forest</span></div>
-                     <div className="flex items-center gap-3"><div className="w-3 h-3 rounded-none bg-amber-500"></div><span className="text-[9px] font-bold text-slate-600 uppercase">Waqf / Religious Board</span></div>
-                     <div className="flex items-center gap-3"><div className="w-3 h-3 rounded-none bg-purple-600"></div><span className="text-[9px] font-bold text-slate-600 uppercase">Water Bodies / HR&CE</span></div>
-                  </div>
+
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3681,23 +3743,40 @@ const DashboardView = React.memo(({ parcels, alerts, setAlerts, onExport, onMapC
 
    return (
       <div className="space-y-6 animate-in fade-in duration-700 pb-10">
-         {/* TACTICAL COMMAND GUIDE */}
-         <div className="bg-blue-600 p-4 border-l-4 border-slate-900 shadow-md animate-in slide-in-from-top duration-500">
-            <div className="flex items-center gap-4">
-               <div className="bg-white p-2 text-blue-600 shadow-inner"><Monitor size={20} /></div>
-               <div className="flex-1">
-                  <h4 className="text-white font-black text-xs uppercase tracking-widest">Tactical Command Guide</h4>
-                  <div className="flex items-center gap-2 mt-1.5">
-                     <span className="text-blue-100 text-[10px] font-bold uppercase tracking-tight">Direct Access:</span>
-                     <button onClick={() => onTabChange('detection-logic')} className="bg-slate-900 hover:bg-slate-800 text-white px-2 py-0.5 text-[9px] font-black uppercase tracking-widest transition-all">AI Logic Hub</button>
-                     <button onClick={() => onTabChange('field-monitor')} className="bg-slate-900 hover:bg-slate-800 text-white px-2 py-0.5 text-[9px] font-black uppercase tracking-widest transition-all">Field Ops Monitor</button>
+         {/* COMMAND CENTER STATUS BAR */}
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-slate-900 text-white px-5 py-3 flex items-center border-l-4 border-blue-600 shadow-lg">
+               <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 bg-white/5 flex items-center justify-center text-blue-400 shrink-0"><Globe size={18} /></div>
+                  <div>
+                     <p className="text-[7px] font-black text-blue-400 uppercase tracking-[0.2em]">Surveillance Range</p>
+                     <p className="text-base font-black tracking-tighter italic leading-none mt-0.5">14,242.8 <span className="text-[8px] text-slate-400 not-italic uppercase ml-1">Ha</span></p>
                   </div>
                </div>
-               <div className="hidden md:block">
-                  <Badge variant="success" className="bg-white text-blue-600 border-none font-black">SYSTEM_ONLINE</Badge>
+            </div>
+            <div className="bg-white border border-slate-200 px-5 py-3 flex items-center shadow-sm">
+               <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 bg-slate-50 flex items-center justify-center text-slate-400 shrink-0"><RefreshCcw size={18} /></div>
+                  <div>
+                     <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em]">Sentinel-2 Uplink</p>
+                     <p className="text-base font-black text-slate-900 tracking-tighter flex items-center gap-2 leading-none mt-0.5">
+                        <span className="w-2 h-2 bg-green-500 rounded-none animate-pulse"></span>
+                        LIVE_FEED
+                     </p>
+                  </div>
+               </div>
+            </div>
+            <div className="bg-blue-600 text-white px-5 py-3 flex items-center shadow-xl">
+               <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 bg-white/10 flex items-center justify-center text-white shrink-0"><ShieldCheck size={18} /></div>
+                  <div>
+                     <p className="text-[7px] font-black text-blue-100 uppercase tracking-[0.2em]">Protection Index</p>
+                     <p className="text-base font-black tracking-tighter leading-none mt-0.5">98.4% <span className="text-[8px] text-blue-200 uppercase font-bold ml-1 tracking-widest">Secured</span></p>
+                  </div>
                </div>
             </div>
          </div>
+
 
          {gisAttributes && (
             <div className="bg-white border-2 border-blue-600 p-6 rounded-none shadow-xl animate-in slide-in-from-top-4 duration-500">
@@ -3792,71 +3871,55 @@ const DashboardView = React.memo(({ parcels, alerts, setAlerts, onExport, onMapC
 
                   <MapView parcels={parcels} alerts={alerts} onParcelClick={() => { }} onMapClick={onMapClick} selectedPosition={selectedPosition} />
 
-                  <div className="absolute bottom-6 left-6 z-[1000] p-4 bg-white/90 backdrop-blur-md rounded-none border border-white/20 shadow-2xl space-y-2.5 min-w-[160px]">
-                     <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest mb-2 border-b border-slate-200 pb-2 flex items-center gap-2"><MapPin size={10} className="text-blue-600" /> Tactical Legend</p>
-                     <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-none bg-blue-600"></div><span className="text-[8px] font-bold text-slate-600 uppercase">Government Land</span></div>
-                     <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-none bg-red-600 animate-pulse"></div><span className="text-[8px] font-bold text-slate-600 uppercase">Critical Incursion</span></div>
-                     <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-none bg-orange-500"></div><span className="text-[8px] font-bold text-slate-600 uppercase">Excavation / Construction</span></div>
-                     <div className="flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-none bg-violet-600"></div><span className="text-[8px] font-bold text-slate-600 uppercase">Forest / Env Risk</span></div>
-                  </div>
+
                </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-white p-6 rounded-none border border-slate-200 shadow-sm">
-                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2"><Layers size={14} className="text-blue-600" /> Layer Matrix</h3>
-                     <div className="space-y-3">
-                        {['Satellite Feed', 'Cadastral Overlay', 'Water Resource'].map(l => (
-                           <div key={l} className="flex justify-between items-center p-3 bg-slate-50 rounded-none border border-slate-100">
-                              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tight">{l}</span>
-                              <div className="w-10 h-5 bg-blue-600 rounded-none relative cursor-pointer shadow-inner"><div className="absolute top-1 right-1 w-3 h-3 bg-white rounded-none transition-all"></div></div>
-                           </div>
-                        ))}
-                     </div>
-                  </div>
-                  <div className="bg-slate-900 p-6 rounded-none text-white shadow-xl relative overflow-hidden group border border-white/5">
-                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-all duration-700 rotate-12"><Camera size={100} /></div>
-                     <h3 className="text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2 text-blue-400"><Monitor size={14} /> Drone Telemetry</h3>
-                     <div className="space-y-4">
-                        <div className="flex justify-between items-center bg-white/5 p-3 rounded-none border border-white/5">
-                           <span className="text-[9px] font-bold text-slate-400 uppercase">Live Stream</span>
-                           <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-none bg-red-500 animate-pulse"></div>
-                              <span className="text-[9px] font-black text-red-500">REC</span>
-                           </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                           <div className="bg-white/5 p-3 rounded-none border border-white/5">
-                               <p className="text-[8px] font-bold text-slate-500 uppercase mb-1">Altitude</p>
-                               <p className="text-sm font-black text-blue-400">124m</p>
-                           </div>
-                           <div className="bg-white/5 p-3 rounded-none border border-white/5">
-                               <p className="text-[8px] font-bold text-slate-500 uppercase mb-1">Signal</p>
-                               <p className="text-sm font-black text-green-400">92%</p>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-                  <div className="bg-blue-600 p-6 rounded-none text-white shadow-xl shadow-blue-100 relative overflow-hidden group">
-                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-all duration-700"><Globe size={100} /></div>
-                     <h3 className="text-xs font-black uppercase tracking-widest mb-2">District Export</h3>
-                     <p className="text-[9px] text-blue-100 font-bold uppercase mb-6 leading-relaxed">Download latest GIS spatial audit and encroachment reports.</p>
-                     <button onClick={onExport} className="w-full py-3 bg-white text-blue-600 rounded-none text-[9px] font-black uppercase tracking-widest hover:bg-blue-50 transition-all active:scale-[0.98]">Authorize Export</button>
-                  </div>
-               </div>
+
             </div>
 
             {/* Strategic Intelligence Hub */}
             <div className="col-span-12 lg:col-span-3 space-y-6 flex flex-col h-full sticky top-6">
-               <div className="bg-slate-900 rounded-none p-6 text-white shadow-2xl relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-none -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-blue-600/40 transition-all"></div>
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-2"><TrendingUp size={16} className="text-blue-400" /> District Equity at Risk</h3>
-                  <div className="space-y-1">
-                     <h2 className="text-4xl font-black tracking-tighter">₹842.40 Cr</h2>
-                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Estimated Value of Encroached Land</p>
+               {/* GOVERNMENT ASSET SUMMARY */}
+               <div className="bg-white border border-slate-200 p-4 rounded-none shadow-sm">
+                  <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2"><Landmark size={12} className="text-blue-600" /> Govt Asset Registry</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                     <div className="p-3 bg-slate-50 border border-slate-100">
+                        <p className="text-[7px] font-black text-slate-400 uppercase mb-1">Total Parcels</p>
+                        <p className="text-lg font-black text-slate-900">12,482</p>
+                     </div>
+                     <div className="p-3 bg-slate-50 border border-slate-100">
+                        <p className="text-[7px] font-black text-slate-400 uppercase mb-1">Verified Clear</p>
+                        <p className="text-lg font-black text-green-600">94.2%</p>
+                     </div>
                   </div>
-                  <div className="mt-8 pt-6 border-t border-white/10 grid grid-cols-2 gap-4">
-                     <div><p className="text-[8px] font-bold text-slate-500 uppercase mb-1">Recovery Rate</p><p className="text-sm font-black text-green-400">+12.4%</p></div>
-                     <div><p className="text-[8px] font-bold text-slate-500 uppercase mb-1">Audit Score</p><p className="text-sm font-black text-blue-400">94/100</p></div>
+                  <div className="mt-3 space-y-2">
+                     {[
+                        { label: 'Revenue Land', count: 8142, color: 'bg-blue-600' },
+                        { label: 'Forest Reserve', count: 2104, color: 'bg-emerald-600' },
+                        { label: 'Water Bodies', count: 1845, color: 'bg-cyan-500' },
+                        { label: 'Common Poramboke', count: 391, color: 'bg-amber-500' }
+                     ].map((asset, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                              <div className={`w-1.5 h-1.5 ${asset.color}`}></div>
+                              <span className="text-[9px] font-bold text-slate-600 uppercase">{asset.label}</span>
+                           </div>
+                           <span className="text-[10px] font-black text-slate-900">{asset.count}</span>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+
+               <div className="bg-slate-900 rounded-none p-5 text-white shadow-2xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-600/20 rounded-none -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-blue-600/40 transition-all"></div>
+                  <h3 className="text-[9px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-blue-400"><TrendingUp size={14} /> Equity at Risk</h3>
+                  <div className="space-y-1">
+                     <h2 className="text-3xl font-black tracking-tighter italic leading-none">₹842.4 Cr</h2>
+                     <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-tight mt-1">Est. Land Value Impacted</p>
+                  </div>
+                  <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-2 gap-3">
+                     <div><p className="text-[7px] font-bold text-slate-500 uppercase">Recovery</p><p className="text-xs font-black text-green-400">+12.4%</p></div>
+                     <div><p className="text-[7px] font-bold text-slate-500 uppercase">Audit</p><p className="text-xs font-black text-blue-400">94/100</p></div>
                   </div>
                </div>
 
@@ -3901,21 +3964,7 @@ const DashboardView = React.memo(({ parcels, alerts, setAlerts, onExport, onMapC
                   </div>
                </div>
 
-               <div className="bg-white p-6 rounded-none border border-slate-200 shadow-sm">
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2"><BarChart3 size={14} className="text-indigo-600" /> Taluk Saturation</h3>
-                  <div className="space-y-4">
-                     {[
-                        { n: 'Salem West', p: 88, c: 'bg-red-500' },
-                        { n: 'Mettur', p: 42, c: 'bg-orange-500' },
-                        { n: 'Omalur', p: 15, c: 'bg-green-500' }
-                     ].map(t => (
-                        <div key={t.n}>
-                           <div className="flex justify-between text-[9px] font-bold uppercase mb-2"><span>{t.n}</span><span className={t.p > 70 ? 'text-red-600' : 'text-slate-400'}>{t.p}% Risk</span></div>
-                           <ProgressBar progress={t.p} color={t.c} />
-                        </div>
-                     ))}
-                  </div>
-               </div>
+
             </div>
          </div>
 
@@ -3932,15 +3981,7 @@ const DashboardView = React.memo(({ parcels, alerts, setAlerts, onExport, onMapC
             }} 
          />
 
-         <div className="bg-slate-900 rounded-none p-6 text-white text-center shadow-xl shadow-slate-200 mt-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-none blur-3xl group-hover:bg-blue-600/20 transition-all"></div>
-            <div className="w-12 h-12 bg-blue-600 rounded-none flex items-center justify-center mx-auto mb-4 relative z-10"><Monitor size={24} /></div>
-            <h5 className="text-[11px] font-black uppercase tracking-widest mb-2 relative z-10">Command Briefing</h5>
-            <p className="text-[9px] text-slate-400 font-bold uppercase mb-6 leading-relaxed relative z-10">District-wide detection efficiency is up by 12% following the v4.2 update.</p>
-            <button onClick={() => onExport()} className="w-full py-3 bg-white text-slate-900 border border-white/10 rounded-none text-[9px] font-black uppercase tracking-widest transition-all hover:bg-slate-100 relative z-10 flex items-center justify-center gap-2">
-               <Download size={14} /> Download Latest Audit
-            </button>
-         </div>
+
       </div>
    );
 });
@@ -3997,6 +4038,148 @@ const FormView = React.memo(({ title, icon: Icon, fields, onBack }) => {
    );
 });
 
+// --- LIVE ALERT FEED ---
+const LiveAlertFeed = ({ alerts = [] }) => {
+   const [feed, setFeed] = useState(() => {
+      const syntheticEvents = [
+         { id: 'f1', type: 'AI_DETECT', msg: 'New structure detected · Survey 142/A · 97.2% confidence', time: 'Just now', color: 'text-red-500', dot: 'bg-red-500' },
+         { id: 'f2', type: 'FIELD_SYNC', msg: 'Inspector Rajesh submitted geotagged evidence · Salem West', time: '2m ago', color: 'text-blue-500', dot: 'bg-blue-500' },
+         { id: 'f3', type: 'APPROVE', msg: 'Tahsildar approved registry correction · Survey 88/C', time: '5m ago', color: 'text-green-500', dot: 'bg-green-500' },
+         { id: 'f4', type: 'SAT_PASS', msg: 'Sentinel-2 scan complete · 14,242 Ha processed', time: '8m ago', color: 'text-indigo-500', dot: 'bg-indigo-500' },
+         { id: 'f5', type: 'ALERT', msg: 'Boundary violation flagged · Mettur Node · 89.4% conf', time: '11m ago', color: 'text-orange-500', dot: 'bg-orange-500' },
+      ];
+      return [...alerts.slice(0, 3).map((a, i) => ({
+         id: `live-${a.id}`,
+         type: 'AI_DETECT',
+         msg: `${a.alert_type} · Survey ${a.parcel_details} · ${(a.confidence_score * 100).toFixed(0)}% conf`,
+         time: 'Live',
+         color: 'text-red-500',
+         dot: 'bg-red-500 animate-pulse'
+      })), ...syntheticEvents];
+   });
+
+   useEffect(() => {
+      const newEvents = [
+         { type: 'AI_DETECT', msg: 'Change vector detected · Attur Sector · 91.8% conf', color: 'text-red-500', dot: 'bg-red-500' },
+         { type: 'FIELD_SYNC', msg: 'VAO Meyyanur uploaded survey report · 3 photos attached', color: 'text-blue-500', dot: 'bg-blue-500' },
+         { type: 'APPROVE', msg: 'District Collector approved eviction order · #EO-441', color: 'text-green-500', dot: 'bg-green-500' },
+         { type: 'SAT_PASS', msg: 'Cartosat-3 pass initiated · High-res imaging active', color: 'text-indigo-500', dot: 'bg-indigo-500' },
+         { type: 'RESOLVE', msg: 'Case #882 marked resolved · Omalur North cleared', color: 'text-emerald-500', dot: 'bg-emerald-500' },
+      ];
+      let idx = 0;
+      const interval = setInterval(() => {
+         const ev = newEvents[idx % newEvents.length];
+         setFeed(prev => [{ ...ev, id: `auto-${Date.now()}`, time: 'Just now' }, ...prev.slice(0, 14)]);
+         idx++;
+      }, 6000);
+      return () => clearInterval(interval);
+   }, []);
+
+   return (
+      <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
+         <div className="px-6 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+            <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+               Live Intelligence Feed
+            </h3>
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Auto-Sync · 6s</span>
+         </div>
+         <div className="divide-y divide-slate-50 max-h-64 overflow-y-auto custom-scrollbar">
+            {feed.map((ev, i) => (
+               <div key={ev.id} className={`flex items-start gap-3 px-5 py-3 transition-all ${i === 0 ? 'bg-blue-50/50 animate-in slide-in-from-top-2 duration-500' : 'bg-white'}`}>
+                  <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${ev.dot}`}></div>
+                  <div className="flex-1 min-w-0">
+                     <p className={`text-[9px] font-black uppercase tracking-tight ${ev.color} mb-0.5`}>{ev.type.replace('_', ' ')}</p>
+                     <p className="text-[9px] font-bold text-slate-700 leading-tight truncate">{ev.msg}</p>
+                  </div>
+                  <span className="text-[8px] font-bold text-slate-300 uppercase shrink-0">{ev.time}</span>
+               </div>
+            ))}
+         </div>
+      </div>
+   );
+};
+
+// --- NOTIFICATION CENTER PANEL ---
+const NotificationCenterPanel = ({ isOpen, onClose, alerts, registryRequests, onNavigate }) => {
+   const [readIds, setReadIds] = useState(new Set());
+
+   const notifications = useMemo(() => {
+      const notifs = [];
+      alerts.filter(a => a.status === 'NEW' || a.status === 'Pending').slice(0, 4).forEach(a => notifs.push({
+         id: `alert-${a.id}`, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50',
+         title: 'AI Threat Detected', message: `${a.alert_type} — Survey ${a.parcel_details} (${a.taluk})`,
+         time: 'Live', action: 'alerts'
+      }));
+      registryRequests.filter(r => r.status === 'PENDING_TAHSILDAR').slice(0, 3).forEach(r => notifs.push({
+         id: `reg-${r.id}`, icon: CheckSquare, color: 'text-blue-600', bg: 'bg-blue-50',
+         title: 'Registry Approval Pending', message: `${r.type} — ${r.survey} · ${r.taluk}`,
+         time: r.timestamp, action: 'approvals'
+      }));
+      alerts.filter(a => a.verification).slice(0, 2).forEach(a => notifs.push({
+         id: `verify-${a.id}`, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50',
+         title: 'Field Verification Submitted', message: `Evidence by ${a.verification?.officer_name} — ${a.parcel_details}`,
+         time: '5m ago', action: 'camera'
+      }));
+      notifs.push(
+         { id: 'sys-sat', icon: Globe, color: 'text-indigo-600', bg: 'bg-indigo-50', title: 'Satellite Pass Complete', message: 'Sentinel-2 scanned 14,242 Ha. 12 new vectors queued for review.', time: '12m ago', action: 'ai-monitoring' },
+         { id: 'sys-sec', icon: Shield, color: 'text-slate-600', bg: 'bg-slate-50', title: 'Security Audit Clear', message: '1,442 ingress threats blocked. All nodes operating normally.', time: '1h ago', action: 'health' },
+         { id: 'sys-ai', icon: Cpu, color: 'text-purple-600', bg: 'bg-purple-50', title: 'AI Engine v4.2 Active', message: 'EncroachNet model running at 98.4% precision. Inference: 1,442/min.', time: '2h ago', action: 'detection-logic' }
+      );
+      return notifs;
+   }, [alerts, registryRequests]);
+
+   const unreadCount = notifications.filter(n => !readIds.has(n.id)).length;
+
+   if (!isOpen) return null;
+   return (
+      <div className="fixed inset-0 z-[4500] flex justify-end">
+         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" onClick={onClose} />
+         <div className="relative bg-white w-full max-w-sm h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
+            <div className="px-5 py-4 border-b border-slate-200 bg-slate-900 flex justify-between items-center">
+               <div className="flex items-center gap-3">
+                  <div className="bg-blue-600 p-2 text-white"><Bell size={16} /></div>
+                  <div>
+                     <h2 className="text-[10px] font-black text-white uppercase tracking-widest">Command Alerts</h2>
+                     <p className="text-[8px] font-bold text-blue-400 uppercase tracking-widest mt-0.5">{unreadCount} Unread · LIVE</p>
+                  </div>
+               </div>
+               <button onClick={onClose} className="p-2 text-slate-400 hover:text-red-400 transition-all"><X size={16} /></button>
+            </div>
+            <div className="px-5 py-2 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+               <span className="text-[8px] font-bold text-slate-400 uppercase">{notifications.length} Total</span>
+               <button onClick={() => setReadIds(new Set(notifications.map(n => n.id)))} className="text-[8px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-all">Mark All Read</button>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-slate-50">
+               {notifications.map((notif) => {
+                  const isRead = readIds.has(notif.id);
+                  return (
+                     <button key={notif.id}
+                        onClick={() => { setReadIds(prev => new Set([...prev, notif.id])); onNavigate(notif.action); onClose(); }}
+                        className={`w-full px-5 py-4 flex items-start gap-3 hover:bg-slate-50 transition-all text-left group ${isRead ? 'opacity-50' : ''}`}
+                     >
+                        <div className={`p-2 rounded-none ${notif.bg} ${notif.color} shrink-0 mt-0.5`}><notif.icon size={13} /></div>
+                        <div className="flex-1 min-w-0">
+                           <div className="flex justify-between items-center mb-0.5">
+                              <p className="text-[9px] font-black text-slate-900 uppercase tracking-tight">{notif.title}</p>
+                              {!isRead && <div className="w-1.5 h-1.5 bg-blue-600 rounded-full shrink-0"></div>}
+                           </div>
+                           <p className="text-[9px] text-slate-500 font-bold leading-relaxed">{notif.message}</p>
+                           <p className="text-[8px] text-slate-300 font-bold uppercase mt-1">{notif.time}</p>
+                        </div>
+                        <ChevronRight size={11} className="text-slate-300 group-hover:text-blue-600 shrink-0 mt-1" />
+                     </button>
+                  );
+               })}
+            </div>
+            <div className="p-4 bg-slate-900 border-t border-white/5">
+               <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">GEOMMAND · AES-256 Encrypted Channel</p>
+            </div>
+         </div>
+      </div>
+   );
+};
+
 // --- MAIN APPLICATION ---
 
 export default function App() {
@@ -4007,7 +4190,36 @@ export default function App() {
    const [loginCat, setLoginCat] = useState('Core');
    const [currentTime, setCurrentTime] = useState(new Date());
    const [lang, setLang] = useState('EN');
+   const t = (en, ta) => lang === 'EN' ? en : (ta || en);
+
+   // --- LIVE INTELLIGENCE FEED SIMULATION ---
+   useEffect(() => {
+      if (!user) return;
+      const feedInterval = setInterval(() => {
+         const randomType = ['CONSTRUCTION', 'FENCING', 'AGRICULTURAL', 'COMMERCIAL'][Math.floor(Math.random() * 4)];
+         const randomTaluk = TN_TALUKS['Salem'][Math.floor(Math.random() * TN_TALUKS['Salem'].length)];
+         const newAlert = {
+            id: `LIVE-${Math.floor(1000 + Math.random() * 9000)}`,
+            alert_type: randomType,
+            parcel_details: `${Math.floor(100 + Math.random() * 900)}/${Math.floor(1 + Math.random() * 10)}`,
+            taluk: randomTaluk,
+            status: 'NEW',
+            severity: 'HIGH',
+            timestamp: new Date().toISOString(),
+            message: `New Change Detected: ${randomType} in ${randomTaluk}`,
+            isLive: true
+         };
+         
+         setAlerts(prev => {
+            const updated = [newAlert, ...prev];
+            return updated.slice(0, 100);
+         });
+      }, 45000);
+      
+      return () => clearInterval(feedInterval);
+   }, [user]);
    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+   const [isNotifOpen, setIsNotifOpen] = useState(false);
    const [subView, setSubView] = useState(null);
    const [gisAttributes, setGisAttributes] = useState(null);
    const [selectedPosition, setSelectedPosition] = useState(null);
@@ -4087,7 +4299,7 @@ export default function App() {
                const verificationPhotos = f.properties.verification?.photos;
                if (verificationPhotos && Array.isArray(verificationPhotos) && verificationPhotos.length > 0) {
                   let photo = verificationPhotos[0];
-                  if (photo && photo.length > 100 && !photo.startsWith('data:image') && !photo.startsWith('http') && !photo.startsWith('blob:')) {
+                  if (photo && !photo.startsWith('data:image') && !photo.startsWith('http') && !photo.startsWith('blob:')) {
                      photo = 'data:image/jpeg;base64,' + photo;
                   }
                   if (photo) assignedImg = photo;
@@ -4096,7 +4308,7 @@ export default function App() {
                const resolutionPhotos = f.properties.resolution_images;
                if (resolutionPhotos && Array.isArray(resolutionPhotos) && resolutionPhotos.length > 0) {
                   let photo = resolutionPhotos[0];
-                  if (photo && photo.length > 100 && !photo.startsWith('data:image') && !photo.startsWith('http') && !photo.startsWith('blob:')) {
+                  if (photo && !photo.startsWith('data:image') && !photo.startsWith('http') && !photo.startsWith('blob:')) {
                      photo = 'data:image/jpeg;base64,' + photo;
                   }
                   if (photo) assignedImg = photo;
@@ -4111,31 +4323,41 @@ export default function App() {
                   img: assignedImg
                };
             }) || [];
+            
             setAlerts(prev => {
                const newAlerts = alertsData;
-               
-               // PRESERVE LOCAL MISSION STATE (Match on string IDs)
-               return newAlerts.map(na => {
+               const finalAlerts = newAlerts.map(na => {
                   const localMatch = prev.find(p => String(p.id) === String(na.id));
-                  if (localMatch && localMatch.status !== 'NEW') {
-                     return { 
-                        ...na, 
-                        status: localMatch.status, 
-                        assignedTahsildar: localMatch.assignedTahsildar, 
-                        assignedCollector: localMatch.assignedCollector,
-                        assignedTo: localMatch.assignedTo,
-                        resolution_notes: localMatch.resolution_notes
-                     };
+                  if (localMatch) {
+                     // If backend updated status to a completed/verified state, accept it fully
+                     if (['RESOLVED', 'COLLECTOR_ACCEPTED', 'TAHSILDAR_ACCEPTED'].includes(na.status)) {
+                        return na;
+                     }
+                     // Keep local overrides only if both are in progress
+                     if (localMatch.status !== 'NEW' && localMatch.status !== 'RESOLVED') {
+                        return { 
+                           ...na, 
+                           status: localMatch.status, 
+                           assignedTahsildar: localMatch.assignedTahsildar, 
+                           assignedCollector: localMatch.assignedCollector,
+                           assignedTo: localMatch.assignedTo,
+                           resolution_notes: localMatch.resolution_notes,
+                           verification: na.verification || localMatch.verification
+                        };
+                     }
                   }
                   return na;
                });
+               
+               return finalAlerts;
             });
-         } catch (err) { 
-             console.error("Data Sync Error:", err); 
-          }
+         } catch (err) {
+            console.error("Data Sync Error:", err);
+         }
       };
+      
       fetchData();
-      const interval = setInterval(fetchData, 5000);
+      const interval = setInterval(fetchData, 30000); 
       return () => clearInterval(interval);
    }, [user]);
 
@@ -4143,6 +4365,8 @@ export default function App() {
       const timer = setInterval(() => setCurrentTime(new Date()), 1000);
       return () => clearInterval(timer);
    }, []);
+
+
 
 
    const handleDemoLogin = useCallback((roleId) => {
@@ -4182,7 +4406,7 @@ export default function App() {
       if (activeTab === 'field-ops') return <CombinedTacticalOpsView user={user} alerts={alerts} />;
       if (activeTab === 'detection-logic') return <AIDetectionLogicView />;
       if (activeTab === 'government-registry') return <GovernmentLandRegistryView user={user} />;
-      if (activeTab === 'gis-sentinel') return <DashboardView parcels={parcels} alerts={alerts} setAlerts={setAlerts} onExport={handleExport} onMapClick={handleMapClick} gisAttributes={{...gisAttributes, message: 'GEOCOMMAND MODE: Monitoring 14,200 Government Parcels in Real-Time.'}} onTabChange={setActiveTab} activeTab={activeTab} />;
+      if (activeTab === 'gis-sentinel') return <DashboardView parcels={parcels} alerts={alerts} setAlerts={setAlerts} onExport={handleExport} onMapClick={handleMapClick} gisAttributes={{...gisAttributes, message: 'GEOMMAND MODE: Monitoring 14,200 Government Parcels in Real-Time.'}} onTabChange={setActiveTab} activeTab={activeTab} />;
       if (activeTab === 'health') return <SystemHealthView />;
       if (activeTab === 'ai-monitoring' || activeTab === 'alerts') return <AIMonitoringView user={user} alerts={alerts} patchAlertStatus={patchAlertStatus} parcels={parcels} onMapClick={handleMapClick} selectedPosition={selectedPosition} />;
       if (activeTab === 'reports') return <ReportsView parcels={parcels} alerts={alerts} />;
@@ -4275,6 +4499,8 @@ export default function App() {
       if (activeTab === 'threats' && user.role === 'ADMIN') return <OperationalListView title="Security Threat Registry" icon={ShieldAlert} columns={['Timestamp', 'Event Type', 'Source IP', 'Action Taken']} data={[{ t: '16:42:01', e: 'Brute Force Attempt', s: '103.44.22.11', a: 'IP_BLOCKED' }, { t: '14:15:22', e: 'Unauthorized API Access', s: 'Admin_Node_02', a: 'TOKEN_REVOKED' }, { t: '09:12:44', e: 'Unusual Data Export', s: 'VAO_Mettur', a: 'LOGGED' }]} />;
       if (activeTab === 'satellites' && user.role === 'ADMIN') return <OperationalListView title="Satellite Data Sources" icon={Globe} columns={['Provider', 'Resolution', 'Update Frequency', 'Status']} data={[{ p: 'Sentinel-2', r: '10m', u: '5 Days', s: 'Active' }, { p: 'DigitalGlobe', r: '0.3m', u: 'On-Demand', s: 'Ready' }, { p: 'LandSat 9', r: '30m', u: '8 Days', s: 'Standby' }]} />;
       if (activeTab === 'liaison' && user.role === 'ADMIN') return <OperationalListView title="Inter-Agency Liaison Matrix" icon={Briefcase} columns={['Department', 'Node Head', 'Priority Channel', 'Status']} data={[{ d: 'Police HQ', n: 'SP Salem', p: 'Secure_Line_01', s: 'Connected' }, { d: 'Forest Dept', n: 'DFO Salem', p: 'Radio_Node_4', s: 'Active' }, { d: 'Highways Dept', n: 'EE Highways', p: 'Email/Official', s: 'Standby' }]} />;
+      
+      if (activeTab === 'gis-sentinel') return <div className="p-6"><DistrictMapView parcels={parcels} alerts={alerts} onExport={handleExport} onMapClick={handleMapClick} selectedPosition={selectedPosition} /></div>;
 
       if (activeTab === 'dashboard') {
          if (user.role === 'COLLECTOR') return <CollectorExecutiveView parcels={parcels} alerts={alerts} patchAlertStatus={patchAlertStatus} onTabChange={setActiveTab} />;
@@ -4313,7 +4539,7 @@ export default function App() {
                <div className="w-full md:w-[35%] p-8 sm:p-12 flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 bg-slate-50 shrink-0">
                   <div className="mb-6 md:mb-10">
                      <div className="bg-blue-600 w-12 h-12 rounded-none text-white flex items-center justify-center shadow-lg mb-4 md:mb-6"><ShieldAlert size={28} /></div>
-                     <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 uppercase leading-none">GeoCommand</h2>
+                     <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 uppercase leading-none">GEOMMAND</h2>
                      <p className="text-slate-500 text-[9px] md:text-[10px] font-bold mt-2 uppercase tracking-widest">Government of Tamil Nadu</p>
                   </div>
                   <div className="space-y-3 md:space-y-4">
@@ -4347,7 +4573,8 @@ export default function App() {
    }
 
    return (
-      <div className="flex h-screen bg-slate-100 font-jakarta text-sm antialiased text-slate-800 relative overflow-hidden">
+      <>
+         <div className="flex h-screen bg-slate-100 font-jakarta text-sm antialiased text-slate-800 relative overflow-hidden">
          {/* Mobile Sidebar Overlay */}
          {isSidebarOpen && (
             <div className="fixed inset-0 bg-slate-900/40 z-[1900] lg:hidden backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsSidebarOpen(false)}></div>
@@ -4359,7 +4586,7 @@ export default function App() {
                <div className="flex items-center gap-3" onClick={() => setActiveTab('dashboard')} style={{ cursor: 'pointer' }}>
                   <div className="bg-blue-600 p-2 rounded-none text-white shadow-md"><ShieldAlert size={20} /></div>
                   <div>
-                     <h1 className="font-extrabold text-sm tracking-tighter text-slate-900 uppercase">GeoCommand</h1>
+                     <h1 className="font-extrabold text-sm tracking-tighter text-slate-900 uppercase">GEOMMAND</h1>
                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Salem District</p>
                   </div>
                </div>
@@ -4430,7 +4657,11 @@ export default function App() {
                      <div className="hidden sm:block w-px h-6 bg-slate-200 mx-2"></div>
                      <button onClick={() => setActiveTab('profile')} className={`px-2 sm:px-4 py-1.5 sm:py-2 rounded-none text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-1 sm:gap-2 ${activeTab === 'profile' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}><Users size={14} /><span className="hidden sm:inline">Profile</span></button>
                   </div>
-                  <button className="p-2 text-slate-500 hover:text-blue-600 transition-all relative"><Bell size={20} /><span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-600 rounded-none border border-white"></span></button>
+                  <button onClick={() => setIsNotifOpen(true)} className="p-2 text-slate-500 hover:text-blue-600 transition-all relative">
+                     <Bell size={20} />
+                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-600 rounded-full border border-white animate-pulse text-[6px] font-black flex items-center justify-center text-white">
+                     </span>
+                  </button>
                </div>
             </header>
 
@@ -4439,6 +4670,14 @@ export default function App() {
             </div>
          </main>
       </div>
+         <NotificationCenterPanel
+            isOpen={isNotifOpen}
+            onClose={() => setIsNotifOpen(false)}
+            alerts={alerts}
+            registryRequests={registryRequests}
+            onNavigate={(tab) => { setActiveTab(tab); setSubView(null); }}
+         />
+      </>
    );
 }
 

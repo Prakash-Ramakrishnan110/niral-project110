@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polygon, LayersControl, useMapEvents, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, LayersControl, useMapEvents, Circle, WMSTileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -115,6 +115,7 @@ const MapLegend = ({ showRoadside }) => (
 const MapView = React.memo(({ parcels = [], alerts = [], onParcelClick, onMapClick, selectedPosition = null }) => {
     const center = [11.6643, 78.1460]; // Centered on Salem District
     const [showLegend, setShowLegend] = useState(true);
+    const [showPrivate, setShowPrivate] = useState(false);
 
     return (
         <div style={{ height: '100%', width: '100%', position: 'relative' }}>
@@ -138,6 +139,24 @@ const MapView = React.memo(({ parcels = [], alerts = [], onParcelClick, onMapCli
                             url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
                         />
                     </LayersControl.BaseLayer>
+                    <LayersControl.Overlay checked name="Live Govt Land Boundaries (GeoServer)">
+                        <WMSTileLayer
+                            url="http://localhost:8081/geoserver/geommand/wms"
+                            layers="geommand:core_landparcel"
+                            format="image/png"
+                            transparent={true}
+                            zIndex={10}
+                        />
+                    </LayersControl.Overlay>
+                    <LayersControl.Overlay checked name="Live Encroachment Alerts (GeoServer)">
+                        <WMSTileLayer
+                            url="http://localhost:8081/geoserver/geommand/wms"
+                            layers="geommand:core_encroachmentalert"
+                            format="image/png"
+                            transparent={true}
+                            zIndex={20}
+                        />
+                    </LayersControl.Overlay>
                 </LayersControl>
                 
                 {/* Map Click Handler */}
@@ -152,7 +171,7 @@ const MapView = React.memo(({ parcels = [], alerts = [], onParcelClick, onMapCli
                 </Marker>
 
                 {/* Render Land Parcels with Classification Color Coding */}
-                {parcels.map(parcel => {
+                {parcels.filter(p => showPrivate || p.classification !== 'Private').map(parcel => {
                     if (!parcel.coordinates || parcel.coordinates.length === 0) return null;
                     const style = getParcelStyle(parcel, alerts);
                     return (
@@ -234,17 +253,29 @@ const MapView = React.memo(({ parcels = [], alerts = [], onParcelClick, onMapCli
 
             {/* Legend Overlay */}
             {showLegend && <MapLegend />}
-            <button
-                onClick={() => setShowLegend(v => !v)}
-                style={{
-                    position: 'absolute', bottom: 24, right: 16, zIndex: 1000,
-                    background: 'rgba(15,23,42,0.85)', color: 'white', border: '1px solid rgba(255,255,255,0.15)',
-                    padding: '6px 12px', fontSize: 9, fontWeight: 900, letterSpacing: '0.12em', cursor: 'pointer',
-                    textTransform: 'uppercase',
-                }}
-            >
-                {showLegend ? 'Hide Legend' : 'Show Legend'}
-            </button>
+            <div style={{ position: 'absolute', bottom: 24, right: 16, zIndex: 1000, display: 'flex', gap: 8 }}>
+                <button
+                    onClick={() => setShowPrivate(v => !v)}
+                    style={{
+                        background: showPrivate ? 'rgba(37,99,235,0.9)' : 'rgba(15,23,42,0.85)',
+                        color: 'white', border: '1px solid rgba(255,255,255,0.15)',
+                        padding: '6px 12px', fontSize: 9, fontWeight: 900, letterSpacing: '0.12em', cursor: 'pointer',
+                        textTransform: 'uppercase',
+                    }}
+                >
+                    {showPrivate ? 'Govt Focus: OFF' : 'Govt Focus: ON'}
+                </button>
+                <button
+                    onClick={() => setShowLegend(v => !v)}
+                    style={{
+                        background: 'rgba(15,23,42,0.85)', color: 'white', border: '1px solid rgba(255,255,255,0.15)',
+                        padding: '6px 12px', fontSize: 9, fontWeight: 900, letterSpacing: '0.12em', cursor: 'pointer',
+                        textTransform: 'uppercase',
+                    }}
+                >
+                    {showLegend ? 'Hide Legend' : 'Show Legend'}
+                </button>
+            </div>
         </div>
     );
 });

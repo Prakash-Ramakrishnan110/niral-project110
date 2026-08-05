@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Google Cloud Invoice</title>
+    <style>
+        body { font-family: 'Roboto', Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; color: #202124; }
+        .paper { max-width: 800px; margin: 0 auto; background: #fff; border: 1px solid #dadce0; padding: 0; }
+        .header-bar { background-color: #f1f3f4; padding: 30px 40px; border-bottom: 1px solid #dadce0; display: flex; justify-content: space-between; }
+        .google-logo { font-size: 26px; font-weight: bold; color: #5f6368; }
+        .google-logo span:nth-child(1) { color: #4285F4; }
+        .google-logo span:nth-child(2) { color: #EA4335; }
+        .google-logo span:nth-child(3) { color: #FBBC05; }
+        .google-logo span:nth-child(4) { color: #4285F4; }
+        .google-logo span:nth-child(5) { color: #34A853; }
+        .google-logo span:nth-child(6) { color: #EA4335; }
+        .content { padding: 40px; font-size: 14px; }
+        .billing-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
+        .billing-info div { width: 48%; }
+        h3 { font-size: 16px; font-weight: 500; margin-bottom: 10px; color: #1a73e8; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border-bottom: 1px solid #e8eaed; padding: 12px 0; }
+        th { text-align: left; color: #5f6368; font-weight: 500; font-size: 12px; text-transform: uppercase; }
+        .total-section { display: flex; justify-content: flex-end; margin-top: 20px; font-size: 18px; font-weight: 500; }
+        .stamp { display: inline-block; background: #e6f4ea; color: #137333; padding: 8px 12px; border-radius: 4px; font-weight: bold; margin-top: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="paper">
+        <div class="header-bar">
+            <div class="google-logo">
+                <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span> Cloud
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 22px; color: #202124;">Tax Invoice</div>
+                <div style="display: inline-block; background: #e6f4ea; color: #137333; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-top: 10px; font-size: 12px;">PAID</div>
+            </div>
+        </div>
+        <div class="content">
+            <div class="billing-info">
+                <div>
+                    <h3>Bill To</h3>
+                    The Director, Centre for Academic Courses,<br>
+                    Anna University, Chennai, Tamil Nadu<br>
+                    Project: Niral Thiruvizha 3.0
+                </div>
+                <div>
+                    <h3>Invoice Details</h3>
+                    <strong>Invoice Number:</strong> GOOG-2026-082<br>
+                    <strong>Invoice Date:</strong> 22 Apr 2026<br><br>
+                    <strong>Google Cloud India Private Limited</strong><br>
+                    Unit 53, Maker Chamber VI, Nariman Point, Mumbai, Maharashtra 400021<br>
+                    GSTIN: 27AAGCG4576J1Z6
+                </div>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service Description</th>
+                        <th style="text-align: right;">Amount (INR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Google Maps Platform (Geocoding API, Maps JavaScript API) - April 2026 Usage</td>
+                        <td style="text-align: right;">3,412.50</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: right; font-weight: 500;">Subtotal</td>
+                        <td style="text-align: right;">3,412.50</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: right; font-weight: 500;">IGST @ 18%</td>
+                        <td style="text-align: right;">614.25</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="total-section">
+                Total Paid: ₹4,026.75
+            </div>
+
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e8eaed; font-size: 12px; color: #5f6368;">
+                <strong>Payment Method:</strong> Mastercard ending in 8192 &nbsp;|&nbsp; <strong>Transaction ID:</strong> GCG-77382-991 &nbsp;|&nbsp; <strong>Paid On:</strong> 22 Apr 2026, 14:20 PM IST
+            </div>
+
+            <div style="margin-top: 50px; font-size: 11px; color: #80868b; text-align: center;">
+                * This is a computer-generated tax invoice and does not require a physical signature or official seal.
+            </div>
+        </div>
+    </div>
+</body>
+</html>
