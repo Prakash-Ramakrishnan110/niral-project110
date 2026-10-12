@@ -49,12 +49,14 @@
 * **Table of Layers:**
   | Layer | Technologies Used | Role |
   | :--- | :--- | :--- |
-  | **Frontend** | React, Leaflet, Tailwind CSS | Tactical command dashboard, bilingual English/Tamil |
-  | **Spatial Backend** | Django REST Framework, PostGIS, GeoDjango | `ST_Intersects`, `ST_Area` spatial calculations |
-  | **Mobile App** | Flutter, SQLite, Camera Geofencing | Offline-first field verification for VAO |
-  | **AI & Remote Sensing** | Vision Transformers (ChangeFormer), YOLOv8-Seg | Multi-temporal change detection & building footprint extraction |
+  | **Frontend Stack** | React.js, Tailwind CSS | Tactical command web dashboard, bilingual English/Tamil |
+  | **Mobile Stack** | Flutter (Mobile) | Offline-first field verification app for VAO with GPS geofencing |
+  | **Backend Stack** | Django, Django REST Framework | Core APIs, role-based security & statutory workflow pipelines |
+  | **Database Stack** | PostgreSQL, PostGIS | Spatial geometry storage, `ST_Intersects` & `ST_Area` queries |
+  | **AI/ML Stack** | TensorFlow, OpenCV | Image preprocessing, contour analysis & change detection model |
+  | **GIS & Satellite Stack** | Google Earth Engine, QGIS | Cloud satellite data processing, vector mapping & FMB layers |
 * **Speaker Script (20s):**
-  > "Our architecture is robust and enterprise-grade: A GeoDjango and PostGIS backend executing millisecond spatial queries, paired with a React tactical dashboard and an offline-first Flutter mobile application for field officers."
+  > "Our architecture is built on a battle-tested, enterprise-ready stack: React.js and Tailwind CSS with a Flutter mobile app on the front, powered by Django REST Framework and PostgreSQL/PostGIS for spatial queries. For detection, we combine TensorFlow and OpenCV for computer vision, backed by Google Earth Engine and QGIS for satellite processing."
 
 ---
 
@@ -62,11 +64,11 @@
 * **Slide Title:** How the Engine Spots Encroachments Every 5 Days
 * **Visual:** Before Image (Green grass) vs After Image (New tin roof) = White difference mask.
 * **How It Works in 3 Steps:**
-  1. **5-Day Refresh:** Sentinel-2 satellite captures updated multispectral imagery every 5 days over Tamil Nadu.
-  2. **AI Building Extraction:** ChangeFormer / YOLOv8-Seg isolates new man-made structures (concrete, tin sheds, fences).
-  3. **Spatial Overlap:** PostGIS checks if the structure intersects Government Poramboke (`ST_Intersects`). If yes, triggers an instant **🔴 OCCUPIED alert** with confidence score.
+  1. **Satellite Ingestion:** Google Earth Engine and QGIS stream updated satellite imagery over Tamil Nadu.
+  2. **AI & Image Analysis:** OpenCV performs noise filtering & edge detection, and TensorFlow isolates newly constructed building footprints.
+  3. **Spatial Overlap:** PostgreSQL/PostGIS checks if the structure intersects Government Poramboke (`ST_Intersects`). If yes, triggers an instant **🔴 OCCUPIED alert** with confidence score.
 * **Speaker Script (25s):**
-  > "Instead of waiting months, Sentinel satellites update every 5 days. Our AI compares the new image against baseline records, spots newly constructed roof materials, and calculates the exact encroached area — like 2,400 sq.ft inside a waterbody."
+  > "Instead of waiting months, satellite imagery is ingested via Google Earth Engine. Our OpenCV and TensorFlow pipeline analyzes image differences to spot new roofs and walls, while PostGIS calculates the exact encroached area — like 2,400 sq.ft inside a waterbody."
 
 ---
 
