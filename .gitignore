@@ -2,13 +2,11 @@ node_modules/
 venv/
 .venv/
 env/
-.env
 dist/
 build/
 *.pyc
 __pycache__/
 .DS_Store
-.vscode/
 .idea/
 *.log
 frontend/node_modules/
@@ -30,3 +28,4 @@ field_officer_app/.pub/
 
 # Temporary patch scripts
 frontend/patch_*.cjs
+config.bat
