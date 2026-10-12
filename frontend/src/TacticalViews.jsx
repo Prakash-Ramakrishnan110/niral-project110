@@ -99,7 +99,7 @@ const SatelliteComparisonSlider = () => {
 
          <div
             ref={containerRef}
-            className="relative aspect-video bg-slate-900 overflow-hidden cursor-col-resize select-none rounded-none border-2 border-slate-900 shadow-2xl"
+            className="relative h-[400px] lg:h-[500px] w-full bg-slate-900 overflow-hidden cursor-col-resize select-none rounded-none border-2 border-slate-900 shadow-2xl"
             onMouseMove={(e) => handleMove(e.clientX)}
             onMouseUp={() => { dragging.current = false; }}
             onMouseLeave={() => { dragging.current = false; }}

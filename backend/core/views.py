@@ -3,6 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
+from django.contrib.gis.geos import Point
+from django.contrib.gis.db.models.functions import Distance
 from .models import LandParcel, EncroachmentAlert, FieldVerification, RegistryProposal
 from .serializers import (
     LandParcelSerializer, EncroachmentAlertSerializer, 
@@ -14,14 +16,258 @@ class LandParcelViewSet(viewsets.ModelViewSet):
     queryset = LandParcel.objects.all()
     serializer_class = LandParcelSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['village_code', 'classification']
-    search_fields = ['survey_number', 'patta_number', 'owner_name']
+    filterset_fields = ['village_code', 'classification', 'is_occupied']
+    search_fields = ['survey_number', 'patta_number', 'owner_name', 'ulpin']
+
+    @action(detail=False, methods=['get'])
+    def presets(self, request):
+        """Returns the 4 primary Salem demo presets."""
+        presets_data = [
+            # ── 1. ALL TYPES ROADSIDE OCCUPATION SHOWCASE ──
+            {
+                "id": "omalur",
+                "category": "roadside",
+                "title": "1. Omalur NH-44 Commercial Shed",
+                "title_ta": "ஓமலூர் நெடுஞ்சாலை கொட்டகை",
+                "tag": "Roadside Type 1: Commercial Workshop",
+                "badge": "🔴 OCCUPIED (850 sq.ft)",
+                "taluk": "Omalur",
+                "village": "Omalur North",
+                "survey": "119",
+                "subdivision": "4",
+                "lat": 11.7450,
+                "lng": 78.0410,
+                "zoom": 17,
+                "encroacher": "Patta 488: R. Chinnasamy"
+            },
+            {
+                "id": "kondalampatti",
+                "category": "roadside",
+                "title": "2. Kondalampatti Truck Scrap Yard",
+                "title_ta": "கொண்டலாம்பட்டி லாரி பட்டறை",
+                "tag": "Roadside Type 2: Heavy Vehicle Scrap Yard",
+                "badge": "🔴 OCCUPIED (1,650 sq.ft)",
+                "taluk": "Salem South",
+                "village": "Dadagapatty",
+                "survey": "76",
+                "subdivision": "2B",
+                "lat": 11.6210,
+                "lng": 78.1320,
+                "zoom": 17,
+                "encroacher": "Patta 319: M. Velusamy"
+            },
+            {
+                "id": "attur",
+                "category": "roadside",
+                "title": "3. Attur SH-79 Compound Wall",
+                "title_ta": "ஆத்தூர் மதில்சுவர் அத்துமீறல்",
+                "tag": "Roadside Type 3: Residential Compound Wall",
+                "badge": "🔴 OCCUPIED (920 sq.ft)",
+                "taluk": "Attur",
+                "village": "Attur Town",
+                "survey": "204",
+                "subdivision": "1C",
+                "lat": 11.5980,
+                "lng": 78.6010,
+                "zoom": 17,
+                "encroacher": "Patta 582: P. Arumugam"
+            },
+            {
+                "id": "hasthampatti",
+                "category": "roadside",
+                "title": "4. Hasthampatti Footpath Stalls",
+                "title_ta": "ஹஸ்தம்பட்டி நடைபாதை ஆக்கிரமிப்பு",
+                "tag": "Roadside Type 4: Footpath Commercial Awning",
+                "badge": "🔴 OCCUPIED (480 sq.ft)",
+                "taluk": "Salem West",
+                "village": "Suramangalam",
+                "survey": "45",
+                "subdivision": "3",
+                "lat": 11.6780,
+                "lng": 78.1650,
+                "zoom": 18,
+                "encroacher": "Patta 167: S. Natarajan"
+            },
+            # ── 2. WATERBODY & GOVERNMENT ASSETS ──
+            {
+                "id": "mookaneri",
+                "category": "waterbody",
+                "title": "Mookaneri Lake Poramboke",
+                "title_ta": "மூக்கனேரி ஏரி புறம்போக்கு",
+                "tag": "Waterbody Basin Breach",
+                "badge": "🔴 OCCUPIED (2,400 sq.ft)",
+                "taluk": "Salem West",
+                "village": "Kannankurichi",
+                "survey": "142",
+                "subdivision": "1A",
+                "lat": 11.6982,
+                "lng": 78.1724,
+                "zoom": 17,
+                "encroacher": "Patta 340: A. Selvam"
+            },
+            {
+                "id": "suramangalam",
+                "category": "government",
+                "title": "Suramangalam Govt Poramboke",
+                "title_ta": "சூரமங்கலம் அரசு புறம்போக்கு",
+                "tag": "Commercial Encroachment",
+                "badge": "🔴 OCCUPIED (1,150 sq.ft)",
+                "taluk": "Salem West",
+                "village": "Suramangalam",
+                "survey": "88",
+                "subdivision": "2A",
+                "lat": 11.6742,
+                "lng": 78.1215,
+                "zoom": 17,
+                "encroacher": "Patta 215: K. Venkatesh"
+            },
+            {
+                "id": "mettur",
+                "category": "forest",
+                "title": "Mettur Cauvery Riverbank",
+                "title_ta": "மேட்டூர் காவேரி படுகை",
+                "tag": "Protected State Reserve",
+                "badge": "🟢 SAFE / VACANT (45 Acres)",
+                "taluk": "Mettur",
+                "village": "Mettur Dam",
+                "survey": "63",
+                "subdivision": "1",
+                "lat": 11.7960,
+                "lng": 77.7980,
+                "zoom": 16,
+                "encroacher": "None - Protected Reserve"
+            }
+        ]
+        return Response(presets_data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'])
+    def identify(self, request):
+        """Click-to-identify parcel by lat/lng coordinates."""
+        lat_str = request.query_params.get('lat')
+        lng_str = request.query_params.get('lng')
+        
+        if not lat_str or not lng_str:
+            return Response({"error": "lat and lng parameters are required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            lat = float(lat_str)
+            lng = float(lng_str)
+            point = Point(lng, lat, srid=4326)
+        except (ValueError, TypeError):
+            return Response({"error": "Invalid coordinates"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. First check if point is inside any parcel polygon
+        parcel = LandParcel.objects.filter(geom__contains=point).first()
+        
+        # 2. If not directly inside, find the closest parcel
+        if not parcel:
+            parcel = LandParcel.objects.annotate(
+                distance=Distance('geom', point)
+            ).order_by('distance').first()
+
+        if parcel:
+            serializer = self.get_serializer(parcel)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response({"error": "No parcel found"}, status=status.HTTP_404_NOT_FOUND)
 
 class EncroachmentAlertViewSet(viewsets.ModelViewSet):
     queryset = EncroachmentAlert.objects.all().order_by('-detection_date')
     serializer_class = EncroachmentAlertSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'alert_type']
+
+    @action(detail=True, methods=['post', 'patch'])
+    def inspector_approve(self, request, pk=None):
+        role = (request.data.get('role') or '').upper()
+        if role == 'VAO':
+            return Response({"error": "Access Denied: VAO cannot counter-sign their own verification report. Revenue Inspector sign-off required."}, status=status.HTTP_403_FORBIDDEN)
+        alert = self.get_object()
+        notes = request.data.get('notes', 'Verified and Approved by Field Inspector Mukesh S')
+        alert.status = request.data.get('status', 'INSPECTOR_APPROVED')
+        alert.resolution_notes = notes
+        alert.save()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post', 'patch'])
+    def issue_section_7(self, request, pk=None):
+        role = (request.data.get('role') or '').upper()
+        if role in ['VAO', 'INSPECTOR', 'SURVEYOR', 'DATA_ENTRY']:
+            return Response({"error": f"Access Denied: Under TN Act III of 1905, {role} cannot issue Section 7 Notice. Only Tahsildar / Collector has statutory authority."}, status=status.HTTP_403_FORBIDDEN)
+        alert = self.get_object()
+        encroacher = request.data.get('encroacher_name', 'Unauthorized Occupant')
+        notes = request.data.get('notes') or f"[Section 7 Notice Issued to {encroacher}] 15-day show-cause notice served under TN Land Encroachment Act 1905."
+        alert.status = 'SECTION_7_ISSUED'
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
+        alert.save()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post', 'patch'])
+    def issue_section_6(self, request, pk=None):
+        role = (request.data.get('role') or '').upper()
+        if role in ['VAO', 'INSPECTOR', 'SURVEYOR', 'DATA_ENTRY']:
+            return Response({"error": f"Access Denied: Under TN Act III of 1905, {role} cannot order Section 6 Eviction. Only Tahsildar / Collector has statutory authority."}, status=status.HTTP_403_FORBIDDEN)
+        alert = self.get_object()
+        notes = request.data.get('notes') or "[Section 6 Eviction Warrant] Final eviction and demolition ordered under TN Land Encroachment Act 1905. Police Bandobast requisitioned."
+        alert.status = 'SECTION_6_ORDERED'
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
+        alert.save()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post', 'patch'])
+    def complete_eviction(self, request, pk=None):
+        role = (request.data.get('role') or '').upper()
+        if role == 'VAO':
+            return Response({"error": "Access Denied: VAO cannot complete eviction alone. Revenue Division sign-off required."}, status=status.HTTP_403_FORBIDDEN)
+        alert = self.get_object()
+        notes = request.data.get('notes') or "[Eviction Executed & Restored] Unauthorized structure demolished. Boundary fencing restored. Government possession reclaimed."
+        alert.status = 'RESOLVED'
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
+        alert.save()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post', 'patch'])
+    def mark_false_positive(self, request, pk=None):
+        alert = self.get_object()
+        officer = request.data.get('officer_name', 'Field Officer')
+        reason = request.data.get('reason') or "Field verified: Not an encroachment. Valid patta land / agricultural boundary."
+        alert.status = 'FALSE_POSITIVE'
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n[DISMISSED - FALSE ALARM by {officer}]: {reason}".strip()
+        alert.save()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post', 'patch'])
+    def reject_boundary(self, request, pk=None):
+        alert = self.get_object()
+        role = (request.data.get('role') or '').upper()
+        if role == 'VAO':
+            return Response({"error": "Access Denied: Only Revenue Inspector / Tahsildar can reject on FMB boundary grounds."}, status=status.HTTP_403_FORBIDDEN)
+        officer = request.data.get('officer_name', 'Revenue Inspector')
+        reason = request.data.get('reason') or "FMB boundary check failed: Discrepancy with cadastral survey."
+        alert.status = 'REJECTED_BOUNDARY'
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n[REJECTED - FMB BOUNDARY MISMATCH by {officer}]: {reason}".strip()
+        alert.save()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post', 'patch'])
+    def cancel_legal(self, request, pk=None):
+        alert = self.get_object()
+        role = (request.data.get('role') or '').upper()
+        if role in ['VAO', 'INSPECTOR', 'SURVEYOR', 'DATA_ENTRY']:
+            return Response({"error": f"Access Denied: Only Tahsildar / Collector has authority to cancel Section 7 legal proceedings."}, status=status.HTTP_403_FORBIDDEN)
+        officer = request.data.get('officer_name', 'Tahsildar Salem West')
+        reason = request.data.get('reason') or "Proceedings cancelled: Occupant produced valid Patta / Court Stay Order during 15-day Section 7 window."
+        alert.status = 'CANCELLED_LEGAL'
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n[PROCEEDINGS DROPPED by {officer}]: {reason}".strip()
+        alert.save()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class FieldVerificationViewSet(viewsets.ModelViewSet):
     queryset = FieldVerification.objects.all()
@@ -39,16 +285,10 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
                 
                 # Custom logic for alert status update
                 alert = verification.alert
-                try:
-                    parcel_classification = alert.parcel.classification
-                except Exception:
-                    parcel_classification = ''
-
-                if parcel_classification == 'Roadside':
-                    alert.status = 'COLLECTOR_ACCEPTED'
-                    alert.resolution_notes = 'Auto-escalated: Roadside encroachment requires Collector review.'
-                else:
-                    alert.status = 'Resolved'
+                requested_status = request.data.get('status', 'VAO_SUBMITTED')
+                alert.status = requested_status
+                if request.data.get('remarks'):
+                    alert.resolution_notes = request.data.get('remarks')
                 alert.save()
                 
                 headers = self.get_success_headers(serializer.data)
@@ -61,18 +301,11 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         verification = serializer.save()
-        
         alert = verification.alert
-        try:
-            parcel_classification = alert.parcel.classification
-        except Exception:
-            parcel_classification = ''
-
-        if parcel_classification == 'Roadside':
-            alert.status = 'COLLECTOR_ACCEPTED'
-            alert.resolution_notes = 'Auto-escalated: Roadside encroachment requires Collector review.'
-        else:
-            alert.status = 'Resolved'
+        requested_status = self.request.data.get('status', 'VAO_SUBMITTED')
+        alert.status = requested_status
+        if self.request.data.get('remarks'):
+            alert.resolution_notes = self.request.data.get('remarks')
         alert.save()
 
 class RegistryProposalViewSet(viewsets.ModelViewSet):

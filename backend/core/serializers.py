@@ -8,7 +8,10 @@ class LandParcelSerializer(GeoFeatureModelSerializer):
         geo_field = "geom"
         fields = (
             "id", "survey_number", "subdivision", "patta_number", 
-            "owner_name", "classification", "village_code", "taluk", "district", "last_updated"
+            "owner_name", "classification", "village_code", "taluk", "district",
+            "ulpin", "district_ta", "taluk_ta", "village_name", "village_ta", "village_lgd_code",
+            "area_extent", "occupied_extent", "is_occupied", "g_value",
+            "adjacent_neighbors", "fmb_data", "last_updated"
         )
 
 class FieldVerificationSerializer(serializers.ModelSerializer):

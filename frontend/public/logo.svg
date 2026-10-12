@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="shieldGradMain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="50%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="landGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="goldGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <filter id="shadowMain" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Defense / Land Shield -->
+  <g filter="url(#shadowMain)">
+    <path d="M 256 50 
+             C 345 78, 404 85, 424 99
+             C 424 252, 363 378, 256 440
+             C 149 378, 88 252, 88 99
+             C 108 85, 167 78, 256 50 Z"
+          fill="url(#shieldGradMain)"
+          stroke="#93C5FD"
+          stroke-width="5"
+          stroke-linejoin="round"/>
+
+    <!-- Inner Shield Dark Surface -->
+    <path d="M 256 76 
+             C 334 100, 384 106, 400 118
+             C 400 240, 348 348, 256 404
+             C 164 348, 112 240, 112 118
+             C 128 106, 178 100, 256 76 Z"
+          fill="#0F172A"/>
+
+    <!-- Cadastral Land Parcels (GIS Polygons) -->
+    <path d="M 148 162 L 244 140 L 244 240 L 148 210 Z" fill="url(#landGradMain)" stroke="#059669" stroke-width="2"/>
+    <path d="M 268 140 L 364 162 L 346 256 L 268 240 Z" fill="#0284C7" stroke="#38BDF8" stroke-width="2"/>
+    <path d="M 148 228 L 244 256 L 244 348 L 182 314 Z" fill="#3B82F6" stroke="#60A5FA" stroke-width="2"/>
+    <path d="M 268 256 L 346 272 L 316 344 L 268 348 Z" fill="url(#goldGradMain)" stroke="#FCD34D" stroke-width="2"/>
+
+    <!-- Radar Crosshairs & GPS Target Node -->
+    <circle cx="256" cy="248" r="48" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="6,4" opacity="0.8"/>
+    <circle cx="256" cy="248" r="26" fill="#FFFFFF" fill-opacity="0.15" stroke="#38BDF8" stroke-width="3"/>
+    
+    <line x1="256" y1="182" x2="256" y2="216" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <line x1="256" y1="280" x2="256" y2="314" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <line x1="190" y1="248" x2="224" y2="248" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <line x1="288" y1="248" x2="322" y2="248" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+
+    <circle cx="256" cy="248" r="9" fill="#F59E0B" stroke="#FFFFFF" stroke-width="3"/>
+  </g>
+</svg>

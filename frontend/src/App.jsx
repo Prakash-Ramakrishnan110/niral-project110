@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import MapView from './components/Map';
 import { AIDetectionLogicView, FieldOpsMonitorView } from './TacticalViews';
 import { GovernmentLandRegistryView } from './GovernmentRegistry';
+import { FieldOpsTaskBoard } from './components/FieldOpsTaskBoard';
 import { RegistryApprovalsHub, RegistryProposalForm, RegistryCorrectionWizard } from './components/RegistryWorkflow';
 
 import {
@@ -79,48 +80,29 @@ const MENU_STRUCTURE = {
    ADMIN: [
       { type: 'header', label: 'COMMAND HUB' },
       { id: 'dashboard', icon: LayoutDashboard, label: 'Systems Overview' },
-      { id: 'users', icon: Users, label: 'Node Management' },
-      { id: 'field-monitor', icon: Monitor, label: 'Field Ops Monitor' },
-      { id: 'government-registry', icon: Landmark, label: 'Govt Land Registry', badge: 'PROTECTED' },
       { id: 'gis-sentinel', icon: ShieldCheck, label: 'GIS Sentinel Mapping' },
-      { id: 'directives', icon: Zap, label: 'Broadcast Orders' },
-      { type: 'header', label: 'DATA & STORAGE' },
-      { id: 'database', icon: Database, label: 'Database Hub' },
-      { id: 'api-sync', icon: Link, label: 'API Node Sync' },
-      { id: 'storage', icon: Cloud, label: 'Storage Metrics' },
-      { type: 'header', label: 'SECURITY & PROTOCOLS' },
-      { id: 'security', icon: Lock, label: 'Access Control' },
-      { id: 'threats', icon: ShieldAlert, label: 'Threat Registry' },
-      { id: 'audit', icon: History, label: 'Operational Audit' },
-      { type: 'header', label: 'RESOURCES' },
-      { id: 'satellites', icon: Globe, label: 'Satellite Feeds' },
-      { id: 'liaison', icon: Briefcase, label: 'Inter-Agency Liaison' },
-      { type: 'header', label: 'INTELLIGENCE' },
-      { id: 'health', icon: HeartPulse, label: 'System Health' },
-      { id: 'ai-monitoring', icon: Cpu, label: 'AI Engine Status' },
       { id: 'detection-logic', icon: Zap, label: 'Satellite Timeline', badge: 'LIVE' },
+      { type: 'header', label: 'TACTICAL OPERATIONS' },
+      { id: 'field-monitor', icon: Monitor, label: 'Field Ops Monitor' },
+      { id: 'field-evidence', icon: Camera, label: 'Field Evidence Hub', badge: 'NEW' },
+      { id: 'directives', icon: Zap, label: 'Broadcast Orders' },
+      { type: 'header', label: 'REGISTRY & GOVERNANCE' },
+      { id: 'government-registry', icon: Landmark, label: 'Govt Land Registry', badge: 'PROTECTED' },
       { id: 'reports', icon: BarChart3, label: 'Strategic Reports' },
-      { type: 'header', label: 'SYSTEM' },
-      { id: 'system-config', icon: Settings, label: 'Advanced Config' },
-      { id: 'settings', icon: Settings, label: 'Global Settings' },
+      { id: 'ai-monitoring', icon: Cpu, label: 'AI Engine Status' }
    ],
    COLLECTOR: [
       { type: 'header', label: 'STRATEGIC COMMAND' },
       { id: 'dashboard', icon: LayoutDashboard, label: 'Executive Hub' },
       { id: 'map', icon: Globe, label: 'District Tactical Hub' },
       { id: 'detection-logic', icon: Zap, label: 'Satellite Timeline', badge: 'LIVE' },
-      { id: 'analytics', icon: BarChart3, label: 'Operational Analytics' },
       { type: 'header', label: 'TACTICAL OPERATIONS' },
       { id: 'field-ops', icon: Monitor, label: 'Tactical Operations Hub' },
+      { id: 'field-evidence', icon: Camera, label: 'Field Evidence Hub', badge: 'NEW' },
       { id: 'alerts', icon: AlertTriangle, label: 'Threat Intelligence', badge: 'CRITICAL' },
       { type: 'header', label: 'REGISTRY & GOVERNANCE' },
-      { id: 'recovery', icon: Landmark, label: 'Revenue Recovery' },
-      { id: 'legal', icon: Gavel, label: 'Legal Oversight' },
       { id: 'approvals', icon: CheckSquare, label: 'Executive Approvals' },
-      { id: 'government-registry', icon: Landmark, label: 'Govt Land Registry', badge: 'PROTECTED' },
-      { type: 'header', label: 'SYSTEM & SUPPORT' },
-      { id: 'directives', icon: Zap, label: 'Issue Directives' },
-      { id: 'settings', icon: Settings, label: 'Node Settings' },
+      { id: 'government-registry', icon: Landmark, label: 'Govt Land Registry', badge: 'PROTECTED' }
    ],
    TAHSILDAR: [
       { type: 'header', label: 'TALUK COMMAND' },
@@ -132,7 +114,7 @@ const MENU_STRUCTURE = {
       { id: 'alerts', icon: AlertTriangle, label: 'Tactical Queue' },
       { id: 'analytics', icon: BarChart3, label: 'Taluk Performance' },
       { type: 'header', label: 'EVIDENCE HUB' },
-      { id: 'camera', icon: Camera, label: 'Intelligence Hub' },
+      { id: 'field-evidence', icon: Camera, label: 'Field Evidence Hub', badge: 'NEW' },
       { type: 'header', label: 'REGISTRY & GOVERNANCE' },
       { id: 'recovery', icon: Landmark, label: 'Revenue Matrix' },
       { id: 'approvals', icon: CheckSquare, label: 'Registry Approvals Hub' },
@@ -147,6 +129,7 @@ const MENU_STRUCTURE = {
       { id: 'map', icon: Globe, label: 'Village Map Hub' },
       { type: 'header', label: 'TACTICAL OPERATIONS' },
       { id: 'tasks', icon: ClipboardCheck, label: 'Field Tasks' },
+      { id: 'field-evidence', icon: Camera, label: 'Field Evidence Hub', badge: 'NEW' },
       { id: 'alerts', icon: AlertTriangle, label: 'Encroachment Alerts', badge: '2' },
       { id: 'grievances', icon: MessageSquare, label: 'Public Grievances' },
       { type: 'header', label: 'REGISTRY & GOVERNANCE' },
@@ -939,13 +922,7 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                      <Badge variant="info" className="bg-white/95 backdrop-blur shadow-lg border-slate-200 text-slate-900 rounded-none">AI LIVE GIS STREAM</Badge>
                      <div className="flex items-center gap-2 px-3 py-1 bg-green-500/90 backdrop-blur rounded-none text-[8px] font-black text-white uppercase tracking-widest shadow-lg animate-pulse">● Node Active</div>
                   </div>
-                  <MapView 
-                     parcels={parcels} 
-                     alerts={alerts} 
-                     onParcelClick={() => {}} 
-                     onMapClick={onMapClick} 
-                     selectedPosition={selectedPosition} 
-                  />
+                  <MapView parcels={parcels} alerts={alerts} onParcelClick={() => {}} onMapClick={onMapClick} selectedPosition={selectedPosition} userRole={user?.role} />
                   
 
                </div>
@@ -972,11 +949,13 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                      </div>
                   </div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-50/50">
-                     {filteredDetections.map(d => (
+                     {filteredDetections.map(d => {
+                        const isResolved = ['RESOLVED', 'SUCCESS'].includes((d.status || '').toUpperCase());
+                        return (
                         <div 
                            key={d.id} 
                            onClick={() => setSelectedAlert(d)}
-                           className="p-4 bg-white border border-slate-200 rounded-none transition-all cursor-pointer group shadow-sm hover:border-blue-500 border-l-4 border-l-red-500"
+                           className={`p-4 bg-white border border-slate-200 rounded-none transition-all cursor-pointer group shadow-sm hover:border-blue-500 border-l-4 ${isResolved ? 'border-l-emerald-500' : 'border-l-red-500'}`}
                         >
                            <div className="flex items-center gap-4">
                               <div className="w-20 h-20 rounded-none overflow-hidden shrink-0 border border-slate-100 shadow-inner">
@@ -984,22 +963,26 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                               </div>
                               <div className="flex-1 min-w-0">
                                  <div className="flex justify-between items-center mb-1">
-                                    <Badge variant="danger" className="text-[7px]">{(d.confidence_score * 100).toFixed(0)}% AI CONF</Badge>
+                                    <Badge variant={isResolved ? 'success' : 'danger'} className="text-[7px]">{(d.confidence_score * 100).toFixed(0)}% AI CONF</Badge>
                                     <span className="text-[8px] text-slate-400 font-bold uppercase">ID: {d.id.slice(0, 4)}</span>
                                  </div>
                                  <p className="text-[11px] font-black text-slate-800 uppercase truncate leading-tight tracking-tight">{d.alert_type}</p>
-                                 <p className="text-[9px] text-slate-500 font-bold uppercase mt-1 flex items-center gap-1"><MapPin size={8} className="text-blue-600" /> {d.parcel_details || '142/A'}</p>
+                                 <p className="text-[9px] text-slate-500 font-bold uppercase mt-1 flex items-center gap-1"><MapPin size={8} className={isResolved ? 'text-emerald-600' : 'text-blue-600'} /> {d.parcel_details || '142/A'}</p>
                               </div>
                            </div>
                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                              <span className="text-[8px] font-black text-green-600 uppercase tracking-widest flex items-center gap-1"><RefreshCcw size={8} /> LIVE SYNC</span>
+                              <span className={`text-[8px] font-black uppercase tracking-widest flex items-center gap-1 ${isResolved ? 'text-emerald-600' : 'text-slate-400'}`}><RefreshCcw size={8} /> {isResolved ? 'MISSION ACCOMPLISHED' : 'LIVE SYNC'}</span>
                               <div className="flex gap-2">
                                  <button className="p-2 bg-slate-100 text-slate-600 rounded-none hover:bg-slate-200 transition-all"><Eye size={14} /></button>
-                                 <button className="px-4 py-1.5 bg-blue-600 text-white rounded-none text-[8px] font-black uppercase tracking-widest shadow-md hover:bg-blue-700 transition-all">Review</button>
+                                 {isResolved ? (
+                                    <button disabled className="px-4 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-none text-[8px] font-black uppercase tracking-widest shadow-sm cursor-not-allowed">Closed</button>
+                                 ) : (
+                                    <button className="px-4 py-1.5 bg-blue-600 text-white rounded-none text-[8px] font-black uppercase tracking-widest shadow-md hover:bg-blue-700 transition-all">Review</button>
+                                 )}
                               </div>
                            </div>
                         </div>
-                     ))}
+                     )})}
                   </div>
                </div>
             </div>
@@ -1102,8 +1085,8 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                         {/* Report Header */}
                         <div className="border-b-4 border-slate-900 pb-6 mb-8 flex justify-between items-start">
                            <div className="flex items-center gap-4">
-                              <div className="w-16 h-16 bg-slate-900 flex items-center justify-center">
-                                 <Shield size={32} className="text-white" />
+                              <div className="w-16 h-16 bg-slate-900 flex items-center justify-center p-2 border border-slate-800">
+                                 <img src="/logo.svg" alt="Official GEOMMAND Emblem" className="w-full h-full object-contain" />
                               </div>
                               <div>
                                  <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter leading-none mb-1">Government of Tamil Nadu</h1>
@@ -1195,7 +1178,18 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                                      <div className="space-y-3">
                                         <div className="bg-blue-600 text-white p-2 flex justify-between items-center shadow-lg border-l-4 border-white">
                                            <span className="text-[8px] font-black uppercase tracking-[0.2em]">FIELD EVIDENCE (AFTER)</span>
-                                           <div className="flex items-center gap-2">
+                                           <button 
+                     onClick={() => {
+                        const evt = new CustomEvent('manual-sync');
+                        window.dispatchEvent(evt);
+                     }} 
+                     title="Sync Live Field Uploads from Field Officer Mobile APK"
+                     className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-none text-[9px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-xs"
+                  >
+                     <RefreshCcw size={12} className={isSyncing ? "animate-spin" : ""} />
+                     <span className="hidden md:inline">SYNC MOBILE</span>
+                  </button>
+                  <div className="flex items-center gap-2">
                                               <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
                                               <span className="text-[7px] font-black uppercase">LIVE_UPLINK</span>
                                            </div>
@@ -1655,7 +1649,7 @@ const InspectorExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus })
 };
 
 
-const VillageExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus }) => {
+const VillageExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus, user = {} }) => {
    const [assignmentModal, setAssignmentModal] = useState({ open: false, alertId: null });
    const activeAlerts = alerts.filter(a => a.status === 'TAHSILDAR_ACCEPTED');
 
@@ -1745,14 +1739,14 @@ const VillageExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus }) =
                <p className="text-[10px] font-black uppercase text-slate-800 tracking-widest">Tactical Village Overview • Suramangalam Grid</p>
             </div>
 
-            <MapView parcels={parcels} alerts={alerts} onMapClick={() => {}} />
+            <MapView parcels={parcels} alerts={alerts} onMapClick={() => {}} userRole={user?.role || 'VAO'} />
          </div>
          <OfficerAssignmentModal isOpen={assignmentModal.open} alertId={assignmentModal.alertId} type="FIELD_OFFICER" onClose={() => setAssignmentModal({ open: false, alertId: null })} onAssign={confirmAssignment} />
       </div>
    );
 };
 
-const VillageMapHubView = ({ parcels = [], alerts = [] }) => {
+const VillageMapHubView = ({ parcels = [], alerts = [], user = {} }) => {
    return (
       <div className="space-y-6 animate-in fade-in duration-700">
          <div className="bg-white border border-slate-200 p-6 rounded-none flex justify-between items-center shadow-sm">
@@ -1778,7 +1772,7 @@ const VillageMapHubView = ({ parcels = [], alerts = [] }) => {
                <div className="absolute top-4 left-4 z-[1000] p-3 bg-white/90 backdrop-blur shadow-xl border border-white/20">
                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2"><MapPin size={12} className="text-blue-600" /> Suramangalam Tactical Grid</p>
                </div>
-               <MapView parcels={parcels} alerts={alerts} onMapClick={() => {}} />
+               <MapView parcels={parcels} alerts={alerts} onMapClick={() => {}} userRole={user?.role || 'VAO'} />
                
 
             </div>
@@ -1922,7 +1916,7 @@ const CollectorExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus, o
       if (!matchesTaluk) return false;
 
       // REMOVE COMPLETED: Only show unresolved alerts in the primary action queue
-      if (filterStatus === 'ACTIVE') return ['NEW', 'WAITING', 'PENDING', 'COLLECTOR_ACCEPTED'].includes((a.status || 'NEW').toUpperCase());
+      if (filterStatus === 'ACTIVE') return ['NEW', 'WAITING', 'PENDING', 'COLLECTOR_ACCEPTED', 'VAO_SUBMITTED', 'INSPECTOR_APPROVED'].includes((a.status || 'NEW').toUpperCase());
       if (filterStatus === 'RESOLVED') return ['RESOLVED', 'SUCCESS'].includes((a.status || '').toUpperCase());
       return true;
    }).sort((a, b) => {
@@ -1985,14 +1979,27 @@ const CollectorExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus, o
                       <Badge variant="info">{filteredAlerts.length} Nodes</Badge>
                    </div>
                   <div className="max-h-[580px] overflow-y-auto custom-scrollbar p-2 space-y-3 bg-slate-50/30">
-                     {filteredAlerts.map(alert => (
+                     {filteredAlerts.map(alert => {
+                        const isResolved = ['RESOLVED', 'SUCCESS'].includes((alert.status || '').toUpperCase());
+                        return (
                         <div key={alert.id} className="p-5 bg-white rounded-none flex items-center justify-between group hover:bg-indigo-50/30 border border-slate-100 hover:border-indigo-200 transition-all shadow-sm relative overflow-hidden">
                            {/* Color Accent Strip */}
-                           <div className={`absolute left-0 top-0 h-full w-1 ${alert.confidence_score > 0.8 ? 'bg-rose-500' : 'bg-amber-500'}`}></div>
+                           <div className={`absolute left-0 top-0 h-full w-1 ${isResolved ? 'bg-emerald-500' : (alert.confidence_score > 0.8 ? 'bg-rose-500' : 'bg-amber-500')}`}></div>
                            
                            <div className="flex items-center gap-6">
                               <div className="w-20 h-20 rounded-none overflow-hidden border border-slate-200 shadow-sm relative shrink-0 bg-slate-100 group-hover:border-indigo-300 transition-all">
-                                 <img src={alert.img || img1} alt="Node" className="w-full h-full object-cover transition-all duration-700 scale-110 group-hover:scale-100" />
+                                 {isResolved ? (
+                                    alert.resolutionImg ? (
+                                       <img src={alert.resolutionImg} alt="Resolution" className="w-full h-full object-cover transition-all duration-700 scale-110 group-hover:scale-100" />
+                                    ) : (
+                                       <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-300">
+                                          <ShieldCheck size={20} className="text-emerald-500" />
+                                          <span className="text-[6px] font-black uppercase mt-1 text-center leading-tight">No Photo<br/>Uploaded</span>
+                                       </div>
+                                    )
+                                 ) : (
+                                    <img src={alert.img || img1} alt="Node" className="w-full h-full object-cover transition-all duration-700 scale-110 group-hover:scale-100" />
+                                 )}
                                  <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                               </div>
                               <div>
@@ -2004,6 +2011,16 @@ const CollectorExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus, o
                                     {(alert.parcel_classification === 'Roadside' || alert.status === 'COLLECTOR_ACCEPTED') && (
                                        <div className="px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border bg-amber-500 text-white border-amber-600 animate-pulse">
                                           ⚠ ROADSIDE PRIORITY
+                                       </div>
+                                    )}
+                                    {alert.status === 'VAO_SUBMITTED' && (
+                                       <div className="px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border bg-blue-50 text-blue-700 border-blue-300">
+                                          🔍 VAO SUBMITTED · PENDING INSPECTOR REVIEW
+                                       </div>
+                                    )}
+                                    {alert.status === 'INSPECTOR_APPROVED' && (
+                                       <div className="px-2 py-0.5 text-[8px] font-black uppercase tracking-widest border bg-emerald-50 text-emerald-700 border-emerald-300">
+                                          ✔ INSPECTOR APPROVED · VERIFIED
                                        </div>
                                     )}
                                  </div>
@@ -2026,16 +2043,23 @@ const CollectorExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus, o
                            <div className="flex flex-col items-end gap-3">
                               <div className="text-right">
                                  <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">Protocol_State</p>
-                                 <p className="text-[9px] font-black text-rose-500 uppercase flex items-center justify-end gap-1">
-                                    <AlertTriangle size={10} /> CRITICAL_AWAITING_ORDER
+                                 <p className={`text-[9px] font-black uppercase flex items-center justify-end gap-1 ${isResolved ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                    {isResolved ? <CheckCircle2 size={10} /> : <AlertTriangle size={10} />} 
+                                    {isResolved ? 'MISSION_ACCOMPLISHED' : (alert.status === 'INSPECTOR_APPROVED' ? 'INSPECTOR_VERIFIED' : (alert.status === 'VAO_SUBMITTED' ? 'VAO_REPORT_SUBMITTED' : 'CRITICAL_AWAITING_ORDER'))}
                                  </p>
                               </div>
-                              <button onClick={() => handleAction(alert.id)} className="px-8 py-3 bg-slate-900 text-white rounded-none text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg hover:shadow-indigo-100 flex items-center gap-2 border-b-2 border-indigo-500">
-                                 <Zap size={14} className="text-amber-400" /> Authorize Executive Mission
-                              </button>
+                              {isResolved ? (
+                                 <button disabled className="px-8 py-3 bg-emerald-50 text-emerald-600 rounded-none text-[9px] font-black uppercase tracking-widest border-b-2 border-emerald-200 flex items-center gap-2 cursor-not-allowed">
+                                    <CheckCircle2 size={14} /> Executive Mission Closed
+                                 </button>
+                              ) : (
+                                 <button onClick={() => handleAction(alert.id)} className="px-8 py-3 bg-slate-900 text-white rounded-none text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg hover:shadow-indigo-100 flex items-center gap-2 border-b-2 border-indigo-500">
+                                    <Zap size={14} className="text-amber-400" /> Authorize Executive Mission
+                                 </button>
+                              )}
                            </div>
                         </div>
-                     ))}
+                     )})}
                      {filteredAlerts.length === 0 && (
                         <div className="py-20 text-center bg-white border border-dashed border-slate-200">
                            <div className="w-16 h-16 bg-slate-50 rounded-none flex items-center justify-center mx-auto mb-4 text-slate-300 shadow-sm border border-slate-100"><ShieldCheck size={32} /></div>
@@ -4072,7 +4096,7 @@ const LiveAlertFeed = ({ alerts = [] }) => {
          setFeed(prev => [{ ...ev, id: `auto-${Date.now()}`, time: 'Just now' }, ...prev.slice(0, 14)]);
          idx++;
       }, 6000);
-      return () => clearInterval(interval);
+      return () => { clearInterval(interval); window.removeEventListener('manual-sync', onManualSync); };
    }, []);
 
    return (
@@ -4220,6 +4244,7 @@ export default function App() {
    }, [user]);
    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
    const [isNotifOpen, setIsNotifOpen] = useState(false);
+   const [isSyncing, setIsSyncing] = useState(false);
    const [subView, setSubView] = useState(null);
    const [gisAttributes, setGisAttributes] = useState(null);
    const [selectedPosition, setSelectedPosition] = useState(null);
@@ -4305,13 +4330,17 @@ export default function App() {
                   if (photo) assignedImg = photo;
                }
 
+               let resImgParsed = null;
                const resolutionPhotos = f.properties.resolution_images;
                if (resolutionPhotos && Array.isArray(resolutionPhotos) && resolutionPhotos.length > 0) {
                   let photo = resolutionPhotos[0];
                   if (photo && !photo.startsWith('data:image') && !photo.startsWith('http') && !photo.startsWith('blob:')) {
                      photo = 'data:image/jpeg;base64,' + photo;
                   }
-                  if (photo) assignedImg = photo;
+                  if (photo) {
+                     assignedImg = photo;
+                     resImgParsed = photo;
+                  }
                }
 
                return {
@@ -4320,7 +4349,8 @@ export default function App() {
                   position: [f.geometry.coordinates[1], f.geometry.coordinates[0]],
                   survey_number: f.properties.parcel_details,
                   status: (f.properties.status || 'NEW').toUpperCase(),
-                  img: assignedImg
+                  img: ((f.properties.status || 'NEW').toUpperCase() === 'RESOLVED' || (f.properties.status || 'NEW').toUpperCase() === 'SUCCESS') ? (resImgParsed || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23f8fafc'/><text x='100' y='90' font-family='sans-serif' font-size='14' font-weight='900' fill='%2394a3b8' text-anchor='middle'>NO PHOTO</text><text x='100' y='110' font-family='sans-serif' font-size='14' font-weight='900' fill='%2394a3b8' text-anchor='middle'>UPLOADED</text></svg>") : assignedImg,
+                  resolutionImg: resImgParsed
                };
             }) || [];
             
@@ -4330,7 +4360,7 @@ export default function App() {
                   const localMatch = prev.find(p => String(p.id) === String(na.id));
                   if (localMatch) {
                      // If backend updated status to a completed/verified state, accept it fully
-                     if (['RESOLVED', 'COLLECTOR_ACCEPTED', 'TAHSILDAR_ACCEPTED'].includes(na.status)) {
+                     if (['RESOLVED', 'COLLECTOR_ACCEPTED', 'TAHSILDAR_ACCEPTED', 'VAO_SUBMITTED', 'INSPECTOR_APPROVED'].includes(na.status)) {
                         return na;
                      }
                      // Keep local overrides only if both are in progress
@@ -4357,7 +4387,9 @@ export default function App() {
       };
       
       fetchData();
-      const interval = setInterval(fetchData, 30000); 
+      const interval = setInterval(fetchData, 5000);
+      const onManualSync = () => { setIsSyncing(true); fetchData(); };
+      window.addEventListener('manual-sync', onManualSync); 
       return () => clearInterval(interval);
    }, [user]);
 
@@ -4402,6 +4434,7 @@ export default function App() {
 
       if (activeTab === 'profile') return <ProfileView user={user} />;
       if (activeTab === 'camera') return <CameraView alerts={alerts} />;
+      if (activeTab === 'field-evidence') return <FieldOpsTaskBoard alerts={alerts} user={user} patchAlertStatus={patchAlertStatus} />;
       if (activeTab === 'field-monitor') return <FieldOpsMonitorView user={user} />;
       if (activeTab === 'field-ops') return <CombinedTacticalOpsView user={user} alerts={alerts} />;
       if (activeTab === 'detection-logic') return <AIDetectionLogicView />;
@@ -4441,7 +4474,7 @@ export default function App() {
             return <div className="p-6"><InspectorExecutiveView parcels={parcels} alerts={alerts} patchAlertStatus={patchAlertStatus} /></div>;
          }
          if (user.role === 'VAO') {
-            return <div className="p-6"><VillageExecutiveView parcels={parcels} alerts={alerts} patchAlertStatus={patchAlertStatus} /></div>;
+            return <div className="p-6"><VillageExecutiveView parcels={parcels} alerts={alerts} patchAlertStatus={patchAlertStatus} user={user} /></div>;
          }
          return <ApprovalsHubView user={user} alerts={alerts} patchAlertStatus={patchAlertStatus} />;
       }
@@ -4505,13 +4538,13 @@ export default function App() {
       if (activeTab === 'dashboard') {
          if (user.role === 'COLLECTOR') return <CollectorExecutiveView parcels={parcels} alerts={alerts} patchAlertStatus={patchAlertStatus} onTabChange={setActiveTab} />;
          if (user.role === 'TAHSILDAR') return <TalukExecutiveView parcels={parcels} alerts={alerts} patchAlertStatus={patchAlertStatus} onTabChange={setActiveTab} />;
-         if (user.role === 'VAO') return <VillageExecutiveView parcels={parcels} alerts={alerts} patchAlertStatus={patchAlertStatus} />;
+         if (user.role === 'VAO') return <VillageExecutiveView parcels={parcels} alerts={alerts} patchAlertStatus={patchAlertStatus} user={user} />;
          if (user.role === 'INSPECTOR') return <div className="p-6"><InspectorDashboardView parcels={parcels} alerts={alerts} onTabChange={setActiveTab} /></div>;
          return <DashboardView parcels={parcels} alerts={alerts} setAlerts={setAlerts} onExport={handleExport} onMapClick={handleMapClick} gisAttributes={gisAttributes} selectedPosition={selectedPosition} onTabChange={setActiveTab} />;
       }
 
       if (activeTab === 'map') {
-         if (user.role === 'VAO') return <VillageMapHubView parcels={parcels} alerts={alerts} />;
+         if (user.role === 'VAO') return <VillageMapHubView parcels={parcels} alerts={alerts} user={user} />;
          return <DistrictMapView parcels={parcels} alerts={alerts} onExport={handleExport} onMapClick={handleMapClick} selectedPosition={selectedPosition} />;
       }
 
@@ -4584,7 +4617,7 @@ export default function App() {
          <aside className={`fixed inset-y-0 left-0 lg:static w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 z-[2000] shadow-sm transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
             <div className="p-6 flex items-center justify-between border-b border-slate-100">
                <div className="flex items-center gap-3" onClick={() => setActiveTab('dashboard')} style={{ cursor: 'pointer' }}>
-                  <div className="bg-blue-600 p-2 rounded-none text-white shadow-md"><ShieldAlert size={20} /></div>
+                  <div className="bg-blue-600 p-2 rounded-none text-white shadow-md flex items-center justify-center shrink-0"><ShieldAlert size={20} /></div>
                   <div>
                      <h1 className="font-extrabold text-sm tracking-tighter text-slate-900 uppercase">GEOMMAND</h1>
                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Salem District</p>

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" width="100%" height="100%">
+  <defs>
+    <linearGradient id="shieldGradH" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="50%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="landGradH" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
+    </linearGradient>
+    <filter id="shadowH" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Left Shield Emblem -->
+  <g transform="translate(16, 8)" filter="url(#shadowH)">
+    <!-- Outer Shield -->
+    <path d="M 72 20 
+             C 100 28, 120 30, 128 35
+             C 128 85, 108 126, 72 144
+             C 36 126, 16 85, 16 35
+             C 24 30, 44 28, 72 20 Z"
+          fill="url(#shieldGradH)"
+          stroke="#93C5FD"
+          stroke-width="2"/>
+
+    <!-- Inner Shield Inset -->
+    <path d="M 72 28 
+             C 96 35, 112 37, 120 42
+             C 120 82, 102 116, 72 132
+             C 42 116, 24 82, 24 42
+             C 32 37, 48 35, 72 28 Z"
+          fill="#0F172A"/>
+
+    <!-- Cadastral Parcels -->
+    <path d="M 38 56 L 68 50 L 68 80 L 38 72 Z" fill="url(#landGradH)"/>
+    <path d="M 76 50 L 106 56 L 100 85 L 76 80 Z" fill="#0284C7"/>
+    <path d="M 38 78 L 68 86 L 68 114 L 48 104 Z" fill="#3B82F6"/>
+    <path d="M 76 86 L 100 90 L 90 112 L 76 114 Z" fill="#F59E0B"/>
+
+    <!-- Target Crosshair -->
+    <circle cx="72" cy="82" r="14" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+    <circle cx="72" cy="82" r="3" fill="#F59E0B"/>
+    <line x1="72" y1="62" x2="72" y2="72" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+    <line x1="72" y1="92" x2="72" y2="102" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+    <line x1="52" y1="82" x2="62" y2="82" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+    <line x1="82" y1="82" x2="92" y2="82" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Brand Typography -->
+  <g transform="translate(176, 26)">
+    <!-- Primary Title -->
+    <text x="0" y="52" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="44" font-weight="900" fill="url(#textGrad)" letter-spacing="2">
+      GEOMMAND
+    </text>
+
+    <!-- Version Pill -->
+    <rect x="290" y="24" width="46" height="22" rx="6" fill="#1E40AF" fill-opacity="0.1"/>
+    <text x="313" y="39" font-family="'Inter', system-ui, sans-serif" font-size="11" font-weight="900" fill="#1E40AF" text-anchor="middle">
+      v2.5
+    </text>
+
+    <!-- Subtitle 1 -->
+    <text x="0" y="80" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#334155" letter-spacing="0.5">
+      Tamil Nadu Land Intelligence &amp; Encroachment Monitoring
+    </text>
+
+    <!-- Subtitle 2 / Gov Tag -->
+    <g transform="translate(0, 94)">
+      <circle cx="5" cy="5" r="4" fill="#10B981"/>
+      <text x="16" y="9" font-family="'Inter', system-ui, sans-serif" font-size="11" font-weight="800" fill="#059669" letter-spacing="1">
+        GOVERNMENT OF TAMIL NADU · SALEM DISTRICT
+      </text>
+    </g>
+  </g>
+</svg>

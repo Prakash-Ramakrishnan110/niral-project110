@@ -21,6 +21,20 @@ class LandParcel(models.Model):
     taluk = models.CharField(max_length=50, default='Salem West')
     district = models.CharField(max_length=50, default='Salem')
     
+    # Cadastral & Bilingual Fields (Tamil Nilam standard)
+    ulpin = models.CharField(max_length=30, blank=True, null=True, db_index=True)
+    district_ta = models.CharField(max_length=100, default='சேலம்', blank=True, null=True)
+    taluk_ta = models.CharField(max_length=100, default='சேலம் மேற்கு', blank=True, null=True)
+    village_name = models.CharField(max_length=100, blank=True, null=True)
+    village_ta = models.CharField(max_length=100, blank=True, null=True)
+    village_lgd_code = models.CharField(max_length=20, default='608142', blank=True, null=True)
+    area_extent = models.CharField(max_length=50, default='2.50 Acres', blank=True, null=True)
+    occupied_extent = models.CharField(max_length=50, blank=True, null=True)
+    is_occupied = models.BooleanField(default=False)
+    g_value = models.CharField(max_length=50, default='₹1,450 / sq.ft', blank=True, null=True)
+    adjacent_neighbors = models.JSONField(default=list, blank=True, null=True)
+    fmb_data = models.JSONField(default=dict, blank=True, null=True)
+
     # Spatial Field
     geom = models.PolygonField(srid=4326)
     
@@ -40,6 +54,13 @@ class EncroachmentAlert(models.Model):
         ('COLLECTOR_ACCEPTED', 'COLLECTOR_ACCEPTED'),
         ('TAHSILDAR_ACCEPTED', 'TAHSILDAR_ACCEPTED'),
         ('VAO_ASSIGNED', 'VAO_ASSIGNED'),
+        ('VAO_SUBMITTED', 'VAO_SUBMITTED'),
+        ('INSPECTOR_APPROVED', 'INSPECTOR_APPROVED'),
+        ('SECTION_7_ISSUED', 'SECTION_7_ISSUED'),
+        ('SECTION_6_ORDERED', 'SECTION_6_ORDERED'),
+        ('FALSE_POSITIVE', 'FALSE_POSITIVE'),
+        ('REJECTED_BOUNDARY', 'REJECTED_BOUNDARY'),
+        ('CANCELLED_LEGAL', 'CANCELLED_LEGAL'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
