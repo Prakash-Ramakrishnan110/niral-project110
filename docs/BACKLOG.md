@@ -19,6 +19,7 @@ The following items require official decisions or access from government stakeho
 | **5** | **Guideline Valuation Dataset Authority** | Inspector General of Registration (STAR 3.0 / TN Reg Dept) | Land value-at-risk calculations | Obtain structured CSV/database feed of street/survey guideline values (₹/sq.ft) to replace mock valuations. |
 | **6** | **Hosting & Data Residency (State Data Centre vs Cloud)** | TNeGA / NIC Tamil Nadu | Infrastructure & DPDP Act 2023 compliance | Determine if production workloads and satellite archives must reside within the State Data Centre (ELCOT/SDC) or MeitY-empanelled cloud. |
 | **7** | **TNUHDB Humanitarian Routing Protocol** | Tamil Nadu Urban Habitat Development Board | Welfare routing for vulnerable dwellings | Establish formal API or SOP for forwarding thatched hut cases to the District Housing Welfare Officer. |
+| **8** | **Statutory Timelines under TN Act III of 1905 (UNCONFIRMED)** | Revenue Dept / Spl. Govt. Pleader | Section 7 show-cause reply, Section 6 vacate window, and appeal limitations | **UNVERIFIED - pending legal review**: Confirm exact statutory reply windows (commonly referenced as 15 days for standard Form A show-cause; 48 hours for emergency waterbody obstruction), eviction vacate periods, and pandal grace timers. System must load all durations from `DistrictLegalConfig` per district; zero hardcoded literals in code. |
 
 ---
 
