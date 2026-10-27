@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import LandAPI from './api/client';
 import MapView from './components/Map';
 import { AIDetectionLogicView, FieldOpsMonitorView } from './TacticalViews';
 import { GovernmentLandRegistryView } from './GovernmentRegistry';
@@ -311,6 +312,73 @@ const OfficerAssignmentModal = ({ isOpen, onClose, onAssign, type, alertId, aler
                      ))}
                   </div>
                </div>
+
+                {/* Real Statutory Legal & Executive Actions */}
+                {currentAlert && (
+                   <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-2">
+                      <h5 className="text-[8px] font-black text-slate-700 uppercase tracking-widest mb-2">STATUTORY LEGAL ACTIONS (REAL PRODUCT)</h5>
+                      <div className="grid grid-cols-2 gap-2">
+                         <button
+                            type="button"
+                            onClick={async () => {
+                               try {
+                                  await LandAPI.downloadSection7Notice(currentAlert.id, currentAlert.parcel_details || 'Survey');
+                                  alert('Official Section 7 Notice PDF downloaded for Survey ' + currentAlert.parcel_details + '!');
+                               } catch (e) {
+                                  alert('Notice download failed: ' + e.message);
+                               }
+                            }}
+                            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-[9px] uppercase tracking-wider rounded-none flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                         >
+                            <Download size={12} /> Section 7 PDF
+                         </button>
+                         <button
+                            type="button"
+                            onClick={async () => {
+                               try {
+                                  await LandAPI.lockStar3(currentAlert.id);
+                                  alert('STAR 3.0 Deed Registration Locked for Survey ' + currentAlert.parcel_details + '! Sub-Registrar transfer frozen.');
+                               } catch (e) {
+                                  alert('STAR 3.0 Lock failed: ' + e.message);
+                               }
+                            }}
+                            className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-black text-[9px] uppercase tracking-wider rounded-none flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                         >
+                            <Lock size={12} /> Freeze STAR 3.0
+                         </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                         <button
+                            type="button"
+                            onClick={async () => {
+                               try {
+                                  await LandAPI.downloadHighCourtATR('Salem');
+                                  alert('Madras High Court W.P. 34091/2023 Compliance ATR PDF downloaded!');
+                               } catch (e) {
+                                  alert('High Court ATR failed: ' + e.message);
+                               }
+                            }}
+                            className="px-3 py-2 bg-slate-900 hover:bg-black text-white font-black text-[9px] uppercase tracking-wider rounded-none flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                         >
+                            <Gavel size={12} /> High Court ATR
+                         </button>
+                         <button
+                            type="button"
+                            onClick={async () => {
+                               try {
+                                  await LandAPI.humanitarianRehab(currentAlert.id, { scheme: 'TNUHDB Tenements' });
+                                  alert('Welfare Housing Protocol dispatched for Survey ' + currentAlert.parcel_details + '! Demolition stayed, rerouted to TNUHDB.');
+                               } catch (e) {
+                                  alert('Humanitarian dispatch failed: ' + e.message);
+                               }
+                            }}
+                            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[9px] uppercase tracking-wider rounded-none flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                         >
+                            <Home size={12} /> TNUHDB Welfare
+                         </button>
+                      </div>
+                   </div>
+                )}
             </div>
 
             {/* Footer: Command Summary */}
@@ -1937,6 +2005,20 @@ const CollectorExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus, o
                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Salem District • Strategic Node</p>
             </div>
             <div className="flex items-center gap-3">
+               <button
+                  type="button"
+                  onClick={async () => {
+                     try {
+                        await LandAPI.downloadHighCourtATR('Salem');
+                        alert('Madras High Court W.P. 34091/2023 Compliance ATR PDF downloaded!');
+                     } catch(e) {
+                        alert('Download error: ' + e.message);
+                     }
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-[9px] uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all"
+               >
+                  <Download size={14} /> 1-Click High Court ATR (PDF)
+               </button>
                <Badge variant="danger">{activeCount} Unresolved Threats</Badge>
             </div>
          </div>
@@ -4216,32 +4298,7 @@ export default function App() {
    const [lang, setLang] = useState('EN');
    const t = (en, ta) => lang === 'EN' ? en : (ta || en);
 
-   // --- LIVE INTELLIGENCE FEED SIMULATION ---
-   useEffect(() => {
-      if (!user) return;
-      const feedInterval = setInterval(() => {
-         const randomType = ['CONSTRUCTION', 'FENCING', 'AGRICULTURAL', 'COMMERCIAL'][Math.floor(Math.random() * 4)];
-         const randomTaluk = TN_TALUKS['Salem'][Math.floor(Math.random() * TN_TALUKS['Salem'].length)];
-         const newAlert = {
-            id: `LIVE-${Math.floor(1000 + Math.random() * 9000)}`,
-            alert_type: randomType,
-            parcel_details: `${Math.floor(100 + Math.random() * 900)}/${Math.floor(1 + Math.random() * 10)}`,
-            taluk: randomTaluk,
-            status: 'NEW',
-            severity: 'HIGH',
-            timestamp: new Date().toISOString(),
-            message: `New Change Detected: ${randomType} in ${randomTaluk}`,
-            isLive: true
-         };
-         
-         setAlerts(prev => {
-            const updated = [newAlert, ...prev];
-            return updated.slice(0, 100);
-         });
-      }, 45000);
-      
-      return () => clearInterval(feedInterval);
-   }, [user]);
+   // Live PostGIS alerts synced via backend API - zero fake random simulation
    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
    const [isNotifOpen, setIsNotifOpen] = useState(false);
    const [isSyncing, setIsSyncing] = useState(false);

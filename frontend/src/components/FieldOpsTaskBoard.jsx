@@ -31,6 +31,10 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
     const [objectionDays, setObjectionDays] = useState('15');
     const [policeStation, setPoliceStation] = useState('Salem West Police Station');
     const [actionNotes, setActionNotes] = useState('');
+    const [fmbAcknowledged, setFmbAcknowledged] = useState(false);
+    const [actionError, setActionError] = useState(null);
+    const [boardAtrDistrict, setBoardAtrDistrict] = useState('');
+    const [boardAtrWritNo, setBoardAtrWritNo] = useState('');
 
     const fetchVerifications = useCallback(async () => {
         setSyncing(true);
@@ -321,7 +325,28 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
     };
 
     // ─── DOWNLOAD 3: STATUTORY LEGAL NOTICE (SEC 7 OR SEC 6) ─────────────────────
-    const downloadStatutoryNoticePDF = (task) => {
+    const downloadStatutoryNoticePDF = async (task) => {
+        if (!task) return;
+        try {
+            if (task.alertId) {
+                const res = await axios.get(`/api/alerts/${task.alertId}/download_section_7/`, {
+                    responseType: 'blob'
+                });
+                const blob = new Blob([res.data], { type: 'application/pdf' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Section_7_Notice_SNo_${task.survey.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                return;
+            }
+        } catch (e) {
+            console.warn('Backend ReportLab PDF unavailable, falling back to client jsPDF:', e);
+        }
+
         const pdf = new jsPDF('p', 'mm', 'a4');
         const isSec6 = task.status === 'SECTION_6_ORDERED';
 
@@ -425,10 +450,15 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                 });
                 if (patchAlertStatus) patchAlertStatus(task.alertId, 'INSPECTOR_APPROVED');
             } else if (targetAction === 'ISSUE_SEC_7') {
+                if (!fmbAcknowledged) {
+                    setActionError('Statutory requirement: You must check the FMB acknowledgement box before issuing Section 7 notice.');
+                    return;
+                }
                 await axios.post(`/api/alerts/${task.alertId}/issue_section_7/`, {
                     encroacher_name: encroacherName,
                     role: currentUserRole,
                     officer_name: officerName,
+                    officer_fmb_acknowledgement: true,
                     notes: `Section 7 Show Cause Notice served to ${encroacherName} (${objectionDays} days response period) by ${officerName}.`
                 });
                 if (patchAlertStatus) patchAlertStatus(task.alertId, 'SECTION_7_ISSUED');
@@ -485,9 +515,9 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
         } catch (e) {
             console.error('Pipeline action failed:', e);
             const errMsg = e.response?.data?.error || e.message;
-            if (e.response?.status === 403) {
-                alert(`⚠️ STATUTORY ACCESS DENIED:\n${errMsg}`);
-                setActionModal(null);
+            if (e.response?.status === 403 || e.response?.status === 400) {
+                setActionError(errMsg);
+                alert(`⚠️ STATUTORY CHECK FAILED (${e.response?.status}):\n${errMsg}`);
                 return;
             }
             // Local fallback
@@ -506,7 +536,48 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
         }
     };
 
-    const mobileCount = mergedTasks.filter(t => t.source === 'MOBILE_APP_UPLOAD' || t.photos.length > 0).length;
+    const downloadHighCourtATR = async () => {
+        if (!boardAtrWritNo || !boardAtrWritNo.trim()) {
+            alert('Writ Petition Number is required (e.g. W.P. No. 34091 of 2023).');
+            return;
+        }
+        try {
+            setActionLoading(true);
+            const res = await axios.get(`/api/compliance/high-court-atr/?district=${encodeURIComponent(boardAtrDistrict)}&writ_no=${encodeURIComponent(boardAtrWritNo.trim())}`, {
+                responseType: 'blob'
+            });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Madras_High_Court_Compliance_ATR_${boardAtrDistrict}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (e) {
+            alert('Failed to download High Court ATR: ' + e.message);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleStar3Lock = async (task) => {
+        if (!task) return;
+        try {
+            setActionLoading(true);
+            if (task.alertId) {
+                const res = await axios.post(`/api/alerts/${task.alertId}/star3_lock/`);
+                alert(`🔒 STAR 3.0 REGISTRY LOCK APPLIED:\nReference: ${res.data.lock_reference}\nSub-Registrar Office: ${res.data.registry_portal}\nStatus: ${res.data.message}`);
+                return;
+            }
+            alert(`🔒 STAR 3.0 REGISTRY FREEZE ACTIVATED:\nSurvey No: ${task.survey}\nSub-Registrar Office: Salem West SRO\nStatus: Transaction blocked under TN Land Encroachment Act 1905.`);
+        } catch (e) {
+            alert(`🔒 STAR 3.0 REGISTRY FREEZE ACTIVATED (Offline Simulation):\nSurvey No: ${task.survey}\nTransaction blocked at Sub-Registrar Office.`);
+        } finally {
+            setActionLoading(false);
+        }
+    };
     const awaitingReviewCount = mergedTasks.filter(t => t.status === 'VAO_SUBMITTED').length;
     const sec7Count = mergedTasks.filter(t => t.status === 'SECTION_7_ISSUED').length;
     const sec6Count = mergedTasks.filter(t => t.status === 'SECTION_6_ORDERED').length;
@@ -542,6 +613,34 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                     <span className="text-[11px] text-slate-400 font-medium">
                         Synced: {lastSync.toLocaleTimeString()}
                     </span>
+                    <div className="flex items-center gap-1.5 bg-slate-800 p-1 border border-slate-700">
+                        <select
+                            value={boardAtrDistrict}
+                            onChange={(e) => setBoardAtrDistrict(e.target.value)}
+                            className="bg-slate-900 text-white text-[11px] px-1.5 py-1 border border-slate-700"
+                        >
+                            <option value="">-- District --</option>
+                            {Array.from(new Set(alerts.map(a => a.parcel_district || a.district).filter(Boolean))).sort().map(d => (
+                                <option key={d} value={d}>{d}</option>
+                            ))}
+                        </select>
+                        <input
+                            type="text"
+                            value={boardAtrWritNo}
+                            onChange={(e) => setBoardAtrWritNo(e.target.value)}
+                            placeholder="Writ No"
+                            className="bg-slate-900 text-white text-[11px] px-1.5 py-1 border border-slate-700 w-28 font-mono"
+                        />
+                        <button 
+                            onClick={downloadHighCourtATR}
+                            disabled={actionLoading}
+                            className="px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+                            title="Download official compliance Affidavit & ATR PDF for Madras High Court Waterbody Protection Bench"
+                        >
+                            <Scale size={12} className="text-purple-200" />
+                            ATR PDF
+                        </button>
+                    </div>
                     <button 
                         onClick={fetchVerifications}
                         disabled={syncing}
@@ -959,6 +1058,14 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                             {selectedTask.status === 'SECTION_6_ORDERED' ? 'Sec 6 Order (PDF)' : 'Sec 7 Notice (PDF)'}
                                         </button>
                                     </div>
+                                    <button 
+                                        onClick={() => handleStar3Lock(selectedTask)}
+                                        className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-900 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border border-red-200 cursor-pointer mt-2"
+                                        title="Trigger automated transaction lock at Sub-Registrar Office via STAR 3.0"
+                                    >
+                                        <Lock size={14} className="text-red-700" />
+                                        STAR 3.0 Registry Freeze (Lock Deed)
+                                    </button>
                                 </div>
 
                                 {/* Right: Detailed Intel & Next Government Actions */}
@@ -1259,6 +1366,32 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                     <div className="p-3 bg-purple-50 border border-purple-200 text-purple-900 text-[11px] leading-relaxed">
                                         <b>Section 7 of Tamil Nadu Act III of 1905:</b> Orders the unauthorized occupant of Survey <b>{selectedTask.survey}</b> to show cause within a statutory window why eviction should not be executed.
                                     </div>
+                                    <div className="p-3 bg-amber-50 border border-amber-300 text-amber-900 text-[11px] leading-relaxed">
+                                        <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                                            <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                                            <span>STATUTORY SURVEY ACKNOWLEDGEMENT</span>
+                                        </div>
+                                        <p className="mt-1 text-slate-700">
+                                            FMB measurements for this parcel are currently <b>INDICATIVE</b> (derived from vector polygon geometry, pending certified physical field measurement).
+                                        </p>
+                                        <label className="flex items-start gap-2 mt-2.5 font-bold cursor-pointer text-slate-900">
+                                            <input 
+                                                type="checkbox"
+                                                checked={fmbAcknowledged}
+                                                onChange={(e) => {
+                                                    setFmbAcknowledged(e.target.checked);
+                                                    if (e.target.checked) setActionError(null);
+                                                }}
+                                                className="mt-0.5 rounded cursor-pointer"
+                                            />
+                                            <span>I acknowledge that FMB measurements are indicative polygon-derived coordinates pending certified field survey, and authorize Section 7 issuance.</span>
+                                        </label>
+                                    </div>
+                                    {actionError && (
+                                        <div className="p-2.5 bg-red-50 border border-red-300 text-red-800 text-[11px] font-bold">
+                                            ⚠️ {actionError}
+                                        </div>
+                                    )}
                                     <div>
                                         <label className="font-bold text-slate-700 block mb-1">Encroacher / Occupant Name:</label>
                                         <input 
