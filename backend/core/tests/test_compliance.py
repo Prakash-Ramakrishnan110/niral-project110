@@ -163,17 +163,22 @@ class JudicialComplianceAndLegalSafetyTests(SafeAPITestCase):
         self.assertNotIn("Omalur North", text)
 
     def test_atr_view_missing_writ_no_400(self):
-        """HighCourtATRView returns 400 Bad Request when writ_no is omitted or whitespace."""
-        # 1. Missing writ_no parameter
+        """HighCourtATRView returns 400 Bad Request when district or writ_no is omitted or whitespace."""
+        # 1. Missing district parameter
+        res_no_dist = self.client.get('/api/compliance/high-court-atr/?writ_no=WP123')
+        self.assertEqual(res_no_dist.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("district query parameter is required", res_no_dist.data.get("error", ""))
+
+        # 2. Missing writ_no parameter
         res_missing = self.client.get('/api/compliance/high-court-atr/?district=Salem')
         self.assertEqual(res_missing.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("writ_no query parameter is required", res_missing.data.get("error", ""))
 
-        # 2. Empty string writ_no parameter
+        # 3. Empty string writ_no parameter
         res_empty = self.client.get('/api/compliance/high-court-atr/?district=Salem&writ_no=   ')
         self.assertEqual(res_empty.status_code, status.HTTP_400_BAD_REQUEST)
 
-        # 3. Valid call returns 200 with PDF content type
+        # 4. Valid call returns 200 with PDF content type
         res_valid = self.client.get('/api/compliance/high-court-atr/?district=Coimbatore&writ_no=W.P.+No.+18420+of+2024')
         self.assertEqual(res_valid.status_code, status.HTTP_200_OK)
         self.assertEqual(res_valid['Content-Type'], 'application/pdf')

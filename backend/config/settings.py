@@ -56,29 +56,6 @@ if sys.platform == 'win32':
                 pass
             os.environ['PATH'] = _geos_dir + ';' + os.environ.get('PATH', '')
 
-    # Windows QGIS auto-discovery fallback (only activates when env vars are NOT set)
-    if not _gdal_env:
-        _qgis_candidates = [
-            r'C:\Program Files\QGIS 4.0.1\bin',
-            r'C:\Program Files\QGIS 3.34\bin',
-            r'C:\OSGeo4W\bin',
-        ]
-        for _qgis_dir in _qgis_candidates:
-            if os.path.exists(_qgis_dir):
-                try:
-                    os.add_dll_directory(_qgis_dir)
-                except Exception:
-                    pass
-                os.environ['PATH'] = _qgis_dir + ';' + os.environ.get('PATH', '')
-                for _dll in ['gdal312.dll', 'gdal311.dll', 'gdal310.dll', 'gdal308.dll', 'gdal.dll']:
-                    _gdal_path = os.path.join(_qgis_dir, _dll)
-                    if os.path.exists(_gdal_path):
-                        GDAL_LIBRARY_PATH = _gdal_path
-                        break
-                _geos_path = os.path.join(_qgis_dir, 'geos_c.dll')
-                if os.path.exists(_geos_path):
-                    GEOS_LIBRARY_PATH = _geos_path
-                break
 
 # ── Application definition ────────────────────────────────────────────────────
 INSTALLED_APPS = [

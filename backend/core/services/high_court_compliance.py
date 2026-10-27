@@ -17,7 +17,9 @@ class HighCourtComplianceGenerator:
     """
 
     @classmethod
-    def generate_atr_pdf(cls, district="Salem", writ_petition_no=None):
+    def generate_atr_pdf(cls, district=None, writ_petition_no=None):
+        if not district or not str(district).strip():
+            raise ValueError("district is a required parameter with no default and cannot be empty")
         if not writ_petition_no or not str(writ_petition_no).strip():
             raise ValueError("writ_petition_no is a required parameter with no default and cannot be empty")
 

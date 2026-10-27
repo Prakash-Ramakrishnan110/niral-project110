@@ -540,11 +540,16 @@ class HighCourtATRView(APIView):
     Action Taken Report (ATR) PDF for District Collectors and Revenue Secretaries.
     """
     def get(self, request):
-        district = request.query_params.get('district', 'Salem')
+        district = request.query_params.get('district')
+        if not district or not district.strip():
+            return Response(
+                {"error": "district query parameter is required with no default (e.g. ?district=<DistrictName>&writ_no=<WritNumber>)"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         writ_no = request.query_params.get('writ_no')
         if not writ_no or not writ_no.strip():
             return Response(
-                {"error": "writ_no query parameter is required with no default (e.g. ?district=Salem&writ_no=W.P.+No.+34091+of+2023)"},
+                {"error": "writ_no query parameter is required with no default (e.g. ?district=<DistrictName>&writ_no=<WritNumber>)"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         try:
