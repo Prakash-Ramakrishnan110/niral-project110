@@ -123,7 +123,12 @@ Run with: `python verify_pdfs.py` from `backend/` using venv.
 
 ### What Remains Open (Requires Phase 0 Next Steps)
 
-- **Docker / environment parity**: Docker Desktop could not start (WSL2 issue). Stack was verified against local PostgreSQL 17 + QGIS GDAL — not the pinned `postgis/postgis:15-3.3` container. A CI GitHub Actions workflow using a `postgis/postgis:15-3.3` service container should be added as source-of-truth verification.
+- **Local PostgreSQL & PostGIS Environment Truth (Verified 27-Oct-2026)**:
+  * **Port 5432 (Windows Native PostgreSQL 15.13)**: Native Windows service. PostGIS extension is NOT installed (`postgis.control` missing). Databases: `govland_shield` (7 tables from 13-Apr-2026, 0 alerts), `land_records` (empty, 0 tables).
+  * **Port 5433 (Windows Native PostgreSQL 18.1)**: Native Windows service. Databases: `postgres`, `eduai`.
+  * **Port 5434 (Windows Native PostgreSQL 17.7)**: Native Windows service. Databases: `govland_shield` (19 tables, 5 parcels, 0 alerts).
+  * **Port 5435 (Docker Container `postgis_15` - `postgis/postgis:15-3.3`)**: Official pinned environment running PostgreSQL 15.4 (Debian) + PostGIS 3.3.4. Database: `land_records` (17 Django tables, 0 alerts, 0 parcels). `manage.py migrate` was executed exclusively against this container. Role `landuser` was granted `CREATEDB` (`ALTER ROLE landuser CREATEDB;`) to permit Django's `SafeTestCase` runner to spin up `test_land_records`.
+  * **CI Pipeline (`.github/workflows/ci.yml`)**: Pinned to `postgis/postgis:15-3.3` service container matching local container parity.
 - **Server-side RBAC**: `role` parameter is still client-sent on `issue_section_7`, `inspector_approve`, `issue_section_6`, `complete_eviction`, `reject_boundary`, `cancel_legal`. JWT authentication + DRF permission classes required (Phase 0, Step 3).
 - **State machine migration**: Alert status codes need explicit allowed-transition table (Phase 0, Step 4).
 - **Real QR code**: Section 7 PDF still has no QR code graphic (TD-04 in BACKLOG.md).
