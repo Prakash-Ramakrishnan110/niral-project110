@@ -9,8 +9,19 @@ Django 6.0.4 / DRF 3.16.1 / GeoDjango with PostGIS backend.
 
 from pathlib import Path
 import os
+import sys
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load local .env file if present (stdlib, no external dependency required)
+_env_file = BASE_DIR / '.env'
+if _env_file.exists():
+    with open(_env_file, 'r', encoding='utf-8') as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _k, _v = _line.split('=', 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
 
 # ── Security ──────────────────────────────────────────────────────────────────
 SECRET_KEY = os.environ.get(
@@ -24,36 +35,50 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 # In Docker/Linux these are auto-discovered; set only when running natively on Windows.
 _gdal_env = os.environ.get('GDAL_LIBRARY_PATH', '').strip()
 _geos_env = os.environ.get('GEOS_LIBRARY_PATH', '').strip()
-if _gdal_env:
-    GDAL_LIBRARY_PATH = _gdal_env
-if _geos_env:
-    GEOS_LIBRARY_PATH = _geos_env
 
-# Windows QGIS auto-discovery fallback (only activates when env vars are NOT set
-# and we ARE on Windows — keeps Docker images clean).
-import sys
-if sys.platform == 'win32' and not _gdal_env:
-    _qgis_candidates = [
-        r'C:\Program Files\QGIS 4.0.1\bin',
-        r'C:\Program Files\QGIS 3.34\bin',
-        r'C:\OSGeo4W\bin',
-    ]
-    for _qgis_dir in _qgis_candidates:
-        if os.path.exists(_qgis_dir):
+if sys.platform == 'win32':
+    if _gdal_env:
+        GDAL_LIBRARY_PATH = _gdal_env
+        _gdal_dir = str(Path(_gdal_env).parent)
+        if os.path.exists(_gdal_dir):
             try:
-                os.add_dll_directory(_qgis_dir)
+                os.add_dll_directory(_gdal_dir)
             except Exception:
                 pass
-            os.environ['PATH'] = _qgis_dir + ';' + os.environ.get('PATH', '')
-            for _dll in ['gdal312.dll', 'gdal311.dll', 'gdal310.dll', 'gdal308.dll', 'gdal.dll']:
-                _gdal_path = os.path.join(_qgis_dir, _dll)
-                if os.path.exists(_gdal_path):
-                    GDAL_LIBRARY_PATH = _gdal_path
-                    break
-            _geos_path = os.path.join(_qgis_dir, 'geos_c.dll')
-            if os.path.exists(_geos_path):
-                GEOS_LIBRARY_PATH = _geos_path
-            break
+            os.environ['PATH'] = _gdal_dir + ';' + os.environ.get('PATH', '')
+    if _geos_env:
+        GEOS_LIBRARY_PATH = _geos_env
+        _geos_dir = str(Path(_geos_env).parent)
+        if os.path.exists(_geos_dir):
+            try:
+                os.add_dll_directory(_geos_dir)
+            except Exception:
+                pass
+            os.environ['PATH'] = _geos_dir + ';' + os.environ.get('PATH', '')
+
+    # Windows QGIS auto-discovery fallback (only activates when env vars are NOT set)
+    if not _gdal_env:
+        _qgis_candidates = [
+            r'C:\Program Files\QGIS 4.0.1\bin',
+            r'C:\Program Files\QGIS 3.34\bin',
+            r'C:\OSGeo4W\bin',
+        ]
+        for _qgis_dir in _qgis_candidates:
+            if os.path.exists(_qgis_dir):
+                try:
+                    os.add_dll_directory(_qgis_dir)
+                except Exception:
+                    pass
+                os.environ['PATH'] = _qgis_dir + ';' + os.environ.get('PATH', '')
+                for _dll in ['gdal312.dll', 'gdal311.dll', 'gdal310.dll', 'gdal308.dll', 'gdal.dll']:
+                    _gdal_path = os.path.join(_qgis_dir, _dll)
+                    if os.path.exists(_gdal_path):
+                        GDAL_LIBRARY_PATH = _gdal_path
+                        break
+                _geos_path = os.path.join(_qgis_dir, 'geos_c.dll')
+                if os.path.exists(_geos_path):
+                    GEOS_LIBRARY_PATH = _geos_path
+                break
 
 # ── Application definition ────────────────────────────────────────────────────
 INSTALLED_APPS = [

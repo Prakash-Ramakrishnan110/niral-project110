@@ -103,13 +103,17 @@ class HighCourtComplianceGenerator:
         waterbody_alerts = []
 
         try:
+            from django.db.models import Q
             from ..models import EncroachmentAlert, LandParcel
-            total_waterbodies = LandParcel.objects.filter(district__iexact=district, classification='Waterbody').count()
-            total_alerts = EncroachmentAlert.objects.filter(parcel__district__iexact=district, parcel__classification='Waterbody').count()
-            sec7_issued = EncroachmentAlert.objects.filter(parcel__district__iexact=district, parcel__classification='Waterbody', status='SECTION_7_ISSUED').count()
-            sec6_ordered = EncroachmentAlert.objects.filter(parcel__district__iexact=district, parcel__classification='Waterbody', status='SECTION_6_ORDERED').count()
-            restored = EncroachmentAlert.objects.filter(parcel__district__iexact=district, parcel__classification='Waterbody', status='RESOLVED').count()
-            waterbody_alerts = list(EncroachmentAlert.objects.filter(parcel__district__iexact=district, parcel__classification='Waterbody')[:50])
+            water_parcel_q = Q(district__iexact=district) & (Q(classification__icontains='water') | Q(classification__icontains='eri') | Q(classification__icontains='kulam'))
+            water_alert_q = Q(parcel__district__iexact=district) & (Q(parcel__classification__icontains='water') | Q(parcel__classification__icontains='eri') | Q(parcel__classification__icontains='kulam'))
+
+            total_waterbodies = LandParcel.objects.filter(water_parcel_q).count()
+            total_alerts = EncroachmentAlert.objects.filter(water_alert_q).count()
+            sec7_issued = EncroachmentAlert.objects.filter(water_alert_q, status='SECTION_7_ISSUED').count()
+            sec6_ordered = EncroachmentAlert.objects.filter(water_alert_q, status='SECTION_6_ORDERED').count()
+            restored = EncroachmentAlert.objects.filter(water_alert_q, status='RESOLVED').count()
+            waterbody_alerts = list(EncroachmentAlert.objects.filter(water_alert_q)[:50])
         except Exception:
             pass
 

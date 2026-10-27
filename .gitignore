@@ -29,3 +29,14 @@ field_officer_app/.pub/
 # Temporary patch scripts
 frontend/patch_*.cjs
 config.bat
+
+# Environment variable files — NEVER commit secrets
+.env
+.env.local
+.env.production
+backend/.env
+
+# Media / uploaded files
+backend/media/
+*.pdf
+frontend/dist/
