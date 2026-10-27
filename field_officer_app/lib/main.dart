@@ -70,9 +70,9 @@ const kText         = Color(0xFF0F172A); // High contrast Slate-900
 const kTextSec      = Color(0xFF475569); // Slate-600
 const kTextMuted    = Color(0xFF94A3B8); // Slate-400
 
-// ─── API CONFIGURATION (DYNAMIC MULTI-HOST FOR WEB & EMULATOR) ───────────────
 // ─── API CONFIGURATION (DYNAMIC MULTI-HOST FOR APK, HOTSPOT & LOCALHOST) ───────
-String _activeApiHost = 'http://10.19.203.33:8000';
+// Current Wi-Fi hotspot IP: 10.248.93.33 (update this when the PC's IP changes)
+String _activeApiHost = 'http://10.248.93.33:8000';
 String? _customApiHost;
 
 List<String> get kApiHosts {
@@ -84,12 +84,13 @@ List<String> get kApiHosts {
     hosts.add(_activeApiHost);
   }
   for (final h in [
-    'http://10.19.203.33:8000',
+    'http://10.248.93.33:8000', // Current Wi-Fi IP
+    'http://10.19.203.33:8000', // Previous hotspot IP
     'http://192.168.31.26:8000',
     'http://10.232.119.33:8000',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
-    'http://10.0.2.2:8000',
+    'http://10.0.2.2:8000',    // Android emulator
   ]) {
     if (!hosts.contains(h)) hosts.add(h);
   }
@@ -99,7 +100,7 @@ List<String> get kApiHosts {
 Future<http.Response?> makeApiGet(String path) async {
   for (final host in kApiHosts) {
     try {
-      final res = await http.get(Uri.parse('$host$path')).timeout(const Duration(seconds: 4));
+      final res = await http.get(Uri.parse('$host$path')).timeout(const Duration(seconds: 2));
       if (res.statusCode == 200) {
         _activeApiHost = host;
         return res;
@@ -116,7 +117,7 @@ Future<http.Response?> makeApiPost(String path, Map<String, dynamic> body) async
         Uri.parse('$host$path'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 10));
       if (res.statusCode == 200 || res.statusCode == 201) {
         _activeApiHost = host;
         return res;
@@ -165,9 +166,14 @@ void showServerConfigDialog(BuildContext context, VoidCallback onUpdated) {
           const SizedBox(height: 6),
           Wrap(
             spacing: 6,
+            runSpacing: 4,
             children: [
               ActionChip(
-                label: const Text('10.19.203.33:8000 (Hotspot)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: kPrimary)),
+                label: const Text('10.248.93.33:8000 ✓ Current', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: kPrimary)),
+                onPressed: () => textCtrl.text = '10.248.93.33:8000',
+              ),
+              ActionChip(
+                label: const Text('10.19.203.33:8000', style: TextStyle(fontSize: 10)),
                 onPressed: () => textCtrl.text = '10.19.203.33:8000',
               ),
               ActionChip(
@@ -179,7 +185,7 @@ void showServerConfigDialog(BuildContext context, VoidCallback onUpdated) {
                 onPressed: () => textCtrl.text = 'localhost:8000',
               ),
               ActionChip(
-                label: const Text('10.0.2.2:8000', style: TextStyle(fontSize: 10)),
+                label: const Text('10.0.2.2:8000 (Emulator)', style: TextStyle(fontSize: 10)),
                 onPressed: () => textCtrl.text = '10.0.2.2:8000',
               ),
             ],
