@@ -63,6 +63,19 @@ class EncroachmentAlert(models.Model):
         ('CANCELLED_LEGAL', 'CANCELLED_LEGAL'),
     ]
 
+    TIER_CHOICES = [
+        ('TIER_1_CRITICAL', 'Tier 1: Critical (80-100% - Collector Direct)'),
+        ('TIER_2_MEDIUM', 'Tier 2: Medium Risk (50-79% - VAO 7-Day SLA)'),
+        ('TIER_3_MONITORING', 'Tier 3: Low (<50% - Satellite Sentinel Watch)'),
+    ]
+
+    STRUCTURE_CHOICES = [
+        ('COMMERCIAL_LAYOUT', 'Commercial Layout / Concrete Shed / Warehouse'),
+        ('TEMPORARY_PANDAL', 'Temporary Event / Wedding Pandal / Festival Tent'),
+        ('VULNERABLE_HOUSING', 'Vulnerable Dweller / Thatched Hut (TNUHDB Rehabilitation)'),
+        ('BOUNDARY_FENCE', 'Boundary Wall / Agricultural Fencing Encroachment'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     parcel = models.ForeignKey(LandParcel, on_delete=models.CASCADE, related_name='alerts')
     detection_date = models.DateTimeField(auto_now_add=True)
@@ -70,12 +83,32 @@ class EncroachmentAlert(models.Model):
     alert_type = models.CharField(max_length=100, default='New Structure')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='Pending')
     
+    # 3-Tier Governance & SLA Tracking
+    tier = models.CharField(max_length=30, choices=TIER_CHOICES, default='TIER_2_MEDIUM')
+    sla_deadline = models.DateTimeField(null=True, blank=True)
+    is_peer_audited = models.BooleanField(default=False)
+    peer_auditor_name = models.CharField(max_length=150, null=True, blank=True)
+
+    # Social & Humanitarian Categorization
+    structure_category = models.CharField(max_length=40, choices=STRUCTURE_CHOICES, default='COMMERCIAL_LAYOUT')
+    pass_count = models.IntegerField(default=1) # Satellite observation passes
+
+    # Exact Encroached Area and FMB Ladder Measurements
+    encroached_area_sqft = models.FloatField(default=0.0)
+    fmb_measurements = models.JSONField(default=dict, blank=True, null=True)
+    
     # Point where the change was detected
     alert_geom = models.PointField(srid=4326)
     resolution_notes = models.TextField(blank=True, null=True)
 
+    def is_sla_breached(self):
+        from django.utils import timezone
+        if self.sla_deadline and self.status in ['NEW', 'Pending', 'VAO_ASSIGNED']:
+            return timezone.now() > self.sla_deadline
+        return False
+
     def __str__(self):
-        return f"Alert {self.id} - {self.status}"
+        return f"Alert {self.id} - {self.tier} - {self.status}"
 
 class FieldVerification(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
