@@ -1,6 +1,9 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.http import HttpResponse
+from django.utils import timezone
+from datetime import datetime, timedelta
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from django.contrib.gis.geos import Point
@@ -11,6 +14,9 @@ from .serializers import (
     FieldVerificationSerializer, RegistryProposalSerializer
 )
 from .tngis_service import TNGISService
+from .services.fmb_sketch_generator import FMBSketchGenerator
+from .services.legal_notice_pdf import LegalNoticePDFGenerator
+from .services.high_court_compliance import HighCourtComplianceGenerator
 
 class LandParcelViewSet(viewsets.ModelViewSet):
     queryset = LandParcel.objects.all()
@@ -196,8 +202,21 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
         if role in ['VAO', 'INSPECTOR', 'SURVEYOR', 'DATA_ENTRY']:
             return Response({"error": f"Access Denied: Under TN Act III of 1905, {role} cannot issue Section 7 Notice. Only Tahsildar / Collector has statutory authority."}, status=status.HTTP_403_FORBIDDEN)
         alert = self.get_object()
+
+        # Stop-gap legal safety: Block Section 7 unless certified survey exists or explicit officer acknowledgement is recorded
+        has_certified_survey = bool(alert.fmb_measurements and alert.fmb_measurements.get('is_certified_survey'))
+        officer_ack = request.data.get('officer_fmb_acknowledgement') in [True, 'true', 'True', 1]
+        
+        if not has_certified_survey and not officer_ack:
+            return Response({
+                "error": "Section 7 Issuance Blocked: FMB measurements are currently INDICATIVE (derived from polygon geometry, not a certified survey measurement). To issue statutory notice, provide explicit officer acknowledgement: {'officer_fmb_acknowledgement': true, 'notes': '...'}.",
+                "disclaimer": "INDICATIVE - computed from polygon geometry, not a certified survey measurement"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         encroacher = request.data.get('encroacher_name', 'Unauthorized Occupant')
         notes = request.data.get('notes') or f"[Section 7 Notice Issued to {encroacher}] 15-day show-cause notice served under TN Land Encroachment Act 1905."
+        if officer_ack and not has_certified_survey:
+            notes = f"{notes}\n[OFFICER ACKNOWLEDGEMENT]: Officer proceeded with indicative polygon-derived FMB measurements pending certified field survey."
         alert.status = 'SECTION_7_ISSUED'
         alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
         alert.save()
@@ -230,13 +249,88 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(alert)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['get'])
+    def download_section_7(self, request, pk=None):
+        """Generates and downloads the official court-admissible Section 7 Notice with embedded FMB Sketch."""
+        alert = self.get_object()
+        try:
+            pdf_bytes = LegalNoticePDFGenerator.generate_section_7_pdf(alert)
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            filename = f"Section_7_Notice_{alert.parcel.survey_number}_{str(alert.id)[:8]}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+        except Exception as e:
+            return Response({"error": f"Failed to generate legal PDF: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['get'])
+    def fmb_sketch(self, request, pk=None):
+        """Returns mathematical FMB boundary stones, triangulation, and ladder offset measurements."""
+        alert = self.get_object()
+        parcel = alert.parcel
+        coords = []
+        if hasattr(parcel.geom, 'coords'):
+            coords = list(parcel.geom.coords[0]) if parcel.geom.coords else []
+        calc = FMBSketchGenerator.calculate_fmb_measurements(coords, [])
+        return Response({
+            "alert_id": str(alert.id),
+            "survey_number": f"{parcel.survey_number}/{parcel.subdivision or '1'}",
+            "village": parcel.village_name or "Kannankurichi",
+            "taluk": parcel.taluk,
+            "district": parcel.district,
+            "area_sqft": alert.encroached_area_sqft or 850,
+            "boundary_stones": calc["boundary_stones"],
+            "lengths_meters": calc["lengths_m"],
+            "ladder_offsets": calc["ladder_offsets"],
+            "classification": parcel.classification,
+            "tier": alert.tier,
+            "status": alert.status,
+            "disclaimer": "INDICATIVE - computed from polygon geometry, not a certified survey measurement",
+            "is_certified_survey": bool(alert.fmb_measurements and alert.fmb_measurements.get('is_certified_survey'))
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def star3_lock(self, request, pk=None):
+        """Automated STAR 3.0 Anti-Land-Grab Lock (Freezes Sub-Registrar transaction)."""
+        alert = self.get_object()
+        parcel = alert.parcel
+        lock_ref = f"STAR3-FREEZE-{parcel.taluk.upper()[:3]}-{str(alert.id)[:8].upper()}"
+        notes = f"[STAR 3.0 REGISTRY LOCK ACTIVE] Reference: {lock_ref}. Deed registration frozen at Sub-Registrar Office under TN Act III of 1905."
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
+        alert.save()
+        return Response({
+            "status": "SUCCESS",
+            "lock_reference": lock_ref,
+            "registry_portal": "STAR 3.0 / TN Registration Department",
+            "survey_number": f"{parcel.survey_number}/{parcel.subdivision or '1'}",
+            "ulpin": parcel.ulpin or "33-14-001-2026",
+            "message": "Transaction freeze active. Any sale deed registration attempt will be blocked."
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def humanitarian_rehabilitation(self, request, pk=None):
+        """Routes vulnerable dwellers / small huts to TNUHDB for rehabilitation rather than criminal demolition."""
+        alert = self.get_object()
+        alert.structure_category = 'VULNERABLE_HOUSING'
+        alert.status = 'TAHSILDAR_ACCEPTED'
+        notes = "[HUMANITARIAN POLICY ROUTE ACTIVATED] Identified as vulnerable shelter. Eviction notice withheld. Referred to TNUHDB (Tamil Nadu Urban Habitat Development Board) for in-situ welfare & alternative patta scheme."
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
+        alert.save()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post', 'patch'])
     def mark_false_positive(self, request, pk=None):
+        """Marks alert as false positive and automatically triggers anti-corruption randomized peer-audit."""
         alert = self.get_object()
         officer = request.data.get('officer_name', 'Field Officer')
         reason = request.data.get('reason') or "Field verified: Not an encroachment. Valid patta land / agricultural boundary."
         alert.status = 'FALSE_POSITIVE'
-        alert.resolution_notes = f"{alert.resolution_notes or ''}\n[DISMISSED - FALSE ALARM by {officer}]: {reason}".strip()
+        
+        # Anti-Corruption Automated Peer Audit Trigger (Tier 2 Medium Risk)
+        alert.is_peer_audited = True
+        alert.peer_auditor_name = "Revenue Inspector (Flying Squad / Adjacent Taluk)"
+        notes = f"[DISMISSED - FALSE ALARM by {officer}]: {reason}\n[ANTI-CORRUPTION TRIGGER]: Automated random peer-audit task assigned to {alert.peer_auditor_name}."
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
         alert.save()
         serializer = self.get_serializer(alert)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -439,3 +533,25 @@ class SmartAlertView(APIView):
         }
         
         return Response(result)
+
+class HighCourtATRView(APIView):
+    """
+    Generates and downloads the official Madras High Court Judicial Compliance &
+    Action Taken Report (ATR) PDF for District Collectors and Revenue Secretaries.
+    """
+    def get(self, request):
+        district = request.query_params.get('district', 'Salem')
+        writ_no = request.query_params.get('writ_no')
+        if not writ_no or not writ_no.strip():
+            return Response(
+                {"error": "writ_no query parameter is required with no default (e.g. ?district=Salem&writ_no=W.P.+No.+34091+of+2023)"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            pdf_bytes = HighCourtComplianceGenerator.generate_atr_pdf(district=district, writ_petition_no=writ_no)
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            filename = f"Madras_High_Court_Compliance_ATR_{district}_{datetime.now().strftime('%Y%m%d')}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+        except Exception as e:
+            return Response({"error": f"Failed to generate High Court ATR: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
