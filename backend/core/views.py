@@ -229,6 +229,16 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
         if role in ['VAO', 'INSPECTOR', 'SURVEYOR', 'DATA_ENTRY']:
             return Response({"error": f"Access Denied: Under TN Act III of 1905, {role} cannot order Section 6 Eviction. Only Tahsildar / Collector has statutory authority."}, status=status.HTTP_403_FORBIDDEN)
         alert = self.get_object()
+        if alert.structure_category == 'VULNERABLE_HOUSING':
+            return Response(
+                {"error": "Statutory Violation: Cannot order Section 6 eviction for VULNERABLE_HOUSING. Case must be routed to Humanitarian Rehabilitation (PMAY/TNUHDB)."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if alert.status == 'COURT_STAY_HOLD':
+            return Response(
+                {"error": "Statutory Violation: Injunction in force. Cannot issue Section 6 Eviction Order while case is under COURT_STAY_HOLD."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         notes = request.data.get('notes') or "[Section 6 Eviction Warrant] Final eviction and demolition ordered under TN Land Encroachment Act 1905. Police Bandobast requisitioned."
         alert.status = 'SECTION_6_ORDERED'
         alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()

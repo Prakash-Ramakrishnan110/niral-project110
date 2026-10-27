@@ -2,7 +2,7 @@
 Base test case with database isolation guard.
 Guarantees that test fixtures and executions refuse to run against any non-test database.
 """
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from django.db import connection
 from rest_framework.test import APITestCase
 
@@ -36,6 +36,11 @@ class DatabaseGuardMixin:
 
 class SafeTestCase(DatabaseGuardMixin, TestCase):
     """Django TestCase with strict test-database verification guard."""
+    pass
+
+
+class SafeTransactionTestCase(DatabaseGuardMixin, TransactionTestCase):
+    """Django TransactionTestCase for tests involving multi-threading and real database commit boundaries."""
     pass
 
 
