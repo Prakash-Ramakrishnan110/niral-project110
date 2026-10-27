@@ -2,20 +2,143 @@ import axios from 'axios';
 
 const API_BASE = '/api';
 
+// In-memory access token storage (never kept in localStorage/sessionStorage)
+let inMemoryAccessToken = null;
+let authStateListeners = [];
+
+export function getAccessToken() {
+  return inMemoryAccessToken;
+}
+
+export function setAccessToken(token) {
+  inMemoryAccessToken = token;
+  notifyAuthChange(token);
+}
+
+export function clearAccessToken() {
+  inMemoryAccessToken = null;
+  notifyAuthChange(null);
+}
+
+export function subscribeAuthChange(listener) {
+  authStateListeners.push(listener);
+  return () => {
+    authStateListeners = authStateListeners.filter((l) => l !== listener);
+  };
+}
+
+function notifyAuthChange(token) {
+  authStateListeners.forEach((listener) => {
+    try {
+      listener(token);
+    } catch (e) {
+      console.error('Auth listener error:', e);
+    }
+  });
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE,
   timeout: 30000,
+  withCredentials: true, // Passes httpOnly cookies for /api/auth/token/refresh/
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+// Request Interceptor: Injects in-memory Bearer token
+apiClient.interceptors.request.use(
+  (config) => {
+    if (inMemoryAccessToken && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${inMemoryAccessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response Interceptor: 401 Refresh Handling with queueing
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
+
+    // If 401 Unauthorized and not already retried
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // Do not attempt refresh on auth endpoints
+      if (
+        originalRequest.url?.includes('/auth/login') ||
+        originalRequest.url?.includes('/auth/token/refresh')
+      ) {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshRes = await axios.post(
+          `${API_BASE}/auth/token/refresh/`,
+          {},
+          { withCredentials: true }
+        );
+        const newAccess = refreshRes.data.access;
+        setAccessToken(newAccess);
+        processQueue(null, newAccess);
+        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+        return apiClient(originalRequest);
+      } catch (refreshErr) {
+        processQueue(refreshErr, null);
+        clearAccessToken();
+        return Promise.reject(refreshErr);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 /**
- * Helper to download a binary file (PDF) from an endpoint
+ * Helper to download a binary file (PDF) from an endpoint with auth header
  */
 export async function downloadBlob(url, filename = 'document.pdf') {
   try {
-    const response = await axios.get(url, { responseType: 'blob' });
+    const headers = {};
+    if (inMemoryAccessToken) {
+      headers.Authorization = `Bearer ${inMemoryAccessToken}`;
+    }
+    const response = await axios.get(url, {
+      responseType: 'blob',
+      withCredentials: true,
+      headers,
+    });
     const blob = new Blob([response.data], { type: 'application/pdf' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
@@ -32,9 +155,42 @@ export async function downloadBlob(url, filename = 'document.pdf') {
 }
 
 // ----------------------------------------------------
+// AUTHENTICATION API SERVICES
+// ----------------------------------------------------
+export const AuthAPI = {
+  async login(username, password) {
+    const res = await apiClient.post('/auth/login/', { username, password });
+    if (res.data?.access) {
+      setAccessToken(res.data.access);
+    }
+    return res.data;
+  },
+
+  async logout() {
+    try {
+      await apiClient.post('/auth/logout/');
+    } finally {
+      clearAccessToken();
+    }
+  },
+
+  async getCurrentUser() {
+    const res = await apiClient.get('/auth/me/');
+    return res.data;
+  },
+
+  async refreshToken() {
+    const res = await axios.post(`${API_BASE}/auth/token/refresh/`, {}, { withCredentials: true });
+    if (res.data?.access) {
+      setAccessToken(res.data.access);
+    }
+    return res.data;
+  },
+};
+
+// ----------------------------------------------------
 // REAL BACKEND API SERVICES
 // ----------------------------------------------------
-
 export const LandAPI = {
   // 1. ALERTS
   async getAlerts(params = {}) {

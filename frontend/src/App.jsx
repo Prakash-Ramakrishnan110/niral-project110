@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import LandAPI from './api/client';
+import LandAPI, { AuthAPI, apiClient, subscribeAuthChange } from './api/client';
+import LoginModal from './components/LoginModal';
 import MapView from './components/Map';
 import { AIDetectionLogicView, FieldOpsMonitorView } from './TacticalViews';
 import { GovernmentLandRegistryView } from './GovernmentRegistry';
@@ -4214,7 +4215,7 @@ export default function App() {
       setSelectedPosition([latlng.lat, latlng.lng]);
       setGisAttributes({ message: "Running Automated Threat Assessment..." });
       try {
-         const response = await axios.post(`${API_BASE}/smart-alert/`, {
+         const response = await apiClient.post('/smart-alert/', {
             latitude: latlng.lat,
             longitude: latlng.lng
          });
@@ -4240,7 +4241,7 @@ export default function App() {
 
       // 2. Persist to Backend
       try {
-         await axios.patch(`${API_BASE}/alerts/${id}/`, {
+         await apiClient.patch(`/alerts/${id}/`, {
             status: newStatus,
             ...extraData
          });
@@ -4256,8 +4257,8 @@ export default function App() {
       const fetchData = async () => {
          try {
             const [pRes, aRes] = await Promise.all([
-               axios.get(`${API_BASE}/parcels/`),
-               axios.get(`${API_BASE}/alerts/`)
+               apiClient.get('/parcels/'),
+               apiClient.get('/alerts/')
             ]);
             setParcels(pRes.data?.features?.map(f => ({ id: f.id, ...f.properties, coordinates: f.geometry.coordinates[0].map(c => [c[1], c[0]]) })) || []);
             const alertsData = aRes.data?.features?.map(f => {
@@ -4340,6 +4341,30 @@ export default function App() {
    useEffect(() => {
       const timer = setInterval(() => setCurrentTime(new Date()), 1000);
       return () => clearInterval(timer);
+   }, []);
+
+   useEffect(() => {
+      const checkSession = async () => {
+         try {
+            const me = await AuthAPI.getCurrentUser();
+            if (me) {
+               setUser({
+                  id: me.id,
+                  role: me.role,
+                  name: `${me.first_name || ''} ${me.last_name || ''}`.trim() || me.username,
+                  avatar: (me.role || 'OF').slice(0, 2),
+                  district: me.district,
+                  taluk: me.taluk,
+                  village: me.village,
+               });
+            }
+         } catch (_) {}
+      };
+      checkSession();
+      const unsub = subscribeAuthChange((token) => {
+         if (!token) setUser(null);
+      });
+      return unsub;
    }, []);
 
 
@@ -4511,41 +4536,22 @@ export default function App() {
 
    if (!user) {
       return (
-         <div className="h-screen w-full flex items-center justify-center bg-slate-100 font-jakarta p-4 sm:p-6 overflow-hidden">
-            <div className="w-full max-w-[1000px] flex flex-col md:flex-row h-full md:h-[650px] bg-white rounded-none shadow-xl border border-slate-200 overflow-hidden overflow-y-auto custom-scrollbar text-left">
-               <div className="w-full md:w-[35%] p-8 sm:p-12 flex flex-col justify-center border-b md:border-b-0 md:border-r border-slate-100 bg-slate-50 shrink-0">
-                  <div className="mb-6 md:mb-10">
-                     <div className="bg-blue-600 w-12 h-12 rounded-none text-white flex items-center justify-center shadow-lg mb-4 md:mb-6"><ShieldAlert size={28} /></div>
-                     <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 uppercase leading-none">GEOMMAND</h2>
-                     <p className="text-slate-500 text-[9px] md:text-[10px] font-bold mt-2 uppercase tracking-widest">Government of Tamil Nadu</p>
-                  </div>
-                  <div className="space-y-3 md:space-y-4">
-                     <input type="email" placeholder="Officer Identity" className="w-full bg-white border border-slate-200 rounded-none px-4 py-3 text-sm focus:border-blue-500 transition-all outline-none" />
-                     <input type="password" placeholder="Security Key" className="w-full bg-white border border-slate-200 rounded-none px-4 py-3 text-sm focus:border-blue-500 transition-all shadow-sm outline-none" />
-                     <button onClick={() => handleDemoLogin('ADMIN')} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 md:py-4 rounded-none font-bold shadow-md transition-all active:scale-[0.98] mt-2 md:mt-4 flex items-center justify-center gap-2 text-[10px] md:text-xs uppercase tracking-widest">Sign In</button>
-                  </div>
-               </div>
-               <div className="flex-1 bg-white p-6 sm:p-12 flex flex-col min-h-[400px]">
-                  <div className="mb-6 md:mb-8"><h2 className="text-lg md:text-xl font-bold text-slate-800 uppercase text-center tracking-tight">Administrative Portals</h2></div>
-                  <div className="flex justify-center gap-1 mb-6 md:mb-8 bg-slate-100 p-1 rounded-none w-fit mx-auto border border-slate-200 flex-wrap">
-                     {CATEGORIES.map(cat => (
-                        <button key={cat} onClick={() => setLoginCat(cat)} className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-none text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all ${loginCat === cat ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-white hover:shadow-sm'}`}>{cat}</button>
-                     ))}
-                  </div>
-                  <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                        {Object.entries(ROLES).filter(([_, r]) => r.cat === loginCat).map(([id, role]) => (
-                           <button key={id} onClick={() => handleDemoLogin(id)} className="p-3 sm:p-4 bg-white border border-slate-200 rounded-none hover:border-blue-500 hover:bg-blue-50 transition-all group flex items-center gap-3 sm:gap-4 shadow-sm text-left">
-                              <div className={`p-1.5 sm:p-2 rounded-none bg-white border border-slate-100 ${role.color} group-hover:scale-110 transition-transform shrink-0`}><role.icon size={16} /></div>
-                              <p className="font-bold text-slate-800 text-[10px] sm:text-xs tracking-tight uppercase truncate flex-1">{role.name}</p>
-                              <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500 shrink-0" />
-                           </button>
-                        ))}
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </div>
+         <LoginModal
+            isOpen={true}
+            onLoginSuccess={(u) => {
+               setUser({
+                  id: u.id,
+                  role: u.role,
+                  name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
+                  avatar: (u.role || 'OF').slice(0, 2),
+                  district: u.district,
+                  taluk: u.taluk,
+                  village: u.village,
+               });
+               const firstTab = MENU_STRUCTURE[u.role]?.find(i => i.type !== 'header');
+               setActiveTab(firstTab ? firstTab.id : 'dashboard');
+            }}
+         />
       );
    }
 
@@ -4608,7 +4614,7 @@ export default function App() {
                      <p className="text-[9px] font-medium text-slate-500 uppercase">{user.role}</p>
                   </div>
                </div>
-               <button onClick={() => setUser(null)} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-slate-200 rounded-none text-slate-500 hover:text-red-600 transition-all font-bold text-[10px] uppercase shadow-sm group">
+               <button onClick={async () => { await AuthAPI.logout(); setUser(null); }} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-slate-200 rounded-none text-slate-500 hover:text-red-600 transition-all font-bold text-[10px] uppercase shadow-sm group">
                   <LogOut size={14} /><span>Sign Out</span>
                </button>
             </div>

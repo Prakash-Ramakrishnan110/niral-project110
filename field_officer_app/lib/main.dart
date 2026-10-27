@@ -97,10 +97,47 @@ List<String> get kApiHosts {
   return hosts;
 }
 
+String? _jwtAccessToken;
+String? _jwtRefreshToken;
+Map<String, dynamic>? _currentOfficerProfile;
+
+Map<String, String> get _apiHeaders {
+  final h = <String, String>{'Content-Type': 'application/json'};
+  if (_jwtAccessToken != null && _jwtAccessToken!.isNotEmpty) {
+    h['Authorization'] = 'Bearer $_jwtAccessToken';
+  }
+  return h;
+}
+
+Future<bool> loginOfficer(String username, String password) async {
+  for (final host in kApiHosts) {
+    try {
+      final res = await http.post(
+        Uri.parse('$host/api/auth/login/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      ).timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        _jwtAccessToken = data['access'];
+        _jwtRefreshToken = data['refresh'];
+        _currentOfficerProfile = data['user'];
+        _activeApiHost = host;
+        return true;
+      }
+    } catch (_) {}
+  }
+  return false;
+}
+
 Future<http.Response?> makeApiGet(String path) async {
   for (final host in kApiHosts) {
     try {
-      final res = await http.get(Uri.parse('$host$path')).timeout(const Duration(seconds: 2));
+      final headers = <String, String>{};
+      if (_jwtAccessToken != null && _jwtAccessToken!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $_jwtAccessToken';
+      }
+      final res = await http.get(Uri.parse('$host$path'), headers: headers).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         _activeApiHost = host;
         return res;
@@ -115,7 +152,7 @@ Future<http.Response?> makeApiPost(String path, Map<String, dynamic> body) async
     try {
       final res = await http.post(
         Uri.parse('$host$path'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _apiHeaders,
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 10));
       if (res.statusCode == 200 || res.statusCode == 201) {
