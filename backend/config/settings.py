@@ -13,22 +13,26 @@ import sys
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load local .env file if present (stdlib, no external dependency required)
-_env_file = BASE_DIR / '.env'
-if _env_file.exists():
-    with open(_env_file, 'r', encoding='utf-8') as _f:
-        for _line in _f:
-            _line = _line.strip()
-            if _line and not _line.startswith('#') and '=' in _line:
-                _k, _v = _line.split('=', 1)
-                os.environ.setdefault(_k.strip(), _v.strip())
+# Load local .env file only when running natively outside Docker
+_in_docker = os.environ.get('RUNNING_IN_DOCKER') == '1' or os.path.exists('/.dockerenv')
+if not _in_docker:
+    _env_file = BASE_DIR / '.env'
+    if _env_file.exists():
+        with open(_env_file, 'r', encoding='utf-8') as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith('#') and '=' in _line:
+                    _k, _v = _line.split('=', 1)
+                    os.environ.setdefault(_k.strip(), _v.strip())
 
 # ── Security ──────────────────────────────────────────────────────────────────
 SECRET_KEY = os.environ.get(
     'SECRET_KEY',
     'django-insecure-#l(d4tazr^)es&#+vl4w(t1mue11(jc-oha&^18tkqu(39f_bb'  # dev fallback only
 )
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ('1', 'true', 'yes')
+# In production (when GEOMMAND_ENV != 'demo'), DEBUG must default to False
+_default_debug = 'True' if os.environ.get('GEOMMAND_ENV') == 'demo' else 'False'
+DEBUG = os.environ.get('DEBUG', _default_debug).lower() in ('1', 'true', 'yes')
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # ── GeoDjango native library paths (env-driven; no Windows paths committed) ───
@@ -57,6 +61,8 @@ if sys.platform == 'win32':
             os.environ['PATH'] = _geos_dir + ';' + os.environ.get('PATH', '')
 
 
+from datetime import timedelta
+
 # ── Application definition ────────────────────────────────────────────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -68,9 +74,17 @@ INSTALLED_APPS = [
     'django.contrib.gis',
     'rest_framework',
     'rest_framework_gis',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_filters',
+    'axes',
     'core',
+]
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 MIDDLEWARE = [
@@ -82,6 +96,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -133,15 +148,41 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 REST_FRAMEWORK = {
-    # Phase 0: unauthenticated — remove AllowAny in Phase 1 (JWT auth sprint)
-    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/minute',
+        'login': '10/minute',
+    },
 }
+
+# ── SimpleJWT Configuration ───────────────────────────────────────────────────
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# ── Django-Axes Configuration ─────────────────────────────────────────────────
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = timedelta(minutes=15)
+AXES_HTTP_RESPONSE_CODE = 429
+AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']
+
 
 # ── Internationalisation ──────────────────────────────────────────────────────
 LANGUAGE_CODE = 'en-us'

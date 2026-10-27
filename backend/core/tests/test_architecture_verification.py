@@ -17,7 +17,7 @@ Tests:
 """
 import threading
 import psycopg2
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
 from django.contrib.gis.geos import Polygon, Point
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -30,6 +30,14 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
+        from django.contrib.auth.models import User
+        from core.models import UserProfile
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        self.collector = User.objects.create_user(username='arch_collector_salem', password='TestPass@2026!')
+        UserProfile.objects.create(user=self.collector, role='COLLECTOR', district='Salem')
+        token = RefreshToken.for_user(self.collector).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def test_real_section_6_endpoint_statutory_guards(self):
         """
@@ -55,7 +63,7 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
             alert_geom=Point(78.17, 11.69)
         )
         url_vulnerable = f"/api/alerts/{alert_vulnerable.id}/issue_section_6/"
-        res_vulnerable = self.client.post(url_vulnerable, {'role': 'COLLECTOR'}, format='json')
+        res_vulnerable = self.client.post(url_vulnerable, format='json')
         self.assertEqual(res_vulnerable.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("VULNERABLE_HOUSING", res_vulnerable.data.get("error", ""))
 
@@ -67,7 +75,7 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
             alert_geom=Point(78.17, 11.69)
         )
         url_stay = f"/api/alerts/{alert_stay.id}/issue_section_6/"
-        res_stay = self.client.post(url_stay, {'role': 'COLLECTOR'}, format='json')
+        res_stay = self.client.post(url_stay, format='json')
         self.assertEqual(res_stay.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("COURT_STAY_HOLD", res_stay.data.get("error", ""))
 
@@ -79,7 +87,7 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
             alert_geom=Point(78.17, 11.69)
         )
         url_valid = f"/api/alerts/{alert_valid.id}/issue_section_6/"
-        res_valid = self.client.post(url_valid, {'role': 'COLLECTOR', 'notes': 'Demolition warrant issued'}, format='json')
+        res_valid = self.client.post(url_valid, {'notes': 'Demolition warrant issued'}, format='json')
         self.assertEqual(res_valid.status_code, status.HTTP_200_OK)
         alert_valid.refresh_from_db()
         self.assertEqual(alert_valid.status, "SECTION_6_ORDERED")
@@ -193,9 +201,15 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
         - Writer A commits.
         - Reader polls again and receives BOTH Writer A (seq 1) and Writer B (seq 2) in monotonic sequence.
         """
-        setup_conn = psycopg2.connect(
-            host='127.0.0.1', port=5435, user='landuser', password='landpassword', dbname='test_land_records'
-        )
+        db_cfg = connection.settings_dict
+        conn_kwargs = {
+            'host': db_cfg.get('HOST', 'localhost'),
+            'port': db_cfg.get('PORT', 5432),
+            'user': db_cfg.get('USER', 'landuser'),
+            'password': db_cfg.get('PASSWORD', 'landpassword'),
+            'dbname': db_cfg.get('NAME', 'test_land_records'),
+        }
+        setup_conn = psycopg2.connect(**conn_kwargs)
         setup_conn.autocommit = True
         with setup_conn.cursor() as cur:
             cur.execute("DROP SEQUENCE IF EXISTS test_sync_seq CASCADE;")
@@ -215,9 +229,7 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
         writer_results = {}
 
         def writer_a_task():
-            conn_a = psycopg2.connect(
-                host='127.0.0.1', port=5435, user='landuser', password='landpassword', dbname='test_land_records'
-            )
+            conn_a = psycopg2.connect(**conn_kwargs)
             with conn_a.cursor() as cur:
                 cur.execute(
                     "INSERT INTO test_sync_changelog (seq, record_id, txid) "
@@ -234,9 +246,7 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
 
         def writer_b_task():
             ready_event.wait()
-            conn_b = psycopg2.connect(
-                host='127.0.0.1', port=5435, user='landuser', password='landpassword', dbname='test_land_records'
-            )
+            conn_b = psycopg2.connect(**conn_kwargs)
             with conn_b.cursor() as cur:
                 cur.execute(
                     "INSERT INTO test_sync_changelog (seq, record_id, txid) "
@@ -258,9 +268,7 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
         # Writer B is committed with higher sequence number; Writer A is still in-flight
         self.assertGreater(writer_results['b_seq'], writer_results['a_seq'])
 
-        reader_conn = psycopg2.connect(
-            host='127.0.0.1', port=5435, user='landuser', password='landpassword', dbname='test_land_records'
-        )
+        reader_conn = psycopg2.connect(**conn_kwargs)
         reader_conn.autocommit = True
 
         try:
@@ -297,9 +305,7 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
             self.assertEqual(second_poll[1][1], 'REC-WRITER-B')
         finally:
             reader_conn.close()
-            cleanup_conn = psycopg2.connect(
-                host='127.0.0.1', port=5435, user='landuser', password='landpassword', dbname='test_land_records'
-            )
+            cleanup_conn = psycopg2.connect(**conn_kwargs)
             cleanup_conn.autocommit = True
             with cleanup_conn.cursor() as cur:
                 cur.execute("DROP TABLE IF EXISTS test_sync_changelog CASCADE; DROP SEQUENCE IF EXISTS test_sync_seq CASCADE;")

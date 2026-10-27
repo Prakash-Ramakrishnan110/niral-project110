@@ -39,8 +39,15 @@ class JudicialComplianceAndLegalSafetyTests(SafeAPITestCase):
 
     def setUp(self):
         super().setUp()
+        from django.contrib.auth.models import User
+        from core.models import UserProfile
+        from rest_framework_simplejwt.tokens import RefreshToken
 
-        # Real geometry polygons for land parcels (WGS84)
+        self.apex_user = User.objects.create_user(username='compliance_apex_officer', password='TestPass@2026!')
+        UserProfile.objects.create(user=self.apex_user, role='STATE_APEX')
+        token = RefreshToken.for_user(self.apex_user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
         cbe_poly = Polygon(((76.95, 11.00), (76.96, 11.00), (76.96, 11.01), (76.95, 11.01), (76.95, 11.00)))
         salem_poly = Polygon(((78.15, 11.65), (78.16, 11.65), (78.16, 11.66), (78.15, 11.66), (78.15, 11.65)))
 
