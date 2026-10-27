@@ -231,7 +231,7 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
         alert = self.get_object()
         if alert.structure_category == 'VULNERABLE_HOUSING':
             return Response(
-                {"error": "Statutory Violation: Cannot order Section 6 eviction for VULNERABLE_HOUSING. Case must be routed to Humanitarian Rehabilitation (PMAY/TNUHDB)."},
+                {"error": "Statutory Violation: Cannot order Section 6 eviction for VULNERABLE_HOUSING. Case must be routed to Humanitarian Rehabilitation (TNUHDB)."},
                 status=status.HTTP_400_BAD_REQUEST
             )
         if alert.status == 'COURT_STAY_HOLD':

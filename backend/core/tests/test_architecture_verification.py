@@ -34,7 +34,7 @@ class ArchitectureVerificationTest(SafeTransactionTestCase):
     def test_real_section_6_endpoint_statutory_guards(self):
         """
         Verify the REAL Section 6 API endpoint enforces statutory guards:
-        1. Blocks Section 6 order for VULNERABLE_HOUSING (must route to PMAY/TNUHDB rehabilitation).
+        1. Blocks Section 6 order for VULNERABLE_HOUSING (must route to TNUHDB rehabilitation).
         2. Blocks Section 6 order when case is under COURT_STAY_HOLD.
         3. Allows Section 6 order for COMMERCIAL_LAYOUT when invoked by authorized officer.
         """
