@@ -88,3 +88,43 @@ The following 6 defects present severe operational, legal, and security vulnerab
 Tested under pinned dependencies (`Django==6.0.4`, `djangorestframework==3.16.1`):
 * `python manage.py check`: Passed with **0 issues**.
 * GeoDjango + GDAL/GEOS: Successfully loaded GDAL 3.12.3 and GEOS 3.14.1.
+
+---
+
+## 6. Stop-Gap Legal-Safety Commit — Verification Evidence
+
+**Date verified:** 27-Oct-2026  
+**Commit scope:** Legal-safety fixes for defects Rank 1, 2, 3 and 5 in Section 2 above.
+
+### What Was Fixed
+
+| Fix | File | Change |
+|---|---|---|
+| **Removed fake ATR fallback rows** | `core/services/high_court_compliance.py` | Deleted hard-coded Salem parcels (`Kannankurichi`, `Dadagapatty`, `Omalur North`). Empty result now prints: *"No waterbody encroachments recorded for `<district>` as of `<timestamp>`"* |
+| **District-scoped ATR queries** | `core/services/high_court_compliance.py` | All `LandParcel` and `EncroachmentAlert` queries now filter on `district__iexact=district`. State-wide aggregate is eliminated. |
+| **Mandatory writ petition parameter** | `core/services/high_court_compliance.py` | `writ_petition_no=None` raises `ValueError` with clear message. No default writ number exists. |
+| **FMB sketch disclaimer** | `core/services/fmb_sketch_generator.py` | All FMB drawings and PDF annexures carry: *"DISCLAIMER: INDICATIVE — computed from polygon geometry, not a certified survey measurement"* |
+| **Removed fake SHA256 hash claim** | `core/services/legal_notice_pdf.py` | No `Cryptographic Hash: SHA256-…` line in Section 7 PDF output. |
+| **Fixed `structure_category` None-safety** | `core/services/legal_notice_pdf.py` | `str(alert.structure_category or "Unknown").replace(...)` — prevents `None` or Mock object leaking into PDF table cell. |
+| **Env-driven settings** | `backend/config/settings.py` | `GDAL_LIBRARY_PATH`, `GEOS_LIBRARY_PATH`, `SECRET_KEY`, `DB_*` read from environment variables. Windows paths not committed. |
+| **`.env.example` added** | `backend/.env.example` | Template for all required env vars with safe defaults for local dev. |
+| **`BACKLOG.md` committed** | `docs/BACKLOG.md` | Explicit list of items requiring government stakeholder decisions before production sign-off. |
+
+### PDF Test Results (4/4 PASS)
+
+Run with: `python verify_pdfs.py` from `backend/` using venv.
+
+| Test | Result | Evidence |
+|---|---|---|
+| **ATR-A: Salem (zero data)** | ✅ PASS (3918 bytes) | Contains "No water-body encroachments recorded for Salem"; no `Kannankurichi` / `Dadagapatty` / `Omalur North` rows; DRAFT watermark present; W.P. No. 34091 of 2023 in header. |
+| **ATR-B: Coimbatore (district scoping)** | ✅ PASS (3929 bytes) | Shows "COIMBATORE DISTRICT" heading; no Salem-specific data leaked; W.P. No. 18420 of 2024 in header. |
+| **ATR-C: No writ_no** | ✅ PASS | `ValueError: writ_petition_no is a required parameter with no default and cannot be empty` raised. |
+| **Section 7 PDF (mock alert)** | ✅ PASS (6475 bytes) | FMB disclaimer "INDICATIVE - computed from polygon geometry" present; no `SHA256-` hash claim; no `<Mock` or `MagicMock` string in rendered text; "Nature of Structure" renders `Shed` (correct string coercion). |
+
+### What Remains Open (Requires Phase 0 Next Steps)
+
+- **Docker / environment parity**: Docker Desktop could not start (WSL2 issue). Stack was verified against local PostgreSQL 17 + QGIS GDAL — not the pinned `postgis/postgis:15-3.3` container. A CI GitHub Actions workflow using a `postgis/postgis:15-3.3` service container should be added as source-of-truth verification.
+- **Server-side RBAC**: `role` parameter is still client-sent on `issue_section_7`, `inspector_approve`, `issue_section_6`, `complete_eviction`, `reject_boundary`, `cancel_legal`. JWT authentication + DRF permission classes required (Phase 0, Step 3).
+- **State machine migration**: Alert status codes need explicit allowed-transition table (Phase 0, Step 4).
+- **Real QR code**: Section 7 PDF still has no QR code graphic (TD-04 in BACKLOG.md).
+- **Photo storage**: Base64 photos still stored in PostgreSQL JSONField (TD-01 in BACKLOG.md).

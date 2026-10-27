@@ -144,7 +144,7 @@ class LegalNoticePDFGenerator:
         
         schedule_data = [
             ["District", "Taluk", "Village", "Survey / S.D.", "Classification", "Encroached Extent", "Nature of Structure"],
-            [district, taluk, village, survey_full, classification, f"{area_sqft} sq.ft", alert.structure_category.replace('_', ' ').title()]
+            [district, taluk, village, survey_full, classification, f"{area_sqft} sq.ft", str(alert.structure_category or "Unknown").replace('_', ' ').title()]
         ]
         sched_table = Table(schedule_data, colWidths=[65, 75, 80, 75, 95, 75, 75])
         sched_table.setStyle(TableStyle([

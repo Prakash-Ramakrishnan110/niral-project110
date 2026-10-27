@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     LandParcelViewSet, EncroachmentAlertViewSet, 
     FieldVerificationViewSet, RegistryProposalViewSet,
-    TNGISProxyView, SmartAlertView
+    TNGISProxyView, SmartAlertView, HighCourtATRView
 )
 
 router = DefaultRouter()
@@ -17,4 +17,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('tngis/<str:action>/', TNGISProxyView.as_view(), name='tngis-proxy'),
     path('smart-alert/', SmartAlertView.as_view(), name='smart-alert'),
+    path('compliance/high-court-atr/', HighCourtATRView.as_view(), name='high-court-atr'),
 ]
