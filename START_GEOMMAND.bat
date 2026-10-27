@@ -1,9 +1,24 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 echo ==========================================
 echo   SALEM DISTRICT GEOMMAND CENTER v2.5
 echo   - TACTICAL OPERATIONS READY -
 echo ==========================================
+echo.
+
+REM ── AUTO-DETECT CURRENT WI-FI IP ─────────────────────────────────────────────
+set WIFI_IP=
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /C:"IPv4 Address" ^| findstr /V "172\. 169\."') do (
+    set IP_RAW=%%a
+    set IP_RAW=!IP_RAW: =!
+    if not defined WIFI_IP set WIFI_IP=!IP_RAW!
+)
+
+if not defined WIFI_IP set WIFI_IP=127.0.0.1
+
+echo  ** CURRENT PC Wi-Fi IP: %WIFI_IP% **
+echo  ** Mobile App Backend: http://%WIFI_IP%:8000 **
+echo  ** Use this IP in the app if it shows "Cannot connect" **
 echo.
 
 echo [1/5] Starting Docker Infrastructure...
@@ -31,10 +46,14 @@ start "AI Command Center" cmd /k "python scripts/ai_simulation.py"
 echo.
 echo ==========================================
 echo   SYSTEM ONLINE - MISSION READY
-echo   - Tactical Dashboard: http://localhost:5173
-echo   - Field Mission App:  http://localhost:5174
-echo   - Command Backend:    http://localhost:8000/admin/
-echo   - Spatial Engine:     http://localhost:8081/geoserver
+echo.
+echo   Tactical Dashboard: http://localhost:5173
+echo   Field Mission App:  http://localhost:5174
+echo   Command Backend:    http://localhost:8000/admin/
+echo   Spatial Engine:     http://localhost:8081/geoserver
+echo.
+echo   MOBILE APK BACKEND: http://%WIFI_IP%:8000
+echo   ^(Use the IP above in the Flutter app's "Configure Backend IP" dialog^)
 echo ==========================================
 echo.
 
