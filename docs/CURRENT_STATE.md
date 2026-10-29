@@ -1,135 +1,101 @@
 # GEOMMAND System Audit & Current State Baseline
-**Date:** October 2026  
+**Generated Date:** 29 October 2026  
 **Document:** `docs/CURRENT_STATE.md`  
-**Baseline Version:** 0.9.0-prototype  
-**Auditor:** Principal Engineer / Tech Lead  
+**Baseline Version:** 0.9.1-verified  
+**Environment:** Docker (`postgis/postgis:15-3.3`, `python:3.12-slim`, `geoserver:2.24.1`, `adminer`)
 
 ---
 
-## 1. Resolved Version Matrix (Code Truth vs Documentation)
+## 1. Verified Architecture & Version Matrix (Source Truth)
 
-Documentation had conflicting claims across various files. Below is the ground truth verified directly from dependency manifests, lockfiles, and container recipes:
+Every dependency and runtime version listed below has been verified against the physical manifests and container descriptors:
 
-| Component | Documented Claims | Actual Pinned Reality in Code | Source File | Status / Action |
+| Component | Documented Version | Actual File Truth | Manifest Source | Status |
 |---|---|---|---|---|
-| **Python** | 3.11 vs 3.12 | **Python 3.12** (`python:3.12-slim`) | `backend/Dockerfile:1` | Pinned to 3.12 |
-| **Django** | 4.2 vs 5.0 | **Django 6.0.4** | `backend/requirements.txt:1` | Modern Django 6.x release; update docs |
-| **DRF** | 3.14 vs 3.15 | **3.16.1** | `backend/requirements.txt:2` | Pinned to 3.16.1 (resolved 3.15.2 drift) |
-| **PostgreSQL / PostGIS** | Postgres 15 vs 16 | **PostgreSQL 15 + PostGIS 3.3** (`postgis/postgis:15-3.3`) | `docker-compose.yml:3` | Postgres 15 retained as baseline |
-| **GeoServer** | 2.24 vs 2.24.1 | **GeoServer 2.24.1** (`docker.osgeo.org/geoserver:2.24.1`) | `docker-compose.yml:33` | Confirmed |
-| **Frontend Runtime** | React 18 vs 19 | **React 19.2.5** (`react@^19.2.5`, `react-dom@^19.2.5`) | `frontend/package.json:21-22` | React 19 in use; eliminate any React 18 references |
-| **Build Tooling** | Vite 5 vs 6 | **Vite 8.0.9** (`vite@^8.0.9`, `@vitejs/plugin-react@^6.0.1`) | `frontend/package.json:30,38` | Vite 8 + Tailwind v4 (`@tailwindcss/vite@^4.2.3`) |
-| **Mobile Runtime** | Flutter 3.8 vs 3.29 | **Dart SDK ^3.8.1 / Flutter 3.29+** | `field_officer_app/pubspec.yaml:22` | Confirmed: Dart SDK 3.8.1 corresponds to Flutter 3.29+ |
+| **Python** | 3.12 | `3.12` | `backend/Dockerfile:1` (`python:3.12-slim`) | Verified |
+| **Django** | 6.0.4 | `django==6.0.4` | `backend/requirements.txt:1` | Verified |
+| **DRF** | 3.16.1 | `djangorestframework==3.16.1` | `backend/requirements.txt:2` | Verified |
+| **SimpleJWT** | 5.5.1 | `djangorestframework-simplejwt==5.5.1` | `backend/requirements.txt:10` | Verified |
+| **django-axes** | 8.3.1 | `django-axes==8.3.1` | `backend/requirements.txt:11` | Verified (5-attempt lockout) |
+| **pypdf** | 6.21.2 | `pypdf==6.21.2` | `backend/requirements.txt:12` | Installed in container; verifies PDF stream text |
+| **PostgreSQL / PostGIS** | Postgres 15 / PostGIS 3.3 | `PostgreSQL 15.10 + PostGIS 3.3.4` | `docker-compose.yml:3` (`postgis/postgis:15-3.3`) | Verified via `PostGIS_Full_Version()` |
+| **GeoServer** | 2.24.1 | `2.24.1` | `docker-compose.yml:33` (`geoserver:2.24.1`) | Verified |
+| **Frontend Runtime** | React 19.2.5 | `react@^19.2.5`, `react-dom@^19.2.5` | `frontend/package.json:21-22` | Verified |
+| **Frontend Tooling** | Vite 8 + Tailwind 4 | `vite@^8.0.9`, `@tailwindcss/vite@^4.2.3` | `frontend/package.json:19,38` | Verified |
+| **Mobile Runtime** | Flutter 3.29+ / Dart 3.8.1 | `sdk: ^3.8.1` | `field_officer_app/pubspec.yaml:22` | Verified |
 
 ---
 
-## 2. Critical Defects Ranking (Urgent Remediation Required)
+## 2. Database Content Reality (`land_records`)
 
-The following 6 defects present severe operational, legal, and security vulnerabilities and must be remediated immediately:
+Verified by direct SQL queries on the active PostgreSQL 15 database container (`land_db`):
 
-| Rank | Defect Description | Severity | Impact | Remediation Plan |
-|---|---|---|---|---|
-| **1** | **Fabricated Fallback Rows in ATR Affidavit** | **CRITICAL (LEGAL)** | If no waterbody alerts exist in DB, `HighCourtComplianceGenerator` injects 3 fake Salem parcels (`Salem West / Kannankurichi`, `Salem South / Dadagapatty`, `Omalur / Omalur North`). Submitting this to the High Court constitutes contempt of court / perjury. | Remove fake fallback rows immediately. Print clear "No waterbody encroachments recorded for `<district>` as of `<timestamp>`" if count is 0. |
-| **2** | **Non-District-Scoped ATR Queries** | **CRITICAL (LEGAL)** | Queries in ATR (`LandParcel.objects.filter(classification='Waterbody').count()`) aggregate state-wide counts instead of scoping by `district=district`. Sworn affidavit misrepresents totals. | Add mandatory `.filter(district=district)` on all parcel and alert queries. |
-| **3** | **Synthetic FMB Offsets Presented as Survey Data** | **HIGH (LEGAL/OPERATIONAL)** | `FMBSketchGenerator` calculates chainages and ladder offsets from naive polygon coordinates with hardcoded multipliers (`dist * 0.22`, `offset: 8.4m`), presenting them as certified settlement measurements. | Watermark sketches: *"INDICATIVE - computed from polygon geometry, not a certified survey measurement"*. Require surveyor field measurements or explicit officer acknowledgment for Section 7. |
-| **4** | **Client-Trusted Role Parameter in API Payloads** | **CRITICAL (SECURITY)** | Endpoints (`issue_section_7`, `issue_section_6`, `inspector_approve`, `complete_eviction`) check `request.data.get('role')`. Any unauthenticated user or script can bypass judicial/statutory authority by sending `{"role": "COLLECTOR"}`. | Eliminate client-sent `role`. Enforce server-side JWT authentication, user model roles, and DRF permission classes. |
-| **5** | **Fake "Cryptographic Hash: SHA256-<id>" Line** | **MEDIUM (INTEGRITY)** | PDF prints `• Cryptographic Hash: SHA256-` with first 12 chars of alert UUID. No actual SHA-256 hash of the PDF bytes is computed, and no QR code or verification endpoint exists. | Remove fake hash claim. Implement genuine SHA-256 over generated PDF buffer and real QR code resolving to public verification URL. |
-| **6** | **Base64 Photo Bloat in PostgreSQL `JSONField`** | **HIGH (INFRASTRUCTURE)** | Flutter app posts raw Base64 images directly into `FieldVerification.photos` JSONField. Causes extreme DB bloat, query degradation, and 50MB payload workarounds in Django. | Migrate photo payloads to S3/MinIO object store with signed URLs and hash deduplication. |
-
----
-
-## 3. Actual API Endpoints (`backend/core/urls.py` & `views.py`)
-
-| HTTP Method | Route | Handler View / Action | Description | Real vs Defective Status |
-|---|---|---|---|---|
-| `GET`, `POST` | `/api/parcels/` | `LandParcelViewSet` | List/Create cadastral parcels | **Real** (PostGIS DB) |
-| `GET` | `/api/parcels/presets/` | `LandParcelViewSet.presets` | 4 Salem benchmark demo parcels | **Real** (Hardcoded fixture list) |
-| `GET` | `/api/parcels/identify/` | `LandParcelViewSet.identify` | Lat/Lon spatial identification (`Distance`) | **Real** (PostGIS spatial query) |
-| `GET`, `POST` | `/api/alerts/` | `EncroachmentAlertViewSet` | GeoJSON FeatureCollection of alerts | **Real** (PostGIS spatial DB) |
-| `POST`, `PATCH` | `/api/alerts/{id}/inspector_approve/` | `EncroachmentAlertViewSet.inspector_approve` | Approves field verification | **Defective** (Relies on client-sent `role` parameter) |
-| `POST`, `PATCH` | `/api/alerts/{id}/issue_section_7/` | `EncroachmentAlertViewSet.issue_section_7` | Issues Section 7 Show-Cause Notice | **Defective** (Relies on client-sent `role` parameter) |
-| `POST`, `PATCH` | `/api/alerts/{id}/issue_section_6/` | `EncroachmentAlertViewSet.issue_section_6` | Issues Section 6 Eviction Warrant | **Defective** (Relies on client-sent `role` parameter; lacks hard humanitarian block) |
-| `POST`, `PATCH` | `/api/alerts/{id}/complete_eviction/` | `EncroachmentAlertViewSet.complete_eviction` | Marks parcel evicted/restored | **Defective** (Relies on client-sent `role` parameter) |
-| `GET` | `/api/alerts/{id}/download_section_7/` | `EncroachmentAlertViewSet.download_section_7` | Dynamic Section 7 Notice PDF with vector FMB | **Partial / Defective** (FMB sketch uses synthetic offsets; no real QR code or verification link; displays unhashed fake SHA-256 string) |
-| `GET` | `/api/alerts/{id}/fmb_sketch/` | `EncroachmentAlertViewSet.fmb_sketch` | Boundary stones, triangulation, offsets JSON | **Partial / Defective** (Offsets are hardcoded percentage multipliers along diagonal baseline, not derived from official certified survey settlement/WebFMB data) |
-| `POST` | `/api/alerts/{id}/star3_lock/` | `EncroachmentAlertViewSet.star3_lock` | Freezes property sale at Sub-Registrar | **Stub** (Writes note & lock ref in DB, no real adapter) |
-| `POST` | `/api/alerts/{id}/humanitarian_rehabilitation/` | `EncroachmentAlertViewSet.humanitarian_rehabilitation` | Routes hut to TNUHDB welfare | **Stub** (Sets structure category & notes, no real adapter) |
-| `POST`, `PATCH` | `/api/alerts/{id}/mark_false_positive/` | `EncroachmentAlertViewSet.mark_false_positive` | Triggers peer audit on false alarm | **Partial** (Sets flag, but uses hardcoded auditor string) |
-| `POST`, `PATCH` | `/api/alerts/{id}/reject_boundary/` | `EncroachmentAlertViewSet.reject_boundary` | Rejects based on FMB boundary mismatch | **Defective** (Relies on client-sent `role` parameter) |
-| `POST`, `PATCH` | `/api/alerts/{id}/cancel_legal/` | `EncroachmentAlertViewSet.cancel_legal` | Cancels Section 7 proceedings | **Defective** (Relies on client-sent `role` parameter) |
-| `GET`, `POST` | `/api/verifications/` | `FieldVerificationViewSet` | Submits mobile verification photos/remarks | **Partial / Defective** (Stores raw Base64 in JSONField; lacks server-side 15m metric geofence check) |
-| `GET`, `POST` | `/api/registry-proposals/` | `RegistryProposalViewSet` | Proposed edits to LandParcels | **Real** (Workflow state in DB) |
-| `POST` | `/api/registry-proposals/{id}/approve/` | `RegistryProposalViewSet.approve` | Applies proposed data to LandParcel | **Real** (Updates parcel attributes) |
-| `POST`, `GET` | `/api/tngis/{action}/` | `TNGISProxyView` | Proxy to Tamil Nadu GIS APIs | **Partial** (External TNGIS API adapter) |
-| `POST` | `/api/smart-alert/` | `SmartAlertView` | Checks coordinates against TNGIS layer | **Partial** (External dependency with local fallback) |
-| `GET` | `/api/compliance/high-court-atr/` | `HighCourtATRView` | High Court Judicial Compliance ATR PDF | **Partial / Defective** (Database queries omit district filtering; fallbacks to hardcoded Salem waterbody rows if query is empty; lacks required writ parameter) |
+| Model / Table | UI Display Claim | Actual Database Rows | Reality & Discrepancy |
+|---|---|---|---|
+| `core_landparcel` | `14,242.8 Ha` / `12,482 parcels` | **39 parcels** | **Forest:** 8, **Roadside:** 9, **Temple:** 4, **Waterbody:** 10, **Government:** 8. All 39 parcels are in **Salem District**. |
+| `core_encroachmentalert` | "Dynamic Sentinel stream" | **160 alerts** | Seeded prototype alerts (`is_synthetic=False` in initial seed, confidence numbers hardcoded/random). |
+| `core_fieldverification` | "100+ on-ground inspections" | **0 records** | Empty table in database. Mobile app sends photos in Base64 string payload. |
+| `core_registryproposal` | "Registry Workflow Ledger" | **0 records** | Table exists; UI uses local state with hardcoded proposals (`UP-8821`, `CR-991A`). |
+| `auth_user` | 17 roles | **19 users** | Covers all primary officer personas (`col_salem`, `tah_salem_west`, `vao_kannan`, `apex_tn`, etc.). |
 
 ---
 
-## 4. Real vs Simulated Breakdown
+## 3. Endpoints & API Topology
 
-### Real Components
-1. **Spatial Database:** PostGIS models (`LandParcel`, `EncroachmentAlert`) store spatial geometries (`PolygonField`, `PointField`) and execute `ST_Intersects` and distance calculations.
-2. **ReportLab Document Engine:** Generates styled binary PDFs dynamically for legal notices and court affidavits.
-3. **Flutter Ground Recon App:** Captures mobile GPS coordinates and camera frames, sending structured payloads to the backend.
+Defined in `backend/core/urls.py` and routed through `/api/`:
 
-### Simulated / Mocked Components
-1. **Satellite AI Pipeline:** `scripts/ai_simulation.py` is an ungrounded timer script using `random.uniform()` rather than processing satellite feeds.
-2. **Frontend UI Mock Data:** `App.jsx` contains `feedInterval` injecting synthetic `LIVE-XXXX` alerts, `Math.random()` valuations, and hardcoded static status metrics.
-3. **Role Authorization:** Roles are switched via an unauthenticated dropdown passing `role` in the request body rather than cryptographic JWT tokens.
-4. **Third-Party Integrations:** `star3_lock` (Sub-Registrar) and `humanitarian_rehabilitation` (TNUHDB) append static text notes to the DB record.
-5. **Peer Audit Allocation:** Assigns a hardcoded string rather than querying real officers from adjacent taluks.
-6. **Mobile Geofence Enforcement:** Geofence verification is currently in Flutter UI without server-side validation against `parcel.geom`.
+### Authentication
+- `POST /api/auth/login/` — SimpleJWT authentication protected by `django-axes` (locked out after 5 consecutive failed attempts).
+- `POST /api/auth/token/refresh/` — Rotates refresh token, blacklists previous token, sets `httpOnly` cookie.
+- `POST /api/auth/logout/` — Blacklists refresh token, clears `httpOnly` cookie.
+- `GET /api/auth/me/` — Returns user profile, active role, and jurisdiction (`district`, `taluk`, `village`).
+
+### Restful Resources
+- `/api/parcels/` — GeoJSON polygon features from `LandParcel`.
+- `/api/alerts/` — GeoJSON point features from `EncroachmentAlert` with nested verification and FMB metadata.
+- `/api/verifications/` — CRUD for `FieldVerification`.
+- `/api/registry-proposals/` — Mutation proposals.
+
+### Statutory Actions (`/api/alerts/{id}/...`)
+- `POST .../inspector_approve/` — Revenue Inspector countersignature.
+- `POST .../issue_section_7/` — Section 7 Show-Cause Notice issuance (blocks if FMB is indicative without officer acknowledgement).
+- `POST .../issue_section_6/` — Section 6 Summary Eviction Order (blocks for `VULNERABLE_HOUSING` and `COURT_STAY_HOLD`).
+- `POST .../complete_eviction/` — Demolition sign-off.
+- `POST .../mark_false_positive/` — Marks false positive.
+- `POST .../reject_boundary/` — Boundary mismatch rejection.
+- `POST .../cancel_legal/` — Legal cancellation upon valid patta presentation.
+- `POST .../star3_lock/` — Freezes SRO deed registration.
+- `GET .../download_section_7/` — Official ReportLab court-admissible PDF notice.
+- `GET .../fmb_sketch/` — Mathematical FMB boundary stone coordinates and ladder offsets.
+
+### Compliance & Spatial Services
+- `GET /api/compliance/high-court-atr/?district=<district>&writ_petition_no=<writ>` — Madras High Court Compliance ATR PDF generator.
+- `POST /api/smart-alert/` — Automated threat assessment via TNGIS proxy.
+- `ANY /api/tngis/<action>/` — TNGIS generic API proxy.
 
 ---
 
-## 5. Live Stack Verification Results
+## 4. Current Frontend & Mobile Baseline
 
-Tested under pinned dependencies (`Django==6.0.4`, `djangorestframework==3.16.1`):
-* `python manage.py check`: Passed with **0 issues**.
-* GeoDjango + GDAL/GEOS: Successfully loaded GDAL 3.12.3 and GEOS 3.14.1.
+### Web Frontend (`frontend/src/`)
+- Single entrypoint `App.jsx` (4,670 lines).
+- Navigation is state-based (`activeTab`), with **no URL routing**.
+- Real API connections exist for parcels, alerts, High Court ATR PDF download, and alert status dispatch.
+- Dashboard stats (`14,242.8 Ha`, `12,482 parcels`, `₹1,842.4 Cr`) and auxiliary tabs (Users, Database, Storage, Satellites) are hardcoded static dummy arrays.
+
+### Mobile Field App (`field_officer_app/lib/main.dart`)
+- Full Flutter application (206 KB).
+- Connects to `/api/auth/login/` and attaches `Authorization: Bearer <token>`.
+- Captures on-site camera photos, GPS coordinates, and sends Base64 payloads (2 MB to 10 MB) to `/api/verifications/`.
+- Zero offline queue (no SQLite/Drift); network errors fail immediately.
 
 ---
 
-## 6. Stop-Gap Legal-Safety Commit — Verification Evidence
+## 5. Test Suite Verification
 
-**Date verified:** 27-Oct-2026  
-**Commit scope:** Legal-safety fixes for defects Rank 1, 2, 3 and 5 in Section 2 above.
-
-### What Was Fixed
-
-| Fix | File | Change |
-|---|---|---|
-| **Removed fake ATR fallback rows** | `core/services/high_court_compliance.py` | Deleted hard-coded Salem parcels (`Kannankurichi`, `Dadagapatty`, `Omalur North`). Empty result now prints: *"No waterbody encroachments recorded for `<district>` as of `<timestamp>`"* |
-| **District-scoped ATR queries** | `core/services/high_court_compliance.py` | All `LandParcel` and `EncroachmentAlert` queries now filter on `district__iexact=district`. State-wide aggregate is eliminated. |
-| **Mandatory writ petition parameter** | `core/services/high_court_compliance.py` | `writ_petition_no=None` raises `ValueError` with clear message. No default writ number exists. |
-| **FMB sketch disclaimer** | `core/services/fmb_sketch_generator.py` | All FMB drawings and PDF annexures carry: *"DISCLAIMER: INDICATIVE — computed from polygon geometry, not a certified survey measurement"* |
-| **Removed fake SHA256 hash claim** | `core/services/legal_notice_pdf.py` | No `Cryptographic Hash: SHA256-…` line in Section 7 PDF output. |
-| **Fixed `structure_category` None-safety** | `core/services/legal_notice_pdf.py` | `str(alert.structure_category or "Unknown").replace(...)` — prevents `None` or Mock object leaking into PDF table cell. |
-| **Env-driven settings** | `backend/config/settings.py` | `GDAL_LIBRARY_PATH`, `GEOS_LIBRARY_PATH`, `SECRET_KEY`, `DB_*` read from environment variables. Windows paths not committed. |
-| **`.env.example` added** | `backend/.env.example` | Template for all required env vars with safe defaults for local dev. |
-| **`BACKLOG.md` committed** | `docs/BACKLOG.md` | Explicit list of items requiring government stakeholder decisions before production sign-off. |
-
-### PDF Test Results (4/4 PASS)
-
-Run with: `python verify_pdfs.py` from `backend/` using venv.
-
-| Test | Result | Evidence |
-|---|---|---|
-| **ATR-A: Salem (zero data)** | ✅ PASS (3918 bytes) | Contains "No water-body encroachments recorded for Salem"; no `Kannankurichi` / `Dadagapatty` / `Omalur North` rows; DRAFT watermark present; W.P. No. 34091 of 2023 in header. |
-| **ATR-B: Coimbatore (district scoping)** | ✅ PASS (3929 bytes) | Shows "COIMBATORE DISTRICT" heading; no Salem-specific data leaked; W.P. No. 18420 of 2024 in header. |
-| **ATR-C: No writ_no** | ✅ PASS | `ValueError: writ_petition_no is a required parameter with no default and cannot be empty` raised. |
-| **Section 7 PDF (mock alert)** | ✅ PASS (6475 bytes) | FMB disclaimer "INDICATIVE - computed from polygon geometry" present; no `SHA256-` hash claim; no `<Mock` or `MagicMock` string in rendered text; "Nature of Structure" renders `Shed` (correct string coercion). |
-
-### What Remains Open (Requires Phase 0 Next Steps)
-
-- **Local PostgreSQL & PostGIS Environment Truth (Verified 27-Oct-2026)**:
-  * **Port 5432 (Windows Native PostgreSQL 15.13)**: Native Windows service. PostGIS extension is NOT installed (`postgis.control` missing). Databases: `govland_shield` (7 tables from 13-Apr-2026, 0 alerts), `land_records` (empty, 0 tables).
-  * **Port 5433 (Windows Native PostgreSQL 18.1)**: Native Windows service. Databases: `postgres`, `eduai`.
-  * **Port 5434 (Windows Native PostgreSQL 17.7)**: Native Windows service. Databases: `govland_shield` (19 tables, 5 parcels, 0 alerts).
-  * **Port 5435 (Docker Container `postgis_15` - `postgis/postgis:15-3.3`)**: Official pinned environment running PostgreSQL 15.4 (Debian) + PostGIS 3.3.4. Database: `land_records` (17 Django tables, 0 alerts, 0 parcels). `manage.py migrate` was executed exclusively against this container. Role `landuser` was granted `CREATEDB` (`ALTER ROLE landuser CREATEDB;`) to permit Django's `SafeTestCase` runner to spin up `test_land_records`.
-  * **CI Pipeline (`.github/workflows/ci.yml`)**: Pinned to `postgis/postgis:15-3.3` service container matching local container parity.
-- **Server-side RBAC**: `role` parameter is still client-sent on `issue_section_7`, `inspector_approve`, `issue_section_6`, `complete_eviction`, `reject_boundary`, `cancel_legal`. JWT authentication + DRF permission classes required (Phase 0, Step 3).
-- **State machine migration**: Alert status codes need explicit allowed-transition table (Phase 0, Step 4).
-- **Real QR code**: Section 7 PDF still has no QR code graphic (TD-04 in BACKLOG.md).
-- **Photo storage**: Base64 photos still stored in PostgreSQL JSONField (TD-01 in BACKLOG.md).
+Verified running inside the `land_backend` container:
+```
+Ran 19 tests in 32.253s
+OK (19 passing tests)
+```
+- Tests assert: Mandatory district scoping on ATR, non-empty waterbody alerts, absence of fake fallback rows, presence of DRAFT watermark and INDICATIVE disclaimers, absence of fake SHA256 string claims, axes brute-force lockout, and Section 6 vulnerable dweller guards.
