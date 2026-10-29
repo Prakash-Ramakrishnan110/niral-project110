@@ -653,8 +653,16 @@ class HighCourtATRView(APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
 
+        order_date = request.query_params.get('order_date')
+        bench_name = request.query_params.get('bench_name')
+
         try:
-            pdf_bytes = HighCourtComplianceGenerator.generate_atr_pdf(district=district.strip(), writ_petition_no=writ_no.strip())
+            pdf_bytes = HighCourtComplianceGenerator.generate_atr_pdf(
+                district=district.strip(),
+                writ_petition_no=writ_no.strip(),
+                order_date=order_date.strip() if order_date and order_date.strip() else None,
+                bench_name=bench_name.strip() if bench_name and bench_name.strip() else None
+            )
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             filename = f"Madras_High_Court_Compliance_ATR_{district.strip()}_{datetime.now().strftime('%Y%m%d')}.pdf"
             response['Content-Disposition'] = f'attachment; filename="{filename}"'

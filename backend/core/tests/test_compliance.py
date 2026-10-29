@@ -19,20 +19,18 @@ from .base import SafeAPITestCase
 
 
 def extract_pdf_text(pdf_bytes: bytes) -> str:
-    """Extract plain text from rendered PDF bytes using pdfplumber with pypdf fallback."""
+    """Extract plain text from rendered PDF bytes using pypdf or pdfplumber. Fails loudly if library missing."""
     try:
-        import pdfplumber
-        with pdfplumber.open(io.BytesIO(pdf_bytes)) as p:
-            text = "\n".join(page.extract_text() or "" for page in p.pages)
-    except Exception:
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        return "\n".join(page.extract_text() or "" for page in reader.pages)
+    except ImportError:
         try:
-            from pypdf import PdfReader
-            reader = PdfReader(io.BytesIO(pdf_bytes))
-            text = "\n".join(page.extract_text() or "" for page in reader.pages)
-        except Exception:
-            text = pdf_bytes.decode('latin-1', errors='replace')
-    return text
-
+            import pdfplumber
+            with pdfplumber.open(io.BytesIO(pdf_bytes)) as p:
+                return "\n".join(page.extract_text() or "" for page in p.pages)
+        except ImportError as e:
+            raise RuntimeError("PDF text extraction requires pypdf or pdfplumber installed. Raw bytes fallback is disabled.") from e
 
 class JudicialComplianceAndLegalSafetyTests(SafeAPITestCase):
     """Verifies statutory compliance generators, endpoints, and PDF disclaimers."""
@@ -147,6 +145,23 @@ class JudicialComplianceAndLegalSafetyTests(SafeAPITestCase):
 
         # Classification filtering: Roadside Poramboke 101/2 must NOT be in the waterbody itemized table
         self.assertNotIn("101/2", text)
+
+        # Absence of invented bench names and fake runtime dates
+        self.assertNotIn("Waterbody Protection Bench", text)
+        self.assertIn("SPECIAL BENCH JURISDICTION - NOT CONFIGURED", text)
+        self.assertIn("ORDER DATE NOT CONFIGURED", text)
+        self.assertIn("DATE PENDING SWORN ATTESTATION", text)
+
+        # Configured bench and order dates are rendered when supplied
+        pdf_custom = HighCourtComplianceGenerator.generate_atr_pdf(
+            district="Coimbatore",
+            writ_petition_no="W.P. No. 18420 of 2024",
+            order_date="15-08-2024",
+            bench_name="Division Bench (Water Resources)"
+        )
+        text_custom = extract_pdf_text(pdf_custom)
+        self.assertIn("Division Bench (Water Resources)", text_custom)
+        self.assertIn("15-08-2024", text_custom)
 
     def test_atr_district_with_zero_data(self):
         """ATR for a district with zero data returns explicit empty statement and zero fake rows."""

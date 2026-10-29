@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: landpassword
       POSTGRES_DB: land_records
     ports:
-      - "5432:5432"
+      - "5435:5432"
     volumes:
       - land_db_data:/var/lib/postgresql/data
     healthcheck:

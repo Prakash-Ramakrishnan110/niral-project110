@@ -1,7 +1,11 @@
 """
-GEOMMAND Madras High Court Judicial Compliance & ATR Generator
-Generates official Affidavits and Action Taken Reports (ATRs) for District Collectors
-and Revenue Secretaries responding to High Court PILs / Suo Motu Writs on waterbody protection.
+GEOMMAND High Court Compliance & Judicial Action Taken Report (ATR) Generator
+Builds court-ready Action Taken Report (ATR) PDFs formatted for the Hon'ble High Court of Judicature at Madras.
+Aggregates ground-truth encroachment detections strictly scoped to the Collector's district.
+Watermarked with explicit legal disclaimers:
+- DRAFT for officer review and sworn execution
+- Zero fabricated rows or synthetic filler entries
+- Unconfigured court orders/dates clearly marked as pending judicial verification
 """
 
 import io
@@ -13,60 +17,75 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 class HighCourtComplianceGenerator:
     """
-    Generates high-court compliant Action Taken Reports (ATRs) on waterbody encroachments.
+    Builds official ATR affidavits for filing before the High Court of Madras.
+    Guarantees strict geographic scoping to the specified district and renders
+    explicit empty statements when zero data exists.
     """
 
     @classmethod
-    def generate_atr_pdf(cls, district=None, writ_petition_no=None):
-        if not district or not str(district).strip():
-            raise ValueError("district is a required parameter with no default and cannot be empty")
-        if not writ_petition_no or not str(writ_petition_no).strip():
-            raise ValueError("writ_petition_no is a required parameter with no default and cannot be empty")
-
+    def generate_atr_pdf(
+        cls,
+        district: str,
+        writ_petition_no: str = "W.P. No. [NOT CONFIGURED]",
+        order_date: str = None,
+        bench_name: str = None,
+        execution_date: str = None
+    ) -> bytes:
+        """
+        Builds a Madras High Court ATR PDF buffer for the specified district.
+        All legal dates and bench names default to explicit unverified placeholders
+        unless confirmed order metadata is passed.
+        """
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            leftMargin=36,
-            rightMargin=36,
-            topMargin=36,
-            bottomMargin=36
+            leftMargin=40,
+            rightMargin=40,
+            topMargin=40,
+            bottomMargin=40
         )
 
         styles = getSampleStyleSheet()
+
         title_style = ParagraphStyle(
-            'TitleStyle',
+            'HighCourtTitle',
+            parent=styles['Heading1'],
             fontName='Helvetica-Bold',
             fontSize=11,
-            leading=15,
+            leading=14,
             alignment=1,
             textColor=colors.HexColor('#0F172A')
         )
         legal_sub = ParagraphStyle(
             'LegalSub',
+            parent=styles['Normal'],
             fontName='Helvetica-Bold',
             fontSize=9.5,
             leading=13,
             alignment=1,
-            textColor=colors.HexColor('#B91C1C')
+            textColor=colors.HexColor('#1E293B')
         )
         watermark_banner = ParagraphStyle(
-            'WatermarkBanner',
+            'DraftBanner',
+            parent=styles['Normal'],
             fontName='Helvetica-Bold',
-            fontSize=9,
-            leading=12,
+            fontSize=10,
+            leading=13,
             alignment=1,
             textColor=colors.HexColor('#DC2626')
         )
         body = ParagraphStyle(
-            'BodyStyle',
+            'Body',
+            parent=styles['Normal'],
             fontName='Helvetica',
-            fontSize=8.5,
-            leading=12,
+            fontSize=8,
+            leading=11.5,
             textColor=colors.HexColor('#1E293B')
         )
         small = ParagraphStyle(
             'Small',
+            parent=styles['Normal'],
             fontName='Helvetica',
             fontSize=7.5,
             leading=10,
@@ -80,17 +99,19 @@ class HighCourtComplianceGenerator:
         elements.append(Spacer(1, 4))
 
         # 1. High Court Heading
+        bench_display = bench_name if bench_name else "[SPECIAL BENCH JURISDICTION - NOT CONFIGURED, PENDING LEGAL REVIEW]"
         elements.append(Paragraph("IN THE HIGH COURT OF JUDICATURE AT MADRAS", title_style))
-        elements.append(Paragraph("(Special Original Jurisdiction - Waterbody Protection Bench)", ParagraphStyle('Center', fontName='Helvetica-Oblique', fontSize=9, alignment=1)))
+        elements.append(Paragraph(f"(Special Original Jurisdiction - {bench_display})", ParagraphStyle('Center', fontName='Helvetica-Oblique', fontSize=9, alignment=1)))
         elements.append(Spacer(1, 4))
         elements.append(Paragraph(f"<b>IN THE MATTER OF: {str(writ_petition_no).upper()}</b>", legal_sub))
         elements.append(Spacer(1, 6))
         elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#0F172A"), spaceAfter=8))
 
         # 2. Preamble & Affidavit Identification
+        order_date_display = order_date if order_date else "[ORDER DATE NOT CONFIGURED - PENDING JUDICIAL VERIFICATION]"
         intro_text = f"""
         <b>ACTION TAKEN REPORT (ATR) & AFFIDAVIT FILED BY THE DISTRICT COLLECTOR, {district.upper()} DISTRICT</b><br/>
-        IN COMPLIANCE WITH THE DIRECTIONS DATED {datetime.now().strftime('%d-%m-%Y')} OF THE HON'BLE MADRAS HIGH COURT 
+        IN COMPLIANCE WITH DIRECTIONS OF THE HON'BLE MADRAS HIGH COURT ({order_date_display}) 
         FOR THE RESTORATION AND REMOVAL OF ENCROACHMENTS IN WATERBODIES (ERI / KULAM / ODDAI).
         """
         elements.append(Paragraph(intro_text, body))
@@ -159,8 +180,7 @@ class HighCourtComplianceGenerator:
                     al.status.replace('_', ' ')
                 ])
         else:
-            timestamp = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
-            table_data.append(["-", "-", "-", f"No waterbody encroachments recorded for {district} as of {timestamp}", "-", "-"])
+            table_data.append(["-", "-", "-", f"No waterbody encroachments recorded for {district}", "-", "-"])
 
         item_table = Table(table_data, colWidths=[80, 85, 75, 120, 80, 80])
         item_table.setStyle(TableStyle([
@@ -176,12 +196,13 @@ class HighCourtComplianceGenerator:
         elements.append(Spacer(1, 14))
 
         # 5. Solemn Verification & Affidavit Block
+        exec_date_display = execution_date if execution_date else "[EXECUTION DATE PENDING SWORN ATTESTATION]"
         verif_text = f"""
         <b>SOLEMN VERIFICATION:</b><br/>
         I, District Collector & District Magistrate of {district} District, do hereby verify that the contents of this Action Taken Report are true to my knowledge and backed by satellite temporal records and cadastral survey evidence maintained in the GEOMMAND portal.<br/>
         <b>[NOTICE: THIS IS A DRAFT GENERATED FOR REVIEW AND SWORN ATTESTATION BEFORE THE HON'BLE COURT]</b>
         <br/><br/>
-        <b>Verified at {district} on this {datetime.now().strftime('%d day of %B, %Y')}.</b>
+        <b>Verified at {district} on {exec_date_display}.</b>
         """
         elements.append(Paragraph(verif_text, body))
         elements.append(Spacer(1, 25))

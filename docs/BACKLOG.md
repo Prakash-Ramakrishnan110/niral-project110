@@ -24,7 +24,29 @@ The following items require official decisions or access from government stakeho
 
 ---
 
-## 2. Technical Debt & Implementation Backlog
+## 2. Fixed Legal Phrases Across PDF Generators (Pending Official Legal Review) - UNVERIFIED
+
+All statutory citations, judicial headers, procedural timelines, and affidavit wording across report generators are cataloged below. Zero legal text is assumed authoritative until signed off by the Special Government Pleader / Revenue Administration:
+
+| Generator File | Location | Fixed Legal Text / Parameter | Statutory / Judicial Context | Status / Mitigation |
+|---|---|---|---|---|
+| `high_court_compliance.py` | Header Line 84 | `(Special Original Jurisdiction - [SPECIAL BENCH JURISDICTION - NOT CONFIGURED, PENDING LEGAL REVIEW])` | Roster designation of High Court Bench hearing PIL | **UNVERIFIED**: Removed invented "Waterbody Protection Bench". Accepts `bench_name` param; defaults to explicit unverified placeholder. |
+| `high_court_compliance.py` | Preamble Line 93 | `IN COMPLIANCE WITH DIRECTIONS OF THE HON'BLE MADRAS HIGH COURT ([ORDER DATE NOT CONFIGURED - PENDING JUDICIAL VERIFICATION])` | High Court writ petition interim/final order date | **UNVERIFIED**: Removed invented dynamic `datetime.now()` date. Accepts `order_date` param; defaults to unconfigured notice. |
+| `high_court_compliance.py` | Title Line 86 | `IN THE MATTER OF: {str(writ_petition_no).upper()}` | Writ petition case number | **UNVERIFIED**: Requires explicit `writ_no` param with 400 validation; defaults to `W.P. No. [NOT CONFIGURED]`. |
+| `high_court_compliance.py` | Section Head Line 94 | `FOR THE RESTORATION AND REMOVAL OF ENCROACHMENTS IN WATERBODIES (ERI / KULAM / ODDAI)` | Judicial direction scope for waterbody PILs | **UNVERIFIED**: Pending Law Dept / Spl Govt Pleader review of operative court prayer text. |
+| `high_court_compliance.py` | Verification Line 184 | `Verified at {district} on [EXECUTION DATE PENDING SWORN ATTESTATION]` | Sworn attestation affidavit clause | **UNVERIFIED**: Removed dynamic today's date. Requires notarised/deponent signing date on physical affidavit execution. |
+| `high_court_compliance.py` | Signatory Line 190 | `Counsel for the State of Tamil Nadu, High Court, Madras` & `DISTRICT COLLECTOR & DISTRICT MAGISTRATE (Sworn Attestation Pending)` | Counsel and deponent signature blocks | **UNVERIFIED**: Pending High Court Standing Counsel formal verification of deponent designation. |
+| `legal_notice_pdf.py` | Header Line 107 | `GOVERNMENT OF TAMIL NADU / REVENUE & DISASTER MANAGEMENT DEPARTMENT / OFFICE OF THE TAHSILDAR` | Departmental heading | **UNVERIFIED**: Standard department nomenclature under Revenue Administration. |
+| `legal_notice_pdf.py` | Notice Title Line 121 | `FORM OF NOTICE UNDER SECTION 7 OF THE TAMIL NADU LAND ENCROACHMENT ACT, 1905 (TAMIL NADU ACT III OF 1905)` | Statutory form title under Act III of 1905 | **UNVERIFIED**: Matches statutory schedule heading of TN Act III of 1905 Form A; pending Law Dept template certification. |
+| `legal_notice_pdf.py` | Notice Preamble Line 134 | `WHEREAS, satellite surveillance and on-ground cadastral verification show that you have entered upon and unauthorizedly occupied Government land classified as {classification}...` | Statutory recitals and grounds of show-cause | **UNVERIFIED**: Evidentiary recital coupling satellite detection with cadastral overlap; pending Spl Govt Pleader sign-off. |
+| `legal_notice_pdf.py` | Show Cause Mandate Line 136 | `NOW, THEREFORE, take notice that you are hereby required to show cause in writing or in person before the Tahsildar... on or before {reply_deadline} (within 15 days of service of this notice), why you should not be summarily evicted... under Section 6... and why the structures, crops or building materials erected thereon should not be forfeited.` | Statutory mandate and show-cause timeline | **UNVERIFIED**: 15-day statutory window must be loaded from `DistrictLegalConfig`; default 15-day period pending confirmation for emergency vs standard encroachers. |
+| `legal_notice_pdf.py` | Schedule Table Line 142 | `SCHEDULE OF UNAUTHORIZED OCCUPATION` | Statutory property schedule | **UNVERIFIED**: Formal format for cadastral boundaries and extent schedule. |
+| `legal_notice_pdf.py` | FMB Disclaimer Line 171 | `[DISCLAIMER: INDICATIVE - computed from polygon geometry, not a certified survey measurement]` | Survey ladder legal disclaimer | **UNVERIFIED / ACTIVE GUARD**: Essential judicial safeguard protecting officers against Section 7 challenge on uncertified sketches. |
+| `legal_notice_pdf.py` | Signatory Line 216 | `TAHSILDAR & EXECUTIVE MAGISTRATE, {taluk} TALUK, {district} DISTRICT` | Issuing authority rank | **UNVERIFIED**: Authority delegation under Section 7/Section 6 must be legally verified (see Item 2 above). |
+
+---
+
+## 3. Technical Debt & Implementation Backlog
 
 - [ ] **TD-01:** Migrate Base64 photos from PostgreSQL `FieldVerification.photos` to MinIO/S3 object storage with signed URLs and SHA-256 deduplication.
 - [ ] **TD-02:** Replace synthetic FMB offset heuristics with real CollabLand FMB geometry parsing when official survey files are provided.
