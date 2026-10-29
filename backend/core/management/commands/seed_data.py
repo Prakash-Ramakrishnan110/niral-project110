@@ -2,11 +2,20 @@ from django.core.management.base import BaseCommand
 from core.models import LandParcel, EncroachmentAlert
 from django.contrib.gis.geos import Polygon, Point
 import random
+import os
 
 class Command(BaseCommand):
-    help = 'Seed the database with comprehensive Salem District cadastral & encroachment records'
+    help = 'Seed the database with demo cadastral & encroachment records (requires GEOMMAND_ENV=demo)'
 
     def handle(self, *args, **kwargs):
+        if os.environ.get('GEOMMAND_ENV') != 'demo':
+            self.stdout.write(
+                self.style.ERROR(
+                    "[BLOCKED] seed_data refuses to run without GEOMMAND_ENV=demo to protect live/prototype database records."
+                )
+            )
+            return
+
         LandParcel.objects.all().delete()
         EncroachmentAlert.objects.all().delete()
 

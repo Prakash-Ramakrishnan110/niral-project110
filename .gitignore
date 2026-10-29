@@ -8,6 +8,7 @@ build/
 __pycache__/
 .DS_Store
 .idea/
+.vscode/
 *.log
 frontend/node_modules/
 backend/venv/
@@ -29,3 +30,15 @@ field_officer_app/.pub/
 # Temporary patch scripts
 frontend/patch_*.cjs
 config.bat
+
+# Environment variable files — NEVER commit secrets
+.env
+.env.local
+.env.production
+.env.docker
+backend/.env
+
+# Media / uploaded files
+backend/media/
+*.pdf
+frontend/dist/

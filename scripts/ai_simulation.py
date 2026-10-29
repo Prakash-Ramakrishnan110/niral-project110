@@ -9,6 +9,11 @@ import json
 import time
 import random
 import sys
+import os
+
+if os.environ.get('GEOMMAND_ENV') != 'demo':
+    print(f"[{time.strftime('%H:%M:%S')}] [BLOCKED] ai_simulation refuses to run: GEOMMAND_ENV != 'demo'. Set GEOMMAND_ENV=demo for local demonstration.")
+    sys.exit(1)
 
 API_URL = "http://localhost:8000/api/alerts/"
 PARCEL_API = "http://localhost:8000/api/parcels/"
@@ -86,6 +91,7 @@ def simulate_ai_scan():
         "confidence_score": round(random.uniform(0.92, 0.99), 2) if "Warning" not in tactical_type else round(random.uniform(0.75, 0.88), 2),
         "alert_type": tactical_type,
         "status": "TAHSILDAR_ACCEPTED" if random.random() > 0.7 else "Pending",
+        "is_synthetic": True,
         "alert_geom": {
             "type": "Point",
             "coordinates": [coords[0] + (random.uniform(-0.0003, 0.0003)), coords[1] + (random.uniform(-0.0003, 0.0003))]

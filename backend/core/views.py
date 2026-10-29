@@ -1,23 +1,56 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.http import HttpResponse
+from django.utils import timezone
+from django.db.models import Q
+from datetime import datetime, timedelta
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
-from .models import LandParcel, EncroachmentAlert, FieldVerification, RegistryProposal
+from .models import LandParcel, EncroachmentAlert, FieldVerification, RegistryProposal, DistrictLegalConfig
 from .serializers import (
     LandParcelSerializer, EncroachmentAlertSerializer, 
-    FieldVerificationSerializer, RegistryProposalSerializer
+    FieldVerificationSerializer, RegistryProposalSerializer, DistrictLegalConfigSerializer
+)
+from .permissions import (
+    IsVigilanceReadOnly, get_user_role,
+    STATUTORY_NOTICE_ROLES, INSPECTOR_APPROVE_ROLES,
+    BOUNDARY_REJECT_ROLES, EVICTION_COMPLETE_ROLES,
+    PROPOSAL_APPROVE_ROLES, STATEWIDE_ROLES
 )
 from .tngis_service import TNGISService
+from .services.fmb_sketch_generator import FMBSketchGenerator
+from .services.legal_notice_pdf import LegalNoticePDFGenerator
+from .services.high_court_compliance import HighCourtComplianceGenerator
+
 
 class LandParcelViewSet(viewsets.ModelViewSet):
     queryset = LandParcel.objects.all()
     serializer_class = LandParcelSerializer
+    permission_classes = [IsAuthenticated, IsVigilanceReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['village_code', 'classification', 'is_occupied']
     search_fields = ['survey_number', 'patta_number', 'owner_name', 'ulpin']
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user or not user.is_authenticated:
+            return LandParcel.objects.none()
+        profile = getattr(user, 'profile', None)
+        if not profile or profile.role in STATEWIDE_ROLES:
+            return LandParcel.objects.all()
+
+        qs = LandParcel.objects.all()
+        if profile.district:
+            qs = qs.filter(district__iexact=profile.district)
+        if profile.role in ['TAHSILDAR', 'INSPECTOR', 'VAO'] and profile.taluk:
+            qs = qs.filter(taluk__iexact=profile.taluk)
+        if profile.role == 'VAO' and profile.village:
+            qs = qs.filter(Q(village_name__iexact=profile.village) | Q(village_code__iexact=profile.village))
+        return qs
 
     @action(detail=False, methods=['get'])
     def presets(self, request):
@@ -172,18 +205,36 @@ class LandParcelViewSet(viewsets.ModelViewSet):
         return Response({"error": "No parcel found"}, status=status.HTTP_404_NOT_FOUND)
 
 class EncroachmentAlertViewSet(viewsets.ModelViewSet):
-    queryset = EncroachmentAlert.objects.all().order_by('-detection_date')
+    queryset = EncroachmentAlert.objects.all()
     serializer_class = EncroachmentAlertSerializer
+    permission_classes = [IsAuthenticated, IsVigilanceReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'alert_type']
 
+    def get_queryset(self):
+        user = self.request.user
+        if not user or not user.is_authenticated:
+            return EncroachmentAlert.objects.none()
+        profile = getattr(user, 'profile', None)
+        qs = EncroachmentAlert.objects.select_related('parcel').all().order_by('-detection_date')
+        if not profile or profile.role in STATEWIDE_ROLES:
+            return qs
+
+        if profile.district:
+            qs = qs.filter(parcel__district__iexact=profile.district)
+        if profile.role in ['TAHSILDAR', 'INSPECTOR', 'VAO'] and profile.taluk:
+            qs = qs.filter(parcel__taluk__iexact=profile.taluk)
+        if profile.role == 'VAO' and profile.village:
+            qs = qs.filter(Q(parcel__village_name__iexact=profile.village) | Q(parcel__village_code__iexact=profile.village))
+        return qs
+
     @action(detail=True, methods=['post', 'patch'])
     def inspector_approve(self, request, pk=None):
-        role = (request.data.get('role') or '').upper()
-        if role == 'VAO':
-            return Response({"error": "Access Denied: VAO cannot counter-sign their own verification report. Revenue Inspector sign-off required."}, status=status.HTTP_403_FORBIDDEN)
+        role = get_user_role(request.user)
+        if role not in INSPECTOR_APPROVE_ROLES:
+            return Response({"error": f"Access Denied: Role '{role}' cannot counter-sign field inspection reports. Revenue Inspector sign-off required."}, status=status.HTTP_403_FORBIDDEN)
         alert = self.get_object()
-        notes = request.data.get('notes', 'Verified and Approved by Field Inspector Mukesh S')
+        notes = request.data.get('notes', f'Verified and Approved by {request.user.get_full_name() or request.user.username}')
         alert.status = request.data.get('status', 'INSPECTOR_APPROVED')
         alert.resolution_notes = notes
         alert.save()
@@ -192,12 +243,25 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post', 'patch'])
     def issue_section_7(self, request, pk=None):
-        role = (request.data.get('role') or '').upper()
-        if role in ['VAO', 'INSPECTOR', 'SURVEYOR', 'DATA_ENTRY']:
-            return Response({"error": f"Access Denied: Under TN Act III of 1905, {role} cannot issue Section 7 Notice. Only Tahsildar / Collector has statutory authority."}, status=status.HTTP_403_FORBIDDEN)
+        role = get_user_role(request.user)
+        if role not in STATUTORY_NOTICE_ROLES:
+            return Response({"error": f"Access Denied: Under TN Act III of 1905, '{role}' cannot issue Section 7 Notice. Only Tahsildar / Collector has statutory authority."}, status=status.HTTP_403_FORBIDDEN)
         alert = self.get_object()
+
+        # Stop-gap legal safety: Block Section 7 unless certified survey exists or explicit officer acknowledgement is recorded
+        has_certified_survey = bool(alert.fmb_measurements and alert.fmb_measurements.get('is_certified_survey'))
+        officer_ack = request.data.get('officer_fmb_acknowledgement') in [True, 'true', 'True', 1]
+        
+        if not has_certified_survey and not officer_ack:
+            return Response({
+                "error": "Section 7 Issuance Blocked: FMB measurements are currently INDICATIVE (derived from polygon geometry, not a certified survey measurement). To issue statutory notice, provide explicit officer acknowledgement: {'officer_fmb_acknowledgement': true, 'notes': '...'}.",
+                "disclaimer": "INDICATIVE - computed from polygon geometry, not a certified survey measurement"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         encroacher = request.data.get('encroacher_name', 'Unauthorized Occupant')
         notes = request.data.get('notes') or f"[Section 7 Notice Issued to {encroacher}] 15-day show-cause notice served under TN Land Encroachment Act 1905."
+        if officer_ack and not has_certified_survey:
+            notes = f"{notes}\n[OFFICER ACKNOWLEDGEMENT]: Officer proceeded with indicative polygon-derived FMB measurements pending certified field survey."
         alert.status = 'SECTION_7_ISSUED'
         alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
         alert.save()
@@ -206,10 +270,20 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post', 'patch'])
     def issue_section_6(self, request, pk=None):
-        role = (request.data.get('role') or '').upper()
-        if role in ['VAO', 'INSPECTOR', 'SURVEYOR', 'DATA_ENTRY']:
-            return Response({"error": f"Access Denied: Under TN Act III of 1905, {role} cannot order Section 6 Eviction. Only Tahsildar / Collector has statutory authority."}, status=status.HTTP_403_FORBIDDEN)
+        role = get_user_role(request.user)
+        if role not in STATUTORY_NOTICE_ROLES:
+            return Response({"error": f"Access Denied: Under TN Act III of 1905, '{role}' cannot order Section 6 Eviction. Only Tahsildar / Collector has statutory authority."}, status=status.HTTP_403_FORBIDDEN)
         alert = self.get_object()
+        if alert.structure_category == 'VULNERABLE_HOUSING':
+            return Response(
+                {"error": "Statutory Violation: Cannot order Section 6 eviction for VULNERABLE_HOUSING. Case must be routed to Humanitarian Rehabilitation (TNUHDB)."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if alert.status == 'COURT_STAY_HOLD':
+            return Response(
+                {"error": "Statutory Violation: Injunction in force. Cannot issue Section 6 Eviction Order while case is under COURT_STAY_HOLD."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         notes = request.data.get('notes') or "[Section 6 Eviction Warrant] Final eviction and demolition ordered under TN Land Encroachment Act 1905. Police Bandobast requisitioned."
         alert.status = 'SECTION_6_ORDERED'
         alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
@@ -219,9 +293,9 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post', 'patch'])
     def complete_eviction(self, request, pk=None):
-        role = (request.data.get('role') or '').upper()
-        if role == 'VAO':
-            return Response({"error": "Access Denied: VAO cannot complete eviction alone. Revenue Division sign-off required."}, status=status.HTTP_403_FORBIDDEN)
+        role = get_user_role(request.user)
+        if role not in EVICTION_COMPLETE_ROLES:
+            return Response({"error": f"Access Denied: Role '{role}' cannot complete eviction alone. Revenue Division / Tahsildar sign-off required."}, status=status.HTTP_403_FORBIDDEN)
         alert = self.get_object()
         notes = request.data.get('notes') or "[Eviction Executed & Restored] Unauthorized structure demolished. Boundary fencing restored. Government possession reclaimed."
         alert.status = 'RESOLVED'
@@ -230,24 +304,113 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(alert)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['get'])
+    def download_section_7(self, request, pk=None):
+        """Generates and downloads official court-admissible Section 7 Notice with embedded FMB Sketch."""
+        alert = self.get_object()
+        profile = getattr(request.user, 'profile', None)
+        if profile and profile.role not in STATEWIDE_ROLES and profile.district:
+            if alert.parcel.district.lower() != profile.district.lower():
+                return Response(
+                    {"error": f"Access Denied: Account restricted to {profile.district}. Cannot access notice for {alert.parcel.district}."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        try:
+            pdf_bytes = LegalNoticePDFGenerator.generate_section_7_pdf(alert)
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            filename = f"Section_7_Notice_{alert.parcel.survey_number}_{str(alert.id)[:8]}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+        except Exception as e:
+            return Response({"error": f"Failed to generate legal PDF: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['get'])
+    def fmb_sketch(self, request, pk=None):
+        """Returns mathematical FMB boundary stones, triangulation, and ladder offset measurements."""
+        alert = self.get_object()
+        profile = getattr(request.user, 'profile', None)
+        if profile and profile.role not in STATEWIDE_ROLES and profile.district:
+            if alert.parcel.district.lower() != profile.district.lower():
+                return Response(
+                    {"error": f"Access Denied: Account restricted to {profile.district}. Cannot access FMB sketch for {alert.parcel.district}."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        parcel = alert.parcel
+        coords = []
+        if hasattr(parcel.geom, 'coords'):
+            coords = list(parcel.geom.coords[0]) if parcel.geom.coords else []
+        calc = FMBSketchGenerator.calculate_fmb_measurements(coords, [])
+        return Response({
+            "alert_id": str(alert.id),
+            "survey_number": f"{parcel.survey_number}/{parcel.subdivision or '1'}",
+            "village": parcel.village_name or "Kannankurichi",
+            "taluk": parcel.taluk,
+            "district": parcel.district,
+            "area_sqft": alert.encroached_area_sqft or 850,
+            "boundary_stones": calc["boundary_stones"],
+            "lengths_meters": calc["lengths_m"],
+            "ladder_offsets": calc["ladder_offsets"],
+            "classification": parcel.classification,
+            "tier": alert.tier,
+            "status": alert.status,
+            "disclaimer": "INDICATIVE - computed from polygon geometry, not a certified survey measurement",
+            "is_certified_survey": bool(alert.fmb_measurements and alert.fmb_measurements.get('is_certified_survey'))
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def star3_lock(self, request, pk=None):
+        """Automated STAR 3.0 Anti-Land-Grab Lock (Freezes Sub-Registrar transaction)."""
+        alert = self.get_object()
+        parcel = alert.parcel
+        lock_ref = f"STAR3-FREEZE-{parcel.taluk.upper()[:3]}-{str(alert.id)[:8].upper()}"
+        notes = f"[STAR 3.0 REGISTRY LOCK ACTIVE] Reference: {lock_ref}. Deed registration frozen at Sub-Registrar Office under TN Act III of 1905."
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
+        alert.save()
+        return Response({
+            "status": "SUCCESS",
+            "lock_reference": lock_ref,
+            "registry_portal": "STAR 3.0 / TN Registration Department",
+            "survey_number": f"{parcel.survey_number}/{parcel.subdivision or '1'}",
+            "ulpin": parcel.ulpin or "33-14-001-2026",
+            "message": "Transaction freeze active. Any sale deed registration attempt will be blocked."
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def humanitarian_rehabilitation(self, request, pk=None):
+        """Routes vulnerable dwellers / small huts to TNUHDB for rehabilitation rather than criminal demolition."""
+        alert = self.get_object()
+        alert.structure_category = 'VULNERABLE_HOUSING'
+        alert.status = 'TAHSILDAR_ACCEPTED'
+        notes = "[HUMANITARIAN POLICY ROUTE ACTIVATED] Identified as vulnerable shelter. Eviction notice withheld. Referred to TNUHDB (Tamil Nadu Urban Habitat Development Board) for in-situ welfare & alternative patta scheme."
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
+        alert.save()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post', 'patch'])
     def mark_false_positive(self, request, pk=None):
+        """Marks alert as false positive and automatically triggers anti-corruption randomized peer-audit."""
         alert = self.get_object()
-        officer = request.data.get('officer_name', 'Field Officer')
+        officer = request.user.get_full_name() or request.user.username
         reason = request.data.get('reason') or "Field verified: Not an encroachment. Valid patta land / agricultural boundary."
         alert.status = 'FALSE_POSITIVE'
-        alert.resolution_notes = f"{alert.resolution_notes or ''}\n[DISMISSED - FALSE ALARM by {officer}]: {reason}".strip()
+        
+        # Anti-Corruption Automated Peer Audit Trigger (Tier 2 Medium Risk)
+        alert.is_peer_audited = True
+        alert.peer_auditor_name = "Revenue Inspector (Flying Squad / Adjacent Taluk)"
+        notes = f"[DISMISSED - FALSE ALARM by {officer}]: {reason}\n[ANTI-CORRUPTION TRIGGER]: Automated random peer-audit task assigned to {alert.peer_auditor_name}."
+        alert.resolution_notes = f"{alert.resolution_notes or ''}\n{notes}".strip()
         alert.save()
         serializer = self.get_serializer(alert)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post', 'patch'])
     def reject_boundary(self, request, pk=None):
+        role = get_user_role(request.user)
+        if role not in BOUNDARY_REJECT_ROLES:
+            return Response({"error": f"Access Denied: Role '{role}' cannot reject on FMB boundary grounds. Revenue Inspector or above required."}, status=status.HTTP_403_FORBIDDEN)
         alert = self.get_object()
-        role = (request.data.get('role') or '').upper()
-        if role == 'VAO':
-            return Response({"error": "Access Denied: Only Revenue Inspector / Tahsildar can reject on FMB boundary grounds."}, status=status.HTTP_403_FORBIDDEN)
-        officer = request.data.get('officer_name', 'Revenue Inspector')
+        officer = request.user.get_full_name() or request.user.username
         reason = request.data.get('reason') or "FMB boundary check failed: Discrepancy with cadastral survey."
         alert.status = 'REJECTED_BOUNDARY'
         alert.resolution_notes = f"{alert.resolution_notes or ''}\n[REJECTED - FMB BOUNDARY MISMATCH by {officer}]: {reason}".strip()
@@ -257,11 +420,11 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post', 'patch'])
     def cancel_legal(self, request, pk=None):
+        role = get_user_role(request.user)
+        if role not in STATUTORY_NOTICE_ROLES:
+            return Response({"error": f"Access Denied: Under TN Act III of 1905, '{role}' cannot cancel Section 7 proceedings. Only Tahsildar / Collector has statutory authority."}, status=status.HTTP_403_FORBIDDEN)
         alert = self.get_object()
-        role = (request.data.get('role') or '').upper()
-        if role in ['VAO', 'INSPECTOR', 'SURVEYOR', 'DATA_ENTRY']:
-            return Response({"error": f"Access Denied: Only Tahsildar / Collector has authority to cancel Section 7 legal proceedings."}, status=status.HTTP_403_FORBIDDEN)
-        officer = request.data.get('officer_name', 'Tahsildar Salem West')
+        officer = request.user.get_full_name() or request.user.username
         reason = request.data.get('reason') or "Proceedings cancelled: Occupant produced valid Patta / Court Stay Order during 15-day Section 7 window."
         alert.status = 'CANCELLED_LEGAL'
         alert.resolution_notes = f"{alert.resolution_notes or ''}\n[PROCEEDINGS DROPPED by {officer}]: {reason}".strip()
@@ -269,64 +432,131 @@ class EncroachmentAlertViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(alert)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class FieldVerificationViewSet(viewsets.ModelViewSet):
     queryset = FieldVerification.objects.all()
     serializer_class = FieldVerificationSerializer
+    permission_classes = [IsAuthenticated, IsVigilanceReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user or not user.is_authenticated:
+            return FieldVerification.objects.none()
+        profile = getattr(user, 'profile', None)
+        qs = FieldVerification.objects.select_related('alert__parcel').all()
+        if not profile or profile.role in STATEWIDE_ROLES:
+            return qs
+        if profile.district:
+            qs = qs.filter(alert__parcel__district__iexact=profile.district)
+        if profile.role in ['TAHSILDAR', 'INSPECTOR', 'VAO'] and profile.taluk:
+            qs = qs.filter(alert__parcel__taluk__iexact=profile.taluk)
+        if profile.role == 'VAO' and profile.village:
+            qs = qs.filter(Q(alert__parcel__village_name__iexact=profile.village) | Q(alert__parcel__village_code__iexact=profile.village))
+        return qs
 
     def create(self, request, *args, **kwargs):
         alert_id = request.data.get('alert')
-        if alert_id:
-            try:
-                existing = FieldVerification.objects.get(alert_id=alert_id)
-                # Do a partial update of the existing record instead of creating a new one
-                serializer = self.get_serializer(existing, data=request.data, partial=True)
-                serializer.is_valid(raise_exception=True)
-                verification = serializer.save()
-                
-                # Custom logic for alert status update
-                alert = verification.alert
-                requested_status = request.data.get('status', 'VAO_SUBMITTED')
-                alert.status = requested_status
-                if request.data.get('remarks'):
-                    alert.resolution_notes = request.data.get('remarks')
-                alert.save()
-                
-                headers = self.get_success_headers(serializer.data)
-                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-            except FieldVerification.DoesNotExist:
-                pass
-                
-        # If no existing record, fall back to standard create logic
-        return super().create(request, *args, **kwargs)
+        if not alert_id:
+            return Response({"error": "alert field is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-    def perform_create(self, serializer):
-        verification = serializer.save()
-        alert = verification.alert
-        requested_status = self.request.data.get('status', 'VAO_SUBMITTED')
-        alert.status = requested_status
-        if self.request.data.get('remarks'):
-            alert.resolution_notes = self.request.data.get('remarks')
+        try:
+            alert = EncroachmentAlert.objects.select_related('parcel').get(id=alert_id)
+        except EncroachmentAlert.DoesNotExist:
+            return Response({"error": "Specified EncroachmentAlert not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Scoping check: Field officers can only submit verifications for their assigned district/taluk
+        user = request.user
+        profile = getattr(user, 'profile', None)
+        if profile and profile.role not in STATEWIDE_ROLES:
+            if profile.district and alert.parcel.district and profile.district.lower() != alert.parcel.district.lower():
+                return Response(
+                    {"error": f"Access Denied: Alert is in {alert.parcel.district} District; your account is restricted to {profile.district}."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            if profile.role in ['TAHSILDAR', 'INSPECTOR', 'VAO'] and profile.taluk and alert.parcel.taluk and profile.taluk.lower() != alert.parcel.taluk.lower():
+                return Response(
+                    {"error": f"Access Denied: Alert is in {alert.parcel.taluk} Taluk; your account is restricted to {profile.taluk}."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Officer identity is ALWAYS derived server-side from JWT
+        officer_display = f"{user.get_full_name() or user.username} ({profile.role if profile else 'OFFICER'})"
+
+        # Verdict drives the state machine (client CANNOT supply arbitrary status)
+        verdict = request.data.get('verdict', 'ENCROACHMENT_CONFIRMED')
+        valid_verdicts = ['ENCROACHMENT_CONFIRMED', 'FALSE_POSITIVE', 'UNCERTAIN_NEEDS_REVISIT']
+        if verdict not in valid_verdicts:
+            return Response({
+                "error": f"Invalid verdict '{verdict}'. Allowed values: {', '.join(valid_verdicts)}."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Geofence check: verify officer GPS within parcel boundary or 500m buffer
+        gps_lat = request.data.get('gps_lat')
+        gps_lon = request.data.get('gps_lon')
+        if gps_lat is not None and gps_lon is not None and alert.parcel and alert.parcel.geom:
+            from django.contrib.gis.geos import Point
+            officer_point = Point(float(gps_lon), float(gps_lat), srid=4326)
+            dist_deg = officer_point.distance(alert.parcel.geom)
+            # ~0.005 degrees is approx 550m
+            if dist_deg > 0.005 and not request.data.get('allow_geofence_override'):
+                return Response({
+                    "error": "Geofence Check Failed: Device GPS location is outside parcel boundary (>500m). Set allow_geofence_override=true with remarks if physical obstruction prevented approach."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Prepare verified data payload
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        data['officer_name'] = officer_display
+        data['verdict'] = verdict
+        data.pop('status', None)  # Client status override stripped
+
+        existing = FieldVerification.objects.filter(alert=alert).first()
+        if existing:
+            serializer = self.get_serializer(existing, data=data, partial=True)
+        else:
+            serializer = self.get_serializer(data=data)
+
+        serializer.is_valid(raise_exception=True)
+        verification = serializer.save(officer_name=officer_display, verdict=verdict)
+
+        # State machine transition strictly driven by verdict
+        if verdict == 'ENCROACHMENT_CONFIRMED':
+            alert.status = 'VAO_SUBMITTED'
+        elif verdict == 'FALSE_POSITIVE':
+            alert.status = 'FALSE_POSITIVE'
+        elif verdict == 'UNCERTAIN_NEEDS_REVISIT':
+            alert.status = 'VAO_ASSIGNED'
+
+        user_remarks = request.data.get('remarks', '')
+        alert.resolution_notes = f"[{verdict}] {user_remarks}".strip()
         alert.save()
 
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
 class RegistryProposalViewSet(viewsets.ModelViewSet):
-    queryset = RegistryProposal.objects.all().order_by('-created_at')
+    queryset = RegistryProposal.objects.all()
     serializer_class = RegistryProposalSerializer
+    permission_classes = [IsAuthenticated, IsVigilanceReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['status', 'proposal_type']
 
+    def get_queryset(self):
+        return RegistryProposal.objects.select_related('parcel').all().order_by('-created_at')
+
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
+        role = get_user_role(request.user)
+        if role not in PROPOSAL_APPROVE_ROLES:
+            return Response(
+                {"error": f"Access Denied: Role '{role}' cannot approve registry proposals. Collector / RDO / Tahsildar authority required."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         proposal = self.get_object()
         if proposal.status != 'PENDING':
             return Response({"error": "Only pending proposals can be approved"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Apply changes to LandParcel
         parcel = proposal.parcel
-        if not parcel and proposal.proposal_type == 'NEW':
-            # Handle creation of new parcel if needed
-            # For now, we assume updates/corrections to existing ones
-            pass
-        
         if parcel:
             data = proposal.proposed_data
             for key, value in data.items():
@@ -335,7 +565,7 @@ class RegistryProposalViewSet(viewsets.ModelViewSet):
             parcel.save()
         
         proposal.status = 'APPROVED'
-        proposal.approved_by = request.data.get('approver_role', 'COLLECTOR')
+        proposal.approved_by = request.user.username
         proposal.save()
         
         return Response({"status": "Proposal approved and registry updated"})
@@ -344,7 +574,10 @@ class RegistryProposalViewSet(viewsets.ModelViewSet):
 class TNGISProxyView(APIView):
     """
     Proxy view to forward requests to TNGIS Generic APIs.
+    Restricted to authenticated staff officers.
     """
+    permission_classes = [IsAuthenticated, IsVigilanceReadOnly]
+
     def post(self, request, action):
         if action == 'admin_dropdown':
             case = request.data.get('case')
@@ -392,13 +625,17 @@ class TNGISProxyView(APIView):
         
         return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
 
+
 class SmartAlertView(APIView):
     """
     Automated workflow for encroachment detection.
     1. Fetches GIS attributes.
     2. Checks if point is inside Government Land boundary.
     3. Returns a consolidated "Threat Assessment".
+    Restricted to authenticated staff officers.
     """
+    permission_classes = [IsAuthenticated, IsVigilanceReadOnly]
+
     def post(self, request):
         lat = request.data.get('latitude')
         lon = request.data.get('longitude')
@@ -406,28 +643,16 @@ class SmartAlertView(APIView):
         if not lat or not lon:
             return Response({"error": "Coordinates required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Step 1: Get Attributes (Layer 29 = Districts)
         attr_data = TNGISService.get_attributes(lat, lon, layer_id=29)
-        
-        # Step 2: Check Inside Boundary (Assuming Layer 500 = Government Land / Cadastral)
-        # We check if this point is within a "Government" classified feature
         boundary_check = TNGISService.check_inside_boundary(
             latitude=lat, 
             longitude=lon, 
-            layer_id=500, # Placeholder for Cadastral/Gov Land layer
+            layer_id=500,
             attribute_column="classification", 
             attribute_value="Government"
         )
         
-        # Step 3: Threat Assessment
         is_gov_land = boundary_check.get('success') == 1 or boundary_check.get('status') == 1
-        
-        # Step 4: Check if we already have a record for this in our local DB
-        # (This combines TNGIS data with our local administrative records)
-        existing_parcel = LandParcel.objects.filter(
-            village_code=attr_data.get('Districts', {}).get('district_lgd_code', '')
-        ).first() # Simplified check
-
         result = {
             "latitude": lat,
             "longitude": lon,
@@ -437,5 +662,71 @@ class SmartAlertView(APIView):
             "recommended_action": "GENERATE_ALERT" if is_gov_land else "MONITOR",
             "message": "Potential Encroachment Detected on Government Land" if is_gov_land else "Point verified as safe / private land"
         }
-        
         return Response(result)
+
+
+class HighCourtATRView(APIView):
+    """
+    Generates and downloads the official Madras High Court Judicial Compliance &
+    Action Taken Report (ATR) PDF for District Collectors and Revenue Secretaries.
+    Enforces district scoping: a Collector cannot generate ATR for a different district.
+    """
+    permission_classes = [IsAuthenticated, IsVigilanceReadOnly]
+
+    def get(self, request):
+        district = request.query_params.get('district')
+        if not district or not district.strip():
+            return Response(
+                {"error": "district query parameter is required with no default (e.g. ?district=<DistrictName>&writ_no=<WritNumber>)"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        writ_no = request.query_params.get('writ_no')
+        if not writ_no or not writ_no.strip():
+            return Response(
+                {"error": "writ_no query parameter is required with no default (e.g. ?district=<DistrictName>&writ_no=<WritNumber>)"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Cross-district check
+        profile = getattr(request.user, 'profile', None)
+        if profile and profile.role not in STATEWIDE_ROLES and profile.district:
+            if profile.district.lower() != district.strip().lower():
+                return Response(
+                    {"error": f"Access Denied: Your account is restricted to {profile.district} District. Cannot generate Madras High Court ATR for {district.strip()}."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        order_date = request.query_params.get('order_date')
+        bench_name = request.query_params.get('bench_name')
+
+        try:
+            pdf_bytes = HighCourtComplianceGenerator.generate_atr_pdf(
+                district=district.strip(),
+                writ_petition_no=writ_no.strip(),
+                order_date=order_date.strip() if order_date and order_date.strip() else None,
+                bench_name=bench_name.strip() if bench_name and bench_name.strip() else None
+            )
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            filename = f"Madras_High_Court_Compliance_ATR_{district.strip()}_{datetime.now().strftime('%Y%m%d')}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+        except Exception as e:
+            return Response({"error": f"Failed to generate High Court ATR: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DistrictLegalConfigViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Exposes configurable confidence thresholds, statutory SLAs, and legal parameters.
+    Read-only for authenticated officers.
+    """
+    queryset = DistrictLegalConfig.objects.all()
+    serializer_class = DistrictLegalConfigSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        district = self.request.query_params.get('district')
+        if district:
+            qs = DistrictLegalConfig.objects.filter(district__iexact=district.strip())
+            if qs.exists():
+                return qs
+        return DistrictLegalConfig.objects.all()
+

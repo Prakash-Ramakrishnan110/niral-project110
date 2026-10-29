@@ -4,28 +4,28 @@
 
 ### [0:00 - 0:05] Intro
 **Visual:** GEOMMAND Logo and Title Card.
-**Audio:** "In a world of rapid development, protecting government land is a monumental challenge. Introducing GEOMMAND – the Salem District Land Intelligence Center."
+**Audio:** "Protecting public land and waterbodies across Tamil Nadu is a vital responsibility. Introducing GEOMMAND – the GIS and satellite land monitoring platform."
 
-### [0:05 - 0:15] The Problem
-**Visual:** Fast-scrolling satellite maps of urban areas showing encroaching structures.
-**Audio:** "Manual surveillance is slow, resource-heavy, and often misses unauthorized encroachments until it's too late. GEOMMAND changes this by bringing AI to the front lines."
+### [0:05 - 0:15] The Operational Challenge
+**Visual:** Map view of rural and peri-urban waterbodies showing cadastral boundaries.
+**Audio:** "Manual inspections across thousands of villages face heavy constraints. Unnoticed encroachments on lakes, canals, and poramboke land can take months to detect."
 
-### [0:15 - 0:30] AI Detection Node
-**Visual:** Animation or UI showing AI scanning "Before" and "After" satellite imagery. A red box highlights a new structure.
-**Audio:** "Our AI Intelligence Node autonomously monitors temporal satellite data. Using deep learning change detection, it identifies unauthorized land use shifts the moment they happen."
+### [0:15 - 0:30] 5-Day Satellite Revisit Node
+**Visual:** UI showing Sentinel-2 optical temporal differencing over a monitored waterbody boundary.
+**Audio:** "GEOMMAND ingests Sentinel-2 multispectral imagery every 5 days, comparing ground reflections against Tamil Nilam cadastral boundaries to flag potential new structures during the foundation stage."
 
-### [0:30 - 0:50] Tactical Dashboard
-**Visual:** Screen recording of the Tactical Dashboard. Navigating through heatmaps and encroachment alerts.
-**Audio:** "Alerts are streamed directly to the Tahsildar’s Tactical Hub. Here, administrators can verify satellite evidence, analyze jurisdictional metrics, and prioritize missions with data-driven precision."
+### [0:30 - 0:50] Command Dashboard & Jurisdictional Scoping
+**Visual:** Screen recording of the Command Dashboard. Navigating through verified district metrics and active alerts.
+**Audio:** "Alerts route strictly to authorized officers. The District Collector and Tahsildar can inspect cadastral overlaps, evaluate indicative survey measurements, and dispatch tasks with full jurisdictional control."
 
-### [0:50 - 1:10] Field Operations
-**Visual:** Screen recording of the Field Officer App. A mission is accepted, and a geotagged photo is uploaded.
-**Audio:** "Seamless integration bridges the gap between sky and ground. Field officers receive instant mission orders on their mobile devices, capturing high-fidelity, geotagged evidence that syncs back to the command center in real-time."
+### [0:50 - 1:10] Geofenced Field Verification
+**Visual:** Screen recording of the Field Officer Mobile App. VAO conducts on-site inspection within 50m geofence and submits photo evidence.
+**Audio:** "Every alert requires ground truth. Local Village Administrative Officers must be physically present within 50 meters of the surveyed parcel to submit geotagged, timestamped inspection reports."
 
-### [1:10 - 1:25] Impact & Verification
-**Visual:** Side-by-side comparison of "Satellite Alert" vs "Field Evidence". Final approval button clicked.
-**Audio:** "Verified evidence leads to swift action. GEOMMAND ensures a transparent, hierarchical workflow from the District Collector to the Field Inspector, making land protection efficient and indisputable."
+### [1:10 - 1:25] Statutory Due Process under Act III of 1905
+**Visual:** Generation of Section 7 Show-Cause Notice with indicative FMB sketch and High Court compliance report.
+**Audio:** "No automated evictions. Ground-verified reports empower the Tahsildar to issue statutory Section 7 show-cause notices in strict accordance with the Tamil Nadu Land Encroachment Act of 1905."
 
 ### [1:25 - 1:35] Outro
-**Visual:** Logo with text: "GEOMMAND: Protecting Land. Securing Future."
-**Audio:** "GEOMMAND. Modernizing land governance. Securing our public assets for a safer tomorrow."
+**Visual:** Logo with text: "GEOMMAND: Evidence-Based Land Governance for Tamil Nadu."
+**Audio:** "GEOMMAND. Transparent spatial surveillance, statutory due process, and evidence-driven protection of public assets."

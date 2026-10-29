@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: landpassword
       POSTGRES_DB: land_records
     ports:
-      - "5432:5432"
+      - "5435:5432"
     volumes:
       - land_db_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,12 +19,12 @@ services:
   backend:
     build: ./backend
     container_name: land_backend
+    env_file:
+      - .env.docker
     volumes:
       - ./backend:/app
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgis://landuser:landpassword@db:5432/land_records
     depends_on:
       db:
         condition: service_healthy

@@ -99,7 +99,7 @@ const SatelliteComparisonSlider = () => {
 
          <div
             ref={containerRef}
-            className="relative h-[400px] lg:h-[500px] w-full bg-slate-900 overflow-hidden cursor-col-resize select-none rounded-none border-2 border-slate-900 shadow-2xl"
+            className="relative h-[400px] lg:h-[500px] w-full bg-slate-100 overflow-hidden cursor-col-resize select-none rounded-none border-2 border-slate-300 shadow-sm"
             onMouseMove={(e) => handleMove(e.clientX)}
             onMouseUp={() => { dragging.current = false; }}
             onMouseLeave={() => { dragging.current = false; }}
@@ -189,7 +189,7 @@ export const AIDetectionLogicView = () => {
          <div className="grid grid-cols-12 gap-6">
          <div className="col-span-12 lg:col-span-8 space-y-6">
             <Card title="Live AI Inference Pipeline" icon={Cpu}>
-               <div className="p-6 bg-slate-900 aspect-video relative flex items-center justify-center overflow-hidden">
+               <div className="p-6 bg-slate-50 aspect-video relative flex items-center justify-center overflow-hidden border border-slate-200">
                   <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:20px_20px]"></div>
                   <div className="z-10 w-full max-w-2xl space-y-8">
                      <div className="flex justify-between items-center">
@@ -336,16 +336,16 @@ export const FieldOpsMonitorView = ({ user, selectedRegion: propRegion, setSelec
       
       return (
          <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-            <div className="flex justify-between items-center bg-slate-900 p-6 text-white border border-slate-700">
+            <div className="flex justify-between items-center bg-white p-6 text-slate-900 border border-slate-200 border-l-4 border-blue-600 shadow-sm">
                <div>
-                  <h2 className="text-2xl font-black uppercase tracking-widest flex items-center gap-3">
-                     <Globe className="text-blue-500" /> {title}
+                  <h2 className="text-2xl font-black uppercase tracking-widest text-slate-900 flex items-center gap-3">
+                     <Globe className="text-blue-600" /> {title}
                   </h2>
-                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{subtitle}</p>
+                  <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">{subtitle}</p>
                </div>
                <div className="text-right">
-                  <p className="text-3xl font-black text-blue-500">{gridData.reduce((acc, curr) => acc + curr.activeNodes, 0)}</p>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Active Nodes</p>
+                  <p className="text-3xl font-black text-blue-600">{gridData.reduce((acc, curr) => acc + curr.activeNodes, 0)}</p>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Total Active Nodes</p>
                </div>
             </div>
 
@@ -386,19 +386,19 @@ export const FieldOpsMonitorView = ({ user, selectedRegion: propRegion, setSelec
    return (
       <div className="space-y-6 animate-in slide-in-from-right-8 duration-500 pb-10">
          {/* Detail Header with Back Button */}
-         <div className="flex items-center justify-between bg-slate-900 p-4 text-white border border-slate-700">
+         <div className="flex items-center justify-between bg-white p-4 text-slate-900 border border-slate-200 border-l-4 border-blue-600 shadow-sm">
             <div className="flex items-center gap-4">
                <button 
                   onClick={() => setSelectedRegion(null)}
-                  className="p-2 bg-white/10 hover:bg-blue-600 transition-all flex items-center justify-center rounded-none"
+                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all flex items-center justify-center rounded-none"
                >
                   <ChevronLeft size={20} />
                </button>
                <div>
-                  <h2 className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
-                     <Map className="text-blue-500" size={20} /> {selectedRegion} {isDistrictLevel ? 'TALUK COMMAND' : 'DISTRICT COMMAND'}
+                  <h2 className="text-xl font-black uppercase tracking-widest text-slate-900 flex items-center gap-3">
+                     <Map className="text-blue-600" size={20} /> {selectedRegion} {isDistrictLevel ? 'TALUK COMMAND' : 'DISTRICT COMMAND'}
                   </h2>
-                  <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{isDistrictLevel ? 'Village-Level Tactical View' : 'Taluk-Level Tactical View'}</p>
+                  <p className="text-[9px] font-bold text-slate-500 mt-0.5 uppercase tracking-widest">{isDistrictLevel ? 'Village-Level Tactical View' : 'Taluk-Level Tactical View'}</p>
                </div>
             </div>
             <div className="flex gap-2">
@@ -486,14 +486,13 @@ export const FieldOpsMonitorView = ({ user, selectedRegion: propRegion, setSelec
                   </div>
                </Card>
 
-               <div className="bg-slate-900 p-6 rounded-none text-white space-y-6 relative overflow-hidden border border-white/10">
-                  <div className="absolute -left-10 -bottom-10 opacity-5 rotate-12"><Navigation size={200} /></div>
+               <div className="bg-white p-6 rounded-none text-slate-900 space-y-6 relative overflow-hidden border border-slate-200 border-l-4 border-blue-600 shadow-sm">
                   <div>
-                     <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1">Local Command</h4>
-                     <p className="text-xl font-bold leading-tight">Broadcast directives to active {selectedRegion} units.</p>
+                     <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">Local Command</h4>
+                     <p className="text-xl font-bold text-slate-900 leading-tight">Broadcast directives to active {selectedRegion} units.</p>
                   </div>
-                  <textarea className="w-full bg-white/5 border border-white/10 rounded-none p-3 text-[10px] text-white focus:border-blue-500 outline-none" placeholder={`Enter high-priority directive for ${selectedRegion}...`}></textarea>
-                  <button className="w-full py-3 bg-blue-600 text-white font-black text-[9px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-2"><ArrowRight size={12} /> Broadcast Order</button>
+                  <textarea className="w-full bg-slate-50 border border-slate-300 rounded-none p-3 text-[10px] text-slate-900 placeholder:text-slate-400 focus:border-blue-500 outline-none" placeholder={`Enter high-priority directive for ${selectedRegion}...`}></textarea>
+                  <button className="w-full py-3 bg-blue-600 text-white font-black text-[9px] uppercase tracking-widest shadow-md hover:bg-blue-700 transition-all flex items-center justify-center gap-2"><ArrowRight size={12} /> Broadcast Order</button>
                </div>
             </div>
          </div>

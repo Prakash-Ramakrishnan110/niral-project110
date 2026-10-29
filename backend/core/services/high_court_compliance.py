@@ -1,0 +1,227 @@
+"""
+GEOMMAND High Court Compliance & Judicial Action Taken Report (ATR) Generator
+Builds court-ready Action Taken Report (ATR) PDFs formatted for the Hon'ble High Court of Judicature at Madras.
+Aggregates ground-truth encroachment detections strictly scoped to the Collector's district.
+Watermarked with explicit legal disclaimers:
+- DRAFT for officer review and sworn execution
+- Zero fabricated rows or synthetic filler entries
+- Unconfigured court orders/dates clearly marked as pending judicial verification
+"""
+
+import io
+from datetime import datetime
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+class HighCourtComplianceGenerator:
+    """
+    Builds official ATR affidavits for filing before the High Court of Madras.
+    Guarantees strict geographic scoping to the specified district and renders
+    explicit empty statements when zero data exists.
+    """
+
+    @classmethod
+    def generate_atr_pdf(
+        cls,
+        district: str,
+        writ_petition_no: str = "W.P. No. [NOT CONFIGURED]",
+        order_date: str = None,
+        bench_name: str = None,
+        execution_date: str = None
+    ) -> bytes:
+        """
+        Builds a Madras High Court ATR PDF buffer for the specified district.
+        All legal dates and bench names default to explicit unverified placeholders
+        unless confirmed order metadata is passed.
+        """
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            leftMargin=40,
+            rightMargin=40,
+            topMargin=40,
+            bottomMargin=40
+        )
+
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'HighCourtTitle',
+            parent=styles['Heading1'],
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            leading=14,
+            alignment=1,
+            textColor=colors.HexColor('#0F172A')
+        )
+        legal_sub = ParagraphStyle(
+            'LegalSub',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=9.5,
+            leading=13,
+            alignment=1,
+            textColor=colors.HexColor('#1E293B')
+        )
+        watermark_banner = ParagraphStyle(
+            'DraftBanner',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=10,
+            leading=13,
+            alignment=1,
+            textColor=colors.HexColor('#DC2626')
+        )
+        body = ParagraphStyle(
+            'Body',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=8,
+            leading=11.5,
+            textColor=colors.HexColor('#1E293B')
+        )
+        small = ParagraphStyle(
+            'Small',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=7.5,
+            leading=10,
+            textColor=colors.HexColor('#64748B')
+        )
+
+        elements = []
+
+        # 0. Prominent Draft Watermark Header
+        elements.append(Paragraph("<b>[ DRAFT – FOR OFFICER REVIEW AND SWORN EXECUTION ]</b>", watermark_banner))
+        elements.append(Spacer(1, 4))
+
+        # 1. High Court Heading
+        bench_display = bench_name if bench_name else "[SPECIAL BENCH JURISDICTION - NOT CONFIGURED, PENDING LEGAL REVIEW]"
+        elements.append(Paragraph("IN THE HIGH COURT OF JUDICATURE AT MADRAS", title_style))
+        elements.append(Paragraph(f"(Special Original Jurisdiction - {bench_display})", ParagraphStyle('Center', fontName='Helvetica-Oblique', fontSize=9, alignment=1)))
+        elements.append(Spacer(1, 4))
+        elements.append(Paragraph(f"<b>IN THE MATTER OF: {str(writ_petition_no).upper()}</b>", legal_sub))
+        elements.append(Spacer(1, 6))
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#0F172A"), spaceAfter=8))
+
+        # 2. Preamble & Affidavit Identification
+        order_date_display = order_date if order_date else "[ORDER DATE NOT CONFIGURED - PENDING JUDICIAL VERIFICATION]"
+        intro_text = f"""
+        <b>ACTION TAKEN REPORT (ATR) & AFFIDAVIT FILED BY THE DISTRICT COLLECTOR, {district.upper()} DISTRICT</b><br/>
+        IN COMPLIANCE WITH DIRECTIONS OF THE HON'BLE MADRAS HIGH COURT ({order_date_display}) 
+        FOR THE RESTORATION AND REMOVAL OF ENCROACHMENTS IN WATERBODIES (ERI / KULAM / ODDAI).
+        """
+        elements.append(Paragraph(intro_text, body))
+        elements.append(Spacer(1, 8))
+
+        # 3. Aggregate Statistical Summary (Strictly Scoped to District)
+        total_waterbodies = 0
+        total_alerts = 0
+        sec7_issued = 0
+        sec6_ordered = 0
+        restored = 0
+        waterbody_alerts = []
+
+        try:
+            from django.db.models import Q
+            from ..models import EncroachmentAlert, LandParcel
+            water_parcel_q = Q(district__iexact=district) & (Q(classification__icontains='water') | Q(classification__icontains='eri') | Q(classification__icontains='kulam'))
+            water_alert_q = Q(parcel__district__iexact=district) & (Q(parcel__classification__icontains='water') | Q(parcel__classification__icontains='eri') | Q(parcel__classification__icontains='kulam'))
+
+            total_waterbodies = LandParcel.objects.filter(water_parcel_q).count()
+            total_alerts = EncroachmentAlert.objects.filter(water_alert_q).count()
+            sec7_issued = EncroachmentAlert.objects.filter(water_alert_q, status='SECTION_7_ISSUED').count()
+            sec6_ordered = EncroachmentAlert.objects.filter(water_alert_q, status='SECTION_6_ORDERED').count()
+            restored = EncroachmentAlert.objects.filter(water_alert_q, status='RESOLVED').count()
+            waterbody_alerts = list(EncroachmentAlert.objects.filter(water_alert_q)[:50])
+        except Exception:
+            pass
+
+        elements.append(Paragraph(f"<b>I. EXECUTIVE COMPLIANCE METRICS (WATERBODIES SURVEILLANCE - {district.upper()} DISTRICT)</b>", ParagraphStyle('H2', fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#1D4ED8'))))
+        elements.append(Spacer(1, 4))
+
+        stats_data = [
+            ["Total Monitored Waterbodies", "Active Detections", "Section 7 Notices Served", "Section 6 Eviction Orders", "Fully Restored & Fenced"],
+            [str(total_waterbodies), str(total_alerts), str(sec7_issued), str(sec6_ordered), str(restored)]
+        ]
+        stats_table = Table(stats_data, colWidths=[110, 95, 110, 105, 100])
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0F172A')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('FONTNAME', (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 8),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#F8FAFC')),
+        ]))
+        elements.append(stats_table)
+        elements.append(Spacer(1, 10))
+
+        # 4. Itemized Waterbody Parcel Action Schedule (Zero fabricated rows)
+        elements.append(Paragraph(f"<b>II. ITEMIZED WATERBODY RESTORATION ACTION SCHEDULE ({district.upper()} JURISDICTION)</b>", ParagraphStyle('H2', fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#1D4ED8'))))
+        elements.append(Spacer(1, 4))
+
+        table_data = [
+            ["Taluk", "Village", "Survey No", "Waterbody Name", "Encroached Extent", "Action Taken / Status"]
+        ]
+        if waterbody_alerts:
+            for al in waterbody_alerts:
+                table_data.append([
+                    al.parcel.taluk,
+                    al.parcel.village_name or "-",
+                    f"{al.parcel.survey_number}/{al.parcel.subdivision or '1'}",
+                    al.parcel.owner_name or "Waterbody Poramboke",
+                    f"{al.encroached_area_sqft or 0} sq.ft",
+                    al.status.replace('_', ' ')
+                ])
+        else:
+            table_data.append(["-", "-", "-", f"No waterbody encroachments recorded for {district}", "-", "-"])
+
+        item_table = Table(table_data, colWidths=[80, 85, 75, 120, 80, 80])
+        item_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,-1), 7.5),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ]))
+        elements.append(item_table)
+        elements.append(Spacer(1, 14))
+
+        # 5. Solemn Verification & Affidavit Block
+        exec_date_display = execution_date if execution_date else "[EXECUTION DATE PENDING SWORN ATTESTATION]"
+        verif_text = f"""
+        <b>SOLEMN VERIFICATION:</b><br/>
+        I, District Collector & District Magistrate of {district} District, do hereby verify that the contents of this Action Taken Report are true to my knowledge and backed by satellite temporal records and cadastral survey evidence maintained in the GEOMMAND portal.<br/>
+        <b>[NOTICE: THIS IS A DRAFT GENERATED FOR REVIEW AND SWORN ATTESTATION BEFORE THE HON'BLE COURT]</b>
+        <br/><br/>
+        <b>Verified at {district} on {exec_date_display}.</b>
+        """
+        elements.append(Paragraph(verif_text, body))
+        elements.append(Spacer(1, 25))
+
+        sig_block = Table([
+            [Paragraph("Counsel for the State of Tamil Nadu<br/>High Court, Madras", small), 
+             Paragraph(f"<b>DISTRICT COLLECTOR & DISTRICT MAGISTRATE</b><br/>{district.upper()} DISTRICT<br/><i>(Sworn Attestation Pending)</i>", ParagraphStyle('R', parent=body, alignment=2))]
+        ], colWidths=[260, 260])
+        elements.append(sig_block)
+
+        def draw_draft_watermark(canvas, document):
+            canvas.saveState()
+            canvas.setFont('Helvetica-Bold', 30)
+            canvas.setFillColor(colors.HexColor('#DC2626'), alpha=0.12)
+            canvas.translate(A4[0] / 2, A4[1] / 2)
+            canvas.rotate(45)
+            canvas.drawCentredString(0, 0, 'DRAFT - FOR OFFICER REVIEW & SWORN EXECUTION')
+            canvas.restoreState()
+
+        doc.build(elements, onFirstPage=draw_draft_watermark, onLaterPages=draw_draft_watermark)
+        buffer.seek(0)
+        return buffer.getvalue()

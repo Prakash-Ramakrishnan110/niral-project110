@@ -4,23 +4,21 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node api.js && vite",
+    "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "lint:forbidden": "node scripts/lint_forbidden.js",
     "preview": "vite preview"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.3",
     "axios": "^1.15.1",
-    "downloadjs": "^1.4.7",
-    "html-to-image": "^1.11.13",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.18.5",
     "recharts": "^3.8.1"
   },
   "devDependencies": {
