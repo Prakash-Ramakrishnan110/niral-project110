@@ -9,8 +9,11 @@ from .auth_views import (
     LoginView, CustomTokenRefreshView, LogoutView, CurrentUserView
 )
 from .sync_views import SyncChangesView
+from .dashboard_views import DashboardSummaryView
+from .case_views import CaseViewSet
 
 router = DefaultRouter()
+router.register(r'cases', CaseViewSet, basename='cases')
 router.register(r'parcels', LandParcelViewSet)
 router.register(r'alerts', EncroachmentAlertViewSet)
 router.register(r'verifications', FieldVerificationViewSet)
@@ -24,6 +27,9 @@ urlpatterns = [
     path('auth/token/refresh/', CustomTokenRefreshView.as_view(), name='auth-refresh'),
     path('auth/logout/', LogoutView.as_view(), name='auth-logout'),
     path('auth/me/', CurrentUserView.as_view(), name='auth-me'),
+
+    # Operational & Executive Dashboard
+    path('dashboard/summary/', DashboardSummaryView.as_view(), name='dashboard-summary'),
 
     # Restful Resources & Domain Workflows
     path('', include(router.urls)),

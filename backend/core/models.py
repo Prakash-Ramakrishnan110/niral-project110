@@ -271,7 +271,7 @@ class EncroachmentAlert(models.Model):
     fmb_measurements = models.JSONField(default=dict, blank=True, null=True)
     
     # Point where the change was detected
-    alert_geom = models.PointField(srid=4326)
+    alert_geom = models.PointField(srid=4326, null=True, blank=True)
     resolution_notes = models.TextField(blank=True, null=True)
     is_synthetic = models.BooleanField(
         default=False,
@@ -283,6 +283,10 @@ class EncroachmentAlert(models.Model):
     stay_commenced_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp when court stay commenced; pauses SLA clocks")
     paused_sla_remaining_seconds = models.IntegerField(null=True, blank=True, help_text="Remaining seconds on statutory SLA when stay commenced")
     previous_state = models.CharField(max_length=50, blank=True, null=True, help_text="State prior to court stay hold or temporary divergence")
+    stay_order_number = models.CharField(max_length=100, blank=True, null=True, help_text="Court writ or stay order reference number")
+    stayed_by_court = models.CharField(max_length=150, blank=True, null=True, help_text="Judicial forum / bench issuing stay order")
+    stay_granted_date = models.DateField(null=True, blank=True, help_text="Date interim stay was granted")
+    stay_vacated_date = models.DateField(null=True, blank=True, help_text="Date stay was vacated or dismissed")
 
     # Workflow Governance & Legal Safety Overrides
     legacy_status = models.CharField(max_length=50, blank=True, null=True, db_index=True, help_text="Original raw status string prior to Part 14 state machine migration")
@@ -307,6 +311,26 @@ class EncroachmentAlert(models.Model):
         """Returns primary non-peer-audit verification, or latest verification."""
         v = self.verifications.filter(audit_of__isnull=True).order_by('-verified_at').first()
         return v or self.verifications.order_by('-verified_at').first()
+
+    @property
+    def priority_lane(self) -> str:
+        """Derives lane (HIGH, MEDIUM, LOW) from snapshot_lane or confidence_score."""
+        if self.snapshot_lane:
+            return self.snapshot_lane.upper()
+        if self.confidence_score >= 0.80:
+            return 'HIGH'
+        if self.confidence_score >= 0.50:
+            return 'MEDIUM'
+        return 'LOW'
+
+    @property
+    def confidence_category(self) -> str:
+        """Categorical confidence bucket."""
+        if self.confidence_score >= 0.80:
+            return 'HIGH'
+        if self.confidence_score >= 0.50:
+            return 'MEDIUM'
+        return 'LOW'
 
     def is_sla_breached(self):
         from django.utils import timezone

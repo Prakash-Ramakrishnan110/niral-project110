@@ -9,7 +9,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from axes.exceptions import AxesBackendPermissionDenied
 from axes.models import AccessAttempt
-from .models import UserProfile
+from .models import UserProfile, OfficerAssignment
+from .services.jurisdiction_scope import JurisdictionScopeService
 
 
 class LoginRateThrottle(AnonRateThrottle):
@@ -188,22 +189,117 @@ class LogoutView(APIView):
 
 class CurrentUserView(APIView):
     """
-    Returns profile and jurisdiction of the currently authenticated officer.
+    Returns profile, administrative jurisdiction, role navigation, and feature flags
+    of the currently authenticated officer (Part 14 Step 6).
     """
     permission_classes = [IsAuthenticated]
+
+    NAV_CONFIG = {
+        'STATE_APEX': [
+            {"id": "dashboard", "label": "Executive Overview", "path": "/dashboard"},
+            {"id": "districts", "label": "District Comparison", "path": "/districts"},
+            {"id": "cases", "label": "Statewide Cases", "path": "/cases"},
+            {"id": "atr", "label": "ATR Status", "path": "/atr"},
+            {"id": "audit", "label": "Audit Trail", "path": "/audit"}
+        ],
+        'CLA_STATE': [
+            {"id": "dashboard", "label": "Executive Overview", "path": "/dashboard"},
+            {"id": "districts", "label": "District Comparison", "path": "/districts"},
+            {"id": "cases", "label": "Statewide Cases", "path": "/cases"},
+            {"id": "atr", "label": "ATR Status", "path": "/atr"},
+            {"id": "audit", "label": "Audit Trail", "path": "/audit"}
+        ],
+        'COLLECTOR': [
+            {"id": "dashboard", "label": "District Dashboard", "path": "/dashboard"},
+            {"id": "cases", "label": "Statutory Cases", "path": "/cases"},
+            {"id": "stays", "label": "Court Stays", "path": "/court-stays"},
+            {"id": "rehab", "label": "TNUHDB Rehabilitation", "path": "/rehabilitation"},
+            {"id": "peer-audit", "label": "Peer Audits", "path": "/peer-audits"},
+            {"id": "atr", "label": "High Court ATR", "path": "/atr"}
+        ],
+        'RDO': [
+            {"id": "dashboard", "label": "Divisional Overview", "path": "/dashboard"},
+            {"id": "cases", "label": "Division Cases", "path": "/cases"},
+            {"id": "appeals", "label": "Appellate Review", "path": "/appeals"}
+        ],
+        'TAHSILDAR': [
+            {"id": "dashboard", "label": "Taluk Dashboard", "path": "/dashboard"},
+            {"id": "cases", "label": "Work Queue", "path": "/cases"},
+            {"id": "hearings", "label": "Hearings & Notices", "path": "/hearings"},
+            {"id": "star3", "label": "STAR 3.0 Freezes", "path": "/star3-freezes"},
+            {"id": "evictions", "label": "Eviction Execution", "path": "/evictions"}
+        ],
+        'INSPECTOR': [
+            {"id": "dashboard", "label": "Firka Dashboard", "path": "/dashboard"},
+            {"id": "cases", "label": "Firka Field Queue", "path": "/cases"},
+            {"id": "inspections", "label": "Joint Inspections", "path": "/inspections"}
+        ],
+        'VAO': [
+            {"id": "field-queue", "label": "Field Work Queue", "path": "/field-queue"},
+            {"id": "cases", "label": "Village Cases", "path": "/cases"},
+            {"id": "offline-sync", "label": "Offline Sync", "path": "/offline-sync"}
+        ],
+        'ADMIN_GIS': [
+            {"id": "dashboard", "label": "System Health", "path": "/dashboard"},
+            {"id": "layers", "label": "Cadastral Layers", "path": "/cadastral-layers"},
+            {"id": "users", "label": "Officer Assignments", "path": "/officer-assignments"},
+            {"id": "audit", "label": "System Audit", "path": "/audit"}
+        ],
+        'VIGILANCE': [
+            {"id": "dashboard", "label": "Vigilance Dashboard", "path": "/dashboard"},
+            {"id": "suppression", "label": "Suppression Audits", "path": "/suppression-audits"},
+            {"id": "cases", "label": "Case Registry", "path": "/cases"},
+            {"id": "audit", "label": "Audit Export", "path": "/audit"}
+        ],
+    }
 
     def get(self, request):
         user = request.user
         profile, _ = UserProfile.objects.get_or_create(user=user)
-        return Response({
+        role = JurisdictionScopeService.get_primary_role(user) or profile.role or 'VAO'
+        role_dict = dict(OfficerAssignment.ROLE_CHOICES)
+        role_display = role_dict.get(role, role.replace('_', ' ').title())
+        scope = JurisdictionScopeService.get_user_scope(user)
+
+        nav = self.NAV_CONFIG.get(role, [
+            {"id": "dashboard", "label": "Dashboard", "path": "/dashboard"},
+            {"id": "cases", "label": "Cases", "path": "/cases"}
+        ])
+
+        feature_flags = {
+            "can_issue_notice": role in ['TAHSILDAR', 'COLLECTOR', 'CLA_STATE'],
+            "can_verify_field": role in ['VAO', 'INSPECTOR'],
+            "can_order_eviction": role in ['TAHSILDAR', 'COLLECTOR'],
+            "can_sign_atr": role in ['COLLECTOR', 'CLA_STATE', 'STATE_APEX'],
+            "is_readonly": JurisdictionScopeService.is_readonly(user),
+            "is_demo": os.environ.get('GEOMMAND_ENV') == 'demo',
+        }
+
+        user_data = {
             "id": user.id,
             "username": user.username,
             "first_name": user.first_name,
             "last_name": user.last_name,
             "email": user.email,
-            "role": profile.role,
-            "district": profile.district,
-            "taluk": profile.taluk,
-            "village": profile.village,
+            "is_staff": user.is_staff,
+        }
+
+        return Response({
+            # Canonical nested schema
+            "user": user_data,
+            "role": role,
+            "role_display": role_display,
+            "scope": scope,
+            "nav": nav,
+            "feature_flags": feature_flags,
+            # Top-level backward compatibility attributes
+            "id": user.id,
+            "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "district": scope.get('district') or profile.district,
+            "taluk": scope.get('taluk') or profile.taluk,
+            "village": scope.get('village') or profile.village,
             "is_staff": user.is_staff,
         }, status=status.HTTP_200_OK)

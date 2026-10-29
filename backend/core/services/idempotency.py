@@ -50,13 +50,14 @@ def handle_idempotent_request(
         status_code, response_data = execute_func()
         # Only cache 2xx/3xx/4xx business responses; do not cache 5xx server crashes
         if status_code < 500:
+            safe_body = json.loads(json.dumps(response_data, default=str)) if isinstance(response_data, (dict, list)) else {"result": str(response_data)}
             IdempotencyKeyRecord.objects.create(
                 key=clean_key,
                 user=user if (user and user.is_authenticated) else None,
                 endpoint=endpoint,
                 request_hash=req_hash,
                 response_status=status_code,
-                response_body=response_data if isinstance(response_data, dict) else {"result": response_data},
+                response_body=safe_body,
             )
 
     return status_code, response_data, False
