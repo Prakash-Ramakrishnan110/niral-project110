@@ -1,3 +1,4 @@
+import os
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -55,6 +56,24 @@ class LoginView(APIView):
 
         try:
             user = authenticate(request=request, username=username, password=password)
+            if not user and os.environ.get('GEOMMAND_ENV') == 'demo':
+                ALIASES = {
+                    'tah_salem_west': 'tahsildar_salem_west',
+                    'tahsildar_salem_west': 'tah_salem_west',
+                    'col_salem': 'collector_salem',
+                    'collector_salem': 'col_salem',
+                    'apex_tn': 'state_apex_officer',
+                    'state_apex_officer': 'apex_tn',
+                    'dvac_auditor': 'vigilance_officer',
+                    'vigilance_officer': 'dvac_auditor',
+                    'vao_kannan': 'vao_kannankurichi',
+                    'vao_kannankurichi': 'vao_kannan',
+                    'admin': 'admin_gis_officer',
+                    'admin_gis_officer': 'admin',
+                }
+                alt_user = ALIASES.get(username)
+                if alt_user:
+                    user = authenticate(request=request, username=alt_user, password=password)
         except AxesBackendPermissionDenied:
             return Response(
                 {"error": "Account temporarily locked due to too many failed attempts (5-attempt limit)."},

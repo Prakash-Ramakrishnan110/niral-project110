@@ -251,3 +251,34 @@ class AuthAndScopingTestSuite(SafeAPITestCase):
 
         res_cbe = self.client.get("/api/compliance/high-court-atr/?district=Coimbatore&writ_no=WP1002")
         self.assertEqual(res_cbe.status_code, status.HTTP_200_OK)
+
+    def test_09_demo_environment_security(self):
+        """Demo commands and alias authentication are strictly guarded by GEOMMAND_ENV=demo."""
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from unittest.mock import patch
+
+        # 1. seed_demo_users raises CommandError if GEOMMAND_ENV != 'demo'
+        with patch.dict('os.environ', {'GEOMMAND_ENV': 'production'}):
+            with self.assertRaises(CommandError) as ctx:
+                call_command('seed_demo_users')
+            self.assertIn("refuses to execute", str(ctx.exception))
+
+        # 2. Login with alias tahsildar_salem_west (canonical user is tah_salem_west)
+        # In non-demo environment, alias resolution is blocked (401)
+        with patch.dict('os.environ', {'GEOMMAND_ENV': 'production'}):
+            res_prod = self.client.post('/api/auth/login/', {
+                'username': 'tahsildar_salem_west',
+                'password': 'SecurePass@2026!'
+            }, format='json')
+            self.assertEqual(res_prod.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # In demo environment, alias resolution succeeds (200)
+        with patch.dict('os.environ', {'GEOMMAND_ENV': 'demo'}):
+            res_demo = self.client.post('/api/auth/login/', {
+                'username': 'tahsildar_salem_west',
+                'password': 'SecurePass@2026!'
+            }, format='json')
+            self.assertEqual(res_demo.status_code, status.HTTP_200_OK)
+            self.assertEqual(res_demo.data['user']['username'], 'tah_salem_west')
+

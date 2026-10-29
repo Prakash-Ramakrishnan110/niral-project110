@@ -140,16 +140,97 @@ class Command(BaseCommand):
                 'taluk': None,
                 'village': None,
             },
+
+            # Demo Portal Aliases (Quick-preset matching)
+            {
+                'username': 'tah_salem_west',
+                'first_name': 'S.',
+                'last_name': 'Murugan',
+                'role': 'TAHSILDAR',
+                'district': 'Salem',
+                'taluk': 'Salem West',
+                'village': None,
+            },
+            {
+                'username': 'col_salem',
+                'first_name': 'R.',
+                'last_name': 'Brindha Devi IAS',
+                'role': 'COLLECTOR',
+                'district': 'Salem',
+                'taluk': None,
+                'village': None,
+            },
+            {
+                'username': 'apex_tn',
+                'first_name': 'Dr. K.',
+                'last_name': 'Manivasan IAS',
+                'role': 'STATE_APEX',
+                'district': None,
+                'taluk': None,
+                'village': None,
+            },
+            {
+                'username': 'dvac_auditor',
+                'first_name': 'DVAC',
+                'last_name': 'Auditor',
+                'role': 'VIGILANCE',
+                'district': None,
+                'taluk': None,
+                'village': None,
+            },
+            {
+                'username': 'vao_kannan',
+                'first_name': 'K.',
+                'last_name': 'Prakash',
+                'role': 'VAO',
+                'district': 'Salem',
+                'taluk': 'Salem West',
+                'village': 'Kannankurichi',
+            },
+            {
+                'username': 'admin',
+                'first_name': 'GIS',
+                'last_name': 'Administrator',
+                'role': 'ADMIN_GIS',
+                'district': None,
+                'taluk': None,
+                'village': None,
+                'is_staff': True,
+            },
         ]
 
-        password = os.environ.get('DEMO_USER_PASSWORD', 'DemoAdmin@2026!')
+        DEMO_ROLE_PASSWORDS = {
+            'TAHSILDAR': 'Demo@TahSalem2026!',
+            'COLLECTOR': 'Demo@ColSalem2026!',
+            'STATE_APEX': 'Demo@StateApex2026!',
+            'CLA_STATE': 'Demo@ClaState2026!',
+            'ADMIN_GIS': 'Demo@GisAdmin2026!',
+            'VIGILANCE': 'Demo@Vigilance2026!',
+            'RDO': 'Demo@RdoSalem2026!',
+            'INSPECTOR': 'Demo@InspSalem2026!',
+            'VAO': 'Demo@VaoKannan2026!',
+        }
+
+        def resolve_user_password(udata):
+            if os.environ.get('DEMO_USER_PASSWORD'):
+                return os.environ.get('DEMO_USER_PASSWORD')
+            role = udata.get('role', 'OFFICER')
+            dist = udata.get('district') or 'TN'
+            base = DEMO_ROLE_PASSWORDS.get(role, 'Demo@Officer2026!')
+            if dist == 'Coimbatore':
+                return base.replace('Salem', 'Cbe')
+            elif dist == 'Chennai':
+                return base.replace('Salem', 'Chn')
+            return base
+
         created_count = 0
         updated_count = 0
 
         for udata in demo_users:
             uname = udata['username']
             user, created = User.objects.get_or_create(username=uname)
-            user.set_password(password)
+            user_pwd = resolve_user_password(udata)
+            user.set_password(user_pwd)
             user.first_name = udata['first_name']
             user.last_name = udata['last_name']
             user.email = f"{uname}@tn.gov.in"
