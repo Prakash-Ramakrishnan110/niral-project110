@@ -40,6 +40,21 @@ class LandParcel(models.Model):
     
     last_updated = models.DateTimeField(auto_now=True)
 
+    @property
+    def tamil_nilam_meta(self):
+        from .services.tamil_nilam_classifier import TamilNilamClassifier
+        return TamilNilamClassifier.classify(self.classification)
+
+    @property
+    def is_waterbody_protected(self):
+        from .services.tamil_nilam_classifier import TamilNilamClassifier
+        return TamilNilamClassifier.is_waterbody(self.classification)
+
+    @property
+    def is_protected_government_land(self):
+        from .services.tamil_nilam_classifier import TamilNilamClassifier
+        return TamilNilamClassifier.is_protected_government_land(self.classification)
+
     def __str__(self):
         return f"{self.survey_number}/{self.subdivision} ({self.village_code})"
 

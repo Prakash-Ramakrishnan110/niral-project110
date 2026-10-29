@@ -3,12 +3,14 @@ from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import LandParcel, EncroachmentAlert, FieldVerification, RegistryProposal, DistrictLegalConfig
 
 class LandParcelSerializer(GeoFeatureModelSerializer):
+    tamil_nilam_meta = serializers.ReadOnlyField()
+
     class Meta:
         model = LandParcel
         geo_field = "geom"
         fields = (
             "id", "survey_number", "subdivision", "patta_number", 
-            "owner_name", "classification", "village_code", "taluk", "district",
+            "owner_name", "classification", "tamil_nilam_meta", "village_code", "taluk", "district",
             "ulpin", "district_ta", "taluk_ta", "village_name", "village_ta", "village_lgd_code",
             "area_extent", "occupied_extent", "is_occupied", "g_value",
             "adjacent_neighbors", "fmb_data", "last_updated"
