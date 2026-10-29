@@ -63,7 +63,7 @@ export const RegistryApprovalsHub = ({ user }) => {
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                    <div>
                       <div className="flex items-center gap-3 mb-2">
-                         <div className="bg-slate-900 p-2 text-white"><ShieldCheck size={24} /></div>
+                         <div className="bg-blue-600 p-2 text-white"><ShieldCheck size={24} /></div>
                          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Registry Authorization Hub</h2>
                       </div>
                       <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest">
@@ -305,7 +305,7 @@ export const RegistryCorrectionWizard = ({ alert: alertData, onClose }) => {
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-6">
-                            <div className="col-span-2 bg-slate-950 aspect-[16/9] relative flex items-center justify-center group overflow-hidden border border-slate-900">
+                            <div className="col-span-2 bg-slate-100 aspect-[16/9] relative flex items-center justify-center group overflow-hidden border border-slate-200">
                                 <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
                                 <div className="relative z-10 flex flex-col items-center">
                                     <div className="w-32 h-32 border-2 border-rose-500/30 rounded-full animate-ping absolute"></div>

@@ -30,18 +30,18 @@ export const SentinelGISView = ({ parcels = [], alerts = [], onRefresh, onMapCli
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* 1. GIS APEX BANNER */}
-      <div className="bg-slate-900 border-l-4 border-blue-500 text-white p-6 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white border border-slate-200 border-l-4 border-blue-600 text-slate-900 p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+            <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
               <Layers size={11} /> POSTGIS & SENTINEL SPATIAL INFRASTRUCTURE
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">TN-SSDI STATE SPATIAL NODE</span>
+            <span className="text-[10px] text-slate-500 font-mono">TN-SSDI STATE SPATIAL NODE</span>
           </div>
-          <h1 className="text-2xl font-black uppercase tracking-tight mt-1">
+          <h1 className="text-2xl font-black uppercase tracking-tight mt-1 text-slate-900">
             Cadastral Sentinel GIS & Anti-Corruption Peer Audit
           </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-3xl">
+          <p className="text-xs text-slate-500 mt-1 max-w-3xl">
             High-resolution PostGIS cadastral masking over Tamil Nilam Poramboke land records,
             Sentinel-2 multispectral anomaly detection, and cross-taluk peer audit routing.
           </p>
@@ -49,7 +49,7 @@ export const SentinelGISView = ({ parcels = [], alerts = [], onRefresh, onMapCli
 
         <button
           onClick={onRefresh}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-slate-700 transition-all shrink-0"
+          className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-slate-300 transition-all shrink-0 shadow-xs"
         >
           <RefreshCcw size={14} /> Refresh GIS
         </button>

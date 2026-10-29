@@ -63,18 +63,18 @@ export const HighCourtATRView = ({ alerts = [], onRefresh }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* 1. JUDICIAL COMPLIANCE HEADER */}
-      <div className="bg-slate-900 border-l-4 border-red-600 text-white p-6 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white border border-slate-200 border-l-4 border-red-600 text-slate-900 p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-red-600 text-white text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+            <span className="px-2 py-0.5 bg-red-50 border border-red-200 text-red-700 text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
               <Gavel size={11} /> JUDICIAL STATUTORY COMPLIANCE
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">MADRAS HIGH COURT PIL MONITORING</span>
+            <span className="text-[10px] text-slate-500 font-mono">MADRAS HIGH COURT PIL MONITORING</span>
           </div>
-          <h1 className="text-2xl font-black uppercase tracking-tight mt-1">
+          <h1 className="text-2xl font-black uppercase tracking-tight mt-1 text-slate-900">
             Madras High Court Waterbody Protection & Action Taken Report Cell
           </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-3xl">
+          <p className="text-xs text-slate-500 mt-1 max-w-3xl">
             Pursuant to the directions of the Hon'ble Division Bench of the High Court of Judicature at Madras,
             all encroachments on Eris, Kulams, Waterbodies, and PWD Drainage Channels must be cataloged and cleared
             under statutory deadlines with sworn compliance affidavits.
@@ -85,7 +85,7 @@ export const HighCourtATRView = ({ alerts = [], onRefresh }) => {
           <select
             value={selectedDistrict}
             onChange={(e) => setSelectedDistrict(e.target.value)}
-            className="bg-slate-800 text-white text-xs font-bold px-3 py-2 border border-slate-700 rounded-none uppercase"
+            className="bg-white text-slate-800 text-xs font-bold px-3 py-2 border border-slate-300 rounded-none uppercase"
           >
             <option value="">-- Select District --</option>
             {availableDistricts.map(d => (
@@ -98,14 +98,14 @@ export const HighCourtATRView = ({ alerts = [], onRefresh }) => {
             value={writNo}
             onChange={(e) => setWritNo(e.target.value)}
             placeholder="Writ Petition Number"
-            className="bg-slate-800 text-white text-xs px-3 py-2 border border-slate-700 focus:border-red-500 outline-none w-52 font-mono"
+            className="bg-white text-slate-800 text-xs px-3 py-2 border border-slate-300 focus:border-red-500 outline-none w-52 font-mono"
             title="Madras High Court Writ Petition Number"
           />
 
           <button
             onClick={handleDownloadATR}
             disabled={isDownloading}
-            className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all shrink-0"
+            className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all shrink-0"
           >
             <Download size={14} /> {isDownloading ? 'Compiling Affidavit...' : 'Generate 1-Click Court ATR (PDF)'}
           </button>

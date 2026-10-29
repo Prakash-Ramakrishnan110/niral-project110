@@ -21,10 +21,10 @@ export const CadastralDetailModals = ({
             <div className="bg-white border border-slate-300 shadow-2xl rounded-lg w-full max-w-2xl text-slate-800 overflow-hidden relative font-sans animate-in fade-in zoom-in-95 duration-150">
                 
                 {/* ─── MODAL HEADER: Official Tamil Nadu Government Theme ─── */}
-                <div className="bg-gradient-to-r from-teal-800 via-teal-900 to-cyan-900 px-6 py-3.5 border-b border-teal-700 flex items-center justify-between text-white">
+                <div className="bg-white px-6 py-3.5 border-b border-slate-200 border-l-4 border-teal-600 flex items-center justify-between text-slate-900">
                     <div className="flex items-center gap-2.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                        <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-cyan-100">
+                        <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse"></span>
+                        <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800">
                             {modalType === 'patta' && 'Tamil Nadu e-Chitta / இ-பட்டா நில உரிமைச் சான்று'}
                             {modalType === 'fmb' && 'Field Measurement Book (FMB) / புல வரைபடம்'}
                             {modalType === 'neighbors' && 'Adjacent Private Neighbors / பக்கத்து பட்டா விபரங்கள்'}
@@ -34,7 +34,7 @@ export const CadastralDetailModals = ({
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-cyan-200 hover:text-white p-1 hover:bg-white/20 rounded transition"
+                        className="text-slate-400 hover:text-slate-800 p-1 hover:bg-slate-100 rounded transition"
                         title="Close Modal"
                     >
                         <X size={18} />

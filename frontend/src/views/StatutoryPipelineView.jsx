@@ -85,18 +85,18 @@ export const StatutoryPipelineView = ({ alerts = [], onRefresh, selectedAlert: i
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* 1. PIPELINE HEADER */}
-      <div className="bg-slate-900 border-l-4 border-amber-500 text-white p-6 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white border border-slate-200 border-l-4 border-amber-500 text-slate-900 p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-amber-500 text-slate-900 text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+            <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
               <Scale size={11} /> DUE PROCESS OF LAW
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">TAMIL NADU ACT III OF 1905</span>
+            <span className="text-[10px] text-slate-500 font-mono">TAMIL NADU ACT III OF 1905</span>
           </div>
-          <h1 className="text-2xl font-black uppercase tracking-tight mt-1">
+          <h1 className="text-2xl font-black uppercase tracking-tight mt-1 text-slate-900">
             Statutory Legal Enforcement & FMB Notice Center
           </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-3xl">
+          <p className="text-xs text-slate-500 mt-1 max-w-3xl">
             Issuance of Section 7 Show-Cause Notices and Section 6 Eviction Warrants backed by automated FMB Cadastral Sketches,
             triangulation ladders, and STAR 3.0 Sub-Registrar deed locking.
           </p>
@@ -104,7 +104,7 @@ export const StatutoryPipelineView = ({ alerts = [], onRefresh, selectedAlert: i
 
         <button
           onClick={onRefresh}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-slate-700 transition-all shrink-0"
+          className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-slate-300 transition-all shrink-0 shadow-xs"
         >
           <RefreshCcw size={14} /> Refresh
         </button>
@@ -244,20 +244,20 @@ export const StatutoryPipelineView = ({ alerts = [], onRefresh, selectedAlert: i
           </div>
 
           {/* RIGHT: Automated FMB Cadastral Sketch Visualizer */}
-          <div className="lg:col-span-6 bg-slate-900 text-white p-6 shadow-sm flex flex-col justify-between">
+          <div className="lg:col-span-6 bg-white border border-slate-200 text-slate-900 p-6 shadow-sm flex flex-col justify-between">
             <div>
-              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <Compass size={16} className="text-blue-400" />
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                  <Compass size={16} className="text-blue-600" />
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-900">
                     CollabLand / WebFMB Cadastral Sketch
                   </span>
                 </div>
-                <span className="text-[10px] text-green-400 font-mono">SURVEY SCALED 1:500</span>
+                <span className="text-[10px] text-emerald-700 font-mono font-bold">SURVEY SCALED 1:500</span>
               </div>
 
               {/* FMB Vector Drawing Canvas Representation */}
-              <div className="my-6 p-4 bg-slate-950 border border-slate-800 flex flex-col items-center justify-center relative min-h-[260px]">
+              <div className="my-6 p-4 bg-slate-50 border border-slate-200 flex flex-col items-center justify-center relative min-h-[260px]">
                 {/* SVG Cadastral Map Representation */}
                 <svg className="w-full h-56" viewBox="0 0 400 220">
                   {/* Outer Parcel Boundary */}
@@ -270,43 +270,43 @@ export const StatutoryPipelineView = ({ alerts = [], onRefresh, selectedAlert: i
                   />
                   {/* G-Line Triangulation */}
                   <line x1="40" y1="30" x2="340" y2="190" stroke="#3b82f6" strokeWidth="1" strokeDasharray="3 3" />
-                  <text x="180" y="105" fill="#60a5fa" fontSize="10" fontFamily="monospace">G-Line (142.4m)</text>
+                  <text x="180" y="105" fill="#2563eb" fontSize="10" fontFamily="monospace">G-Line (142.4m)</text>
 
                   {/* Boundary Stones */}
                   <circle cx="40" cy="30" r="5" fill="#3b82f6" />
-                  <text x="25" y="25" fill="#ffffff" fontSize="10" fontWeight="bold">Stone A</text>
+                  <text x="25" y="25" fill="#0f172a" fontSize="10" fontWeight="bold">Stone A</text>
 
                   <circle cx="360" cy="30" r="5" fill="#3b82f6" />
-                  <text x="365" y="25" fill="#ffffff" fontSize="10" fontWeight="bold">Stone B</text>
+                  <text x="365" y="25" fill="#0f172a" fontSize="10" fontWeight="bold">Stone B</text>
 
                   <circle cx="340" cy="190" r="5" fill="#3b82f6" />
-                  <text x="345" y="205" fill="#ffffff" fontSize="10" fontWeight="bold">Stone C</text>
+                  <text x="345" y="205" fill="#0f172a" fontSize="10" fontWeight="bold">Stone C</text>
 
                   <circle cx="60" cy="190" r="5" fill="#3b82f6" />
-                  <text x="45" y="205" fill="#ffffff" fontSize="10" fontWeight="bold">Stone D</text>
+                  <text x="45" y="205" fill="#0f172a" fontSize="10" fontWeight="bold">Stone D</text>
 
                   {/* Red Hatch Encroachment Zone */}
                   <polygon
                     points="160,50 240,50 250,110 170,110"
-                    fill="rgba(239, 68, 68, 0.35)"
+                    fill="rgba(239, 68, 68, 0.25)"
                     stroke="#ef4444"
                     strokeWidth="2"
                   />
-                  <text x="175" y="85" fill="#fca5a5" fontSize="10" fontWeight="bold">ENCROACHMENT</text>
-                  <text x="185" y="98" fill="#ffffff" fontSize="9" fontFamily="monospace">{activeAlert.encroachment_area_sqm || 350} sq.m</text>
+                  <text x="175" y="85" fill="#dc2626" fontSize="10" fontWeight="bold">ENCROACHMENT</text>
+                  <text x="185" y="98" fill="#b91c1c" fontSize="9" fontFamily="monospace">{activeAlert.encroachment_area_sqm || 350} sq.m</text>
 
                   {/* Ladder Offset Pointer */}
-                  <line x1="160" y1="50" x2="160" y2="90" stroke="#fbbf24" strokeWidth="1" />
-                  <text x="95" y="70" fill="#fde047" fontSize="8" fontFamily="monospace">Offset: 14.2m N</text>
+                  <line x1="160" y1="50" x2="160" y2="90" stroke="#d97706" strokeWidth="1" />
+                  <text x="95" y="70" fill="#b45309" fontSize="8" fontFamily="monospace">Offset: 14.2m N</text>
                 </svg>
 
-                <div className="text-[10px] text-slate-400 font-mono mt-2 text-center">
+                <div className="text-[10px] text-slate-500 font-mono mt-2 text-center">
                   Survey Ladder Offsets verified from Stone A baseline along G-Line.
                 </div>
               </div>
             </div>
 
-            <div className="p-3 bg-slate-800 text-[10px] text-slate-300 font-mono flex justify-between">
+            <div className="p-3 bg-slate-50 border border-slate-200 text-[10px] text-slate-600 font-mono flex justify-between">
               <span>GPS: 11.6643° N, 78.1460° E</span>
               <span>DATUM: WGS84 / EPSG:4326</span>
             </div>

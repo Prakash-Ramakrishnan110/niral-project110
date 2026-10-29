@@ -11,7 +11,7 @@ import {
    ShieldAlert, LayoutDashboard, Map as MapIcon, AlertTriangle, Gavel, FileText, Settings, Bell, LogOut, Search,
    AlertCircle, Navigation, Download, Filter, CheckCircle2, Globe, Cpu, History, Users, Layers, Terminal, RefreshCcw,
    Activity, BarChart3, Scale, ClipboardCheck, CheckSquare, MapPin, Lock, BookOpen, PieChart, HardHat, Monitor, Cloud,
-   HeartPulse, Key, MessageSquare, Camera, ChevronRight, ChevronLeft, Clock, MoreVertical, PlusCircle, UserPlus, TrendingUp, Zap, Edit3, FileEdit,
+   HeartPulse, HeartHandshake, Key, MessageSquare, Camera, ChevronRight, ChevronLeft, Clock, MoreVertical, PlusCircle, UserPlus, TrendingUp, Zap, Edit3, FileEdit,
    Briefcase, Landmark, Book, HelpCircle, UserCheck, Image, ShieldCheck, Database, Link, Menu, X, Trash2, Eye, Shield, Award,
    Truck, Target, Upload, Fingerprint, Sun, Wind, Compass, Send
 } from 'lucide-react';
@@ -72,6 +72,9 @@ const ROLES = {
    SECURITY: { name: 'Security Officer', icon: Lock, color: 'text-slate-800', cat: 'Support' },
    API: { name: 'API Manager', icon: Key, color: 'text-sky-600', cat: 'Support' },
    TRAINING: { name: 'Training Officer', icon: BookOpen, color: 'text-lime-600', cat: 'Support' },
+   STATE_APEX: { name: 'State Apex / CS (Secretariat)', icon: Landmark, color: 'text-emerald-700', cat: 'Apex' },
+   VIGILANCE: { name: 'DVAC Auditor (Vigilance)', icon: ShieldCheck, color: 'text-amber-700', cat: 'Audit' },
+   ADMIN_GIS: { name: 'GIS System Administrator', icon: Layers, color: 'text-purple-700', cat: 'Core' },
 };
 
 const CATEGORIES = ['Core', 'Technical', 'Legal', 'Intelligence', 'Support'];
@@ -166,6 +169,34 @@ const MENU_STRUCTURE = {
       { id: 'legal', icon: Gavel, label: 'Court Registry' },
       { id: 'cases', icon: Scale, label: 'Case Matrix' },
       { id: 'settings', icon: Settings, label: 'Node Settings' },
+   ],
+   STATE_APEX: [
+      { type: 'header', label: 'STATEWIDE APEX COMMAND' },
+      { id: 'dashboard', icon: LayoutDashboard, label: 'State War Room' },
+      { id: 'gis-sentinel', icon: ShieldCheck, label: 'GIS Sentinel Mapping' },
+      { id: 'high-court-atr', icon: Scale, label: 'High Court Compliance' },
+      { id: 'statutory-pipeline', icon: Gavel, label: 'Statutory Notice Engine' },
+      { id: 'humanitarian-gate', icon: HeartHandshake, label: 'Humanitarian Welfare' },
+      { type: 'header', label: 'STATEWIDE AUDIT & REGISTRY' },
+      { id: 'government-registry', icon: Landmark, label: 'Tamil Nilam Registry', badge: 'PROTECTED' },
+      { id: 'reports', icon: BarChart3, label: 'Statewide Analytics' },
+      { id: 'field-evidence', icon: Camera, label: 'Ground Evidence Proof' },
+   ],
+   VIGILANCE: [
+      { type: 'header', label: 'STATUTORY AUDIT & VIGILANCE' },
+      { id: 'dashboard', icon: LayoutDashboard, label: 'Audit Systems Overview' },
+      { id: 'high-court-atr', icon: Scale, label: 'High Court Compliance ATR' },
+      { id: 'government-registry', icon: Landmark, label: 'Tamil Nilam Registry Audit', badge: 'VERIFIED' },
+      { id: 'field-evidence', icon: Camera, label: 'Ground Recon Evidence' },
+      { id: 'reports', icon: BarChart3, label: 'Statutory Audit Logs' },
+   ],
+   ADMIN_GIS: [
+      { type: 'header', label: 'GIS COMMAND & CONTROL' },
+      { id: 'dashboard', icon: LayoutDashboard, label: 'GIS Overview' },
+      { id: 'gis-sentinel', icon: ShieldCheck, label: 'Sentinel Ingest Core' },
+      { id: 'detection-logic', icon: Zap, label: 'Satellite Timeline', badge: 'LIVE' },
+      { id: 'government-registry', icon: Landmark, label: 'Cadastral Layer Sync' },
+      { id: 'field-evidence', icon: Camera, label: 'Drone / Ground Telemetry' },
    ],
 };
 
@@ -381,12 +412,12 @@ const OfficerAssignmentModal = ({ isOpen, onClose, onAssign, type, alertId, aler
             </div>
 
             {/* Footer: Command Summary */}
-            <div className="p-3 bg-slate-900 flex items-center justify-between">
+            <div className="p-3 bg-white border-t border-slate-200 flex items-center justify-between">
                <div className="flex items-center gap-3">
                   <div className="p-1.5 bg-blue-600 text-white"><Monitor size={16} /></div>
                   <div>
-                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">COMMAND_HUB</p>
-                     <p className="text-[10px] font-black text-white uppercase mt-1">SECURE_CHANNEL_SLM</p>
+                     <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none">COMMAND_HUB</p>
+                     <p className="text-[10px] font-black text-slate-900 uppercase mt-1">SECURE_CHANNEL_SLM</p>
                   </div>
                </div>
                <div className="text-right">
@@ -530,11 +561,11 @@ const DistrictAnalyticsView = () => (
                </div>
             </Card>
 
-            <div className="bg-slate-900 rounded-none p-6 text-white text-center shadow-xl shadow-slate-200">
-               <div className="w-12 h-12 bg-blue-600 rounded-none flex items-center justify-center mx-auto mb-4"><Download size={24} /></div>
-               <h5 className="text-[11px] font-black uppercase tracking-widest mb-2">Quarterly Report</h5>
-               <p className="text-[9px] text-slate-400 font-bold uppercase mb-6 leading-relaxed">Full district spatial audit for Q1 2026 is ready for download.</p>
-               <button className="w-full py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-none text-[9px] font-black uppercase tracking-widest transition-all">Export PDF Audit</button>
+            <div className="bg-white border border-slate-200 rounded-none p-6 text-slate-900 text-center shadow-sm">
+               <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-none flex items-center justify-center mx-auto mb-4 border border-blue-100"><Download size={24} /></div>
+               <h5 className="text-[11px] font-black uppercase tracking-widest mb-2 text-slate-900">Quarterly Report</h5>
+               <p className="text-[9px] text-slate-500 font-bold uppercase mb-6 leading-relaxed">Full district spatial audit for Q1 2026 is ready for download.</p>
+               <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-none text-[9px] font-black uppercase tracking-widest transition-all">Export PDF Audit</button>
             </div>
          </div>
       </div>
@@ -692,8 +723,8 @@ const CameraView = ({ alerts = [] }) => {
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.4em]">Active Field Synchronization · {evidenceItems.length} Tactical Records</p>
                </div>
             </div>
-            <div className="flex bg-slate-900 p-2 rounded-none shadow-2xl border border-white/10">
-               <button className="px-8 py-4 bg-blue-600 text-white rounded-none text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all flex items-center gap-3 shadow-xl group">
+            <div className="flex bg-white p-2 rounded-none shadow-sm border border-slate-200">
+               <button className="px-8 py-4 bg-blue-600 text-white rounded-none text-[10px] font-black uppercase tracking-[0.3em] hover:bg-blue-500 transition-all flex items-center gap-3 shadow-md group">
                   <Camera size={16} className="group-hover:rotate-12 transition-transform" /> START_RECON_CAPTURE
                </button>
             </div>
@@ -709,7 +740,7 @@ const CameraView = ({ alerts = [] }) => {
                               className={`group relative rounded-none overflow-hidden border-2 cursor-pointer transition-all duration-500 bg-white shadow-sm hover:shadow-2xl hover:-translate-y-2 ${selectedEvidence?.id === alert.id ? 'border-blue-600 neon-glow ring-8 ring-blue-50/50' : 'border-slate-100'}`}
                            >
                               {/* High-Tech Image Container */}
-                              <div className="relative aspect-[4/3] overflow-hidden bg-slate-900">
+                              <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
                                  <img src={alert.img} className="w-full h-full object-cover transition-all duration-1000 group-hover:scale-110 opacity-90 group-hover:opacity-100" />
                                  
                                  {/* HUD Elements */}
@@ -834,26 +865,26 @@ const CameraView = ({ alerts = [] }) => {
                         )}
 
                         {/* Tactical Analysis Suite */}
-                        <div className="p-6 bg-slate-900 rounded-none text-white space-y-4 shadow-xl border border-white/5">
+                        <div className="p-6 bg-white border border-slate-200 border-l-4 border-blue-600 rounded-none text-slate-900 space-y-4 shadow-sm">
                            <div className="flex justify-between items-center">
-                              <p className="text-[8px] font-black uppercase tracking-widest text-blue-400">Tactical Analysis</p>
+                              <p className="text-[8px] font-black uppercase tracking-widest text-blue-600">Tactical Analysis</p>
                               <div className="flex gap-1">
-                                 {[1,2,3,4,5].map(x => <div key={x} className="w-1 h-1 bg-blue-500 rounded-none animate-pulse" style={{animationDelay: `${x*200}ms`}}></div>)}
+                                 {[1,2,3,4,5].map(x => <div key={x} className="w-1 h-1 bg-blue-600 rounded-none animate-pulse" style={{animationDelay: `${x*200}ms`}}></div>)}
                               </div>
                            </div>
                            <div className="grid grid-cols-2 gap-4">
                               <div>
-                                 <p className="text-[6px] text-slate-400 uppercase font-bold mb-1">Latency</p>
-                                 <p className="text-[10px] font-black">24ms</p>
+                                 <p className="text-[6px] text-slate-500 uppercase font-bold mb-1">Latency</p>
+                                 <p className="text-[10px] font-black text-slate-900">24ms</p>
                               </div>
                               <div>
-                                 <p className="text-[6px] text-slate-400 uppercase font-bold mb-1">Encryption</p>
-                                 <p className="text-[10px] font-black">AES-256</p>
+                                 <p className="text-[6px] text-slate-500 uppercase font-bold mb-1">Encryption</p>
+                                 <p className="text-[10px] font-black text-slate-900">AES-256</p>
                               </div>
                            </div>
                            <div className="pt-2">
-                              <p className="text-[6px] text-slate-400 uppercase font-bold mb-1">Observation Summary</p>
-                              <p className="text-[9px] leading-relaxed text-slate-300">Unauthorized footprint detected within buffer zone. Thermal signature indicates recent activity. Geo-fencing alerts triggered at node level.</p>
+                              <p className="text-[6px] text-slate-500 uppercase font-bold mb-1">Observation Summary</p>
+                              <p className="text-[9px] leading-relaxed text-slate-600">Unauthorized footprint detected within buffer zone. Thermal signature indicates recent activity. Geo-fencing alerts triggered at node level.</p>
                            </div>
                         </div>
 
@@ -1015,9 +1046,9 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                <div id="pdf-modal-wrapper" className="w-full max-w-[1000px] h-full max-h-[95vh] relative z-[5001] flex flex-col overflow-hidden bg-slate-100 shadow-2xl rounded-none border border-slate-400">
                   
                   {/* Top Actions Bar (Not printed) */}
-                  <div className="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b-4 border-blue-600">
-                     <p className="text-[10px] text-white font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                        <FileText size={14} /> Official Report Preview
+                  <div className="bg-white px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-200 border-l-4 border-blue-600">
+                     <p className="text-[10px] text-slate-900 font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                        <FileText size={14} className="text-blue-600" /> Official Report Preview
                      </p>
                      <div className="flex gap-4">
                         <button 
@@ -1028,12 +1059,12 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                         >
                            <Download size={14} /> Download Certified Dossier
                         </button>
-                        <button onClick={() => setSelectedAlert(null)} className="text-slate-400 hover:text-white transition-all"><X size={20} /></button>
+                        <button onClick={() => setSelectedAlert(null)} className="text-slate-400 hover:text-slate-700 transition-all"><X size={20} /></button>
                      </div>
                   </div>
 
                   {/* Scrollable Printable Area */}
-                  <div id="pdf-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center custom-scrollbar bg-slate-200">
+                  <div id="pdf-scroll-container" className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center custom-scrollbar bg-slate-100">
                      
                      {/* The A4 Page Container */}
                      <div id="pdf-report-content" className="bg-white w-full max-w-[800px] shadow-sm border border-slate-200 p-8 md:p-12 shrink-0 relative">
@@ -1041,7 +1072,7 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                         {/* Report Header */}
                         <div className="border-b-4 border-slate-900 pb-6 mb-8 flex justify-between items-start">
                            <div className="flex items-center gap-4">
-                              <div className="w-16 h-16 bg-slate-900 flex items-center justify-center p-2 border border-slate-800">
+                              <div className="w-16 h-16 bg-white flex items-center justify-center p-2 border border-slate-200">
                                  <img src="/logo.svg" alt="Official GEOMMAND Emblem" className="w-full h-full object-contain" />
                               </div>
                               <div>
@@ -1114,9 +1145,9 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                                   <div className="grid grid-cols-2 gap-8">
                                      {/* BEFORE: Satellite Archive */}
                                      <div className="space-y-3">
-                                        <div className="bg-slate-900 text-white p-2 flex justify-between items-center shadow-lg border-l-4 border-red-600">
+                                        <div className="bg-white text-slate-900 border border-slate-200 p-2 flex justify-between items-center shadow-sm border-l-4 border-red-600">
                                            <span className="text-[8px] font-black uppercase tracking-[0.2em]">SATELLITE ARCHIVE (BEFORE)</span>
-                                           <span className="text-[7px] font-mono text-slate-400">ARCHIVE_REF: 2025</span>
+                                           <span className="text-[7px] font-mono text-slate-500 font-bold">ARCHIVE_REF: 2025</span>
                                         </div>
                                         <div className="aspect-video bg-slate-200 border-2 border-slate-900 relative overflow-hidden group shadow-inner">
                                            <img 
@@ -1166,9 +1197,9 @@ const AIMonitoringView = ({ alerts = [], setAlerts, user, parcels = [], onMapCli
                                                  ))}
                                               </div>
                                            ) : (
-                                              <div className="aspect-video bg-slate-900 border-2 border-blue-600 flex flex-col items-center justify-center gap-2 group">
+                                              <div className="aspect-video bg-slate-100 border-2 border-blue-600 flex flex-col items-center justify-center gap-2 group">
                                                  <Camera size={24} className="text-blue-500 animate-pulse" />
-                                                 <p className="text-[7px] font-black text-blue-400 uppercase tracking-[0.3em] animate-pulse">Waiting for Field Node...</p>
+                                                 <p className="text-[7px] font-black text-blue-600 uppercase tracking-[0.3em] animate-pulse">Waiting for Field Node...</p>
                                                  <div className="absolute inset-0 bg-gradient-to-t from-blue-900/20 to-transparent pointer-events-none"></div>
                                               </div>
                                            )}
@@ -1331,14 +1362,14 @@ const InspectorDashboardView = ({ parcels = [], alerts = [], onTabChange }) => {
    return (
       <div className="space-y-4 animate-in fade-in duration-500 max-h-[calc(100vh-140px)] flex flex-col overflow-hidden">
          {/* Strategic Greeting */}
-         <div className="bg-slate-900 text-white p-6 flex justify-between items-center shadow-xl">
+         <div className="bg-white border border-slate-200 border-l-4 border-blue-600 text-slate-900 p-6 flex justify-between items-center shadow-sm">
             <div>
-               <h2 className="text-xl font-black uppercase tracking-tighter italic">Operational Hub</h2>
-               <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.4em] mt-1">Field Node Inspector · Online</p>
+               <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">Operational Hub</h2>
+               <p className="text-[9px] font-bold text-blue-600 uppercase tracking-[0.2em] mt-1">Field Node Inspector · Online</p>
             </div>
             <button 
                onClick={() => onTabChange('tasks')}
-               className="px-8 py-3 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg"
+               className="px-8 py-3 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm"
             >
                View Active Missions ({activeAlerts.length})
             </button>
@@ -1364,14 +1395,14 @@ const InspectorDashboardView = ({ parcels = [], alerts = [], onTabChange }) => {
                      </div>
                   </div>
                ))}
-               <div className="bg-slate-900 p-6 flex flex-col justify-center">
-                  <p className="text-[8px] font-black text-blue-400 uppercase tracking-[0.3em] mb-2">FIELD_COMMAND_STATUS</p>
-                  <p className="text-xs font-bold text-white uppercase italic leading-tight">Salem West sector currently under 24/7 GIS surveillance.</p>
+               <div className="bg-white border border-slate-200 p-6 flex flex-col justify-center shadow-sm">
+                  <p className="text-[8px] font-black text-blue-600 uppercase tracking-[0.2em] mb-2">FIELD_COMMAND_STATUS</p>
+                  <p className="text-xs font-bold text-slate-800 uppercase italic leading-tight">Salem West sector currently under 24/7 GIS surveillance.</p>
                </div>
             </div>
 
             {/* Visual Intel Column */}
-            <div className="md:col-span-2 bg-slate-900 relative group overflow-hidden border border-slate-200">
+            <div className="md:col-span-2 bg-slate-100 relative group overflow-hidden border border-slate-200">
                <img src={site1} className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-all duration-700" />
                <div className="absolute inset-0 p-6 flex flex-col justify-between">
                   <div className="flex justify-between items-start">
@@ -1515,18 +1546,18 @@ const InspectorExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus })
          )}
 
          {/* Simple Tactical Header */}
-         <div className="bg-slate-900 text-white p-4 flex justify-between items-center shadow-xl">
+         <div className="bg-white border border-slate-200 border-l-4 border-blue-600 text-slate-900 p-4 flex justify-between items-center shadow-sm">
             <div className="flex items-center gap-4">
-               <div className="w-10 h-10 bg-blue-600 flex items-center justify-center"><Navigation size={20} /></div>
+               <div className="w-10 h-10 bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100"><Navigation size={20} /></div>
                <div>
-                  <h2 className="text-sm font-black uppercase tracking-widest">FIELD_MISSIONS_MATRIX</h2>
-                  <p className="text-[8px] font-bold text-blue-400 uppercase tracking-[0.3em] mt-0.5">Active_Node: RAJESH_022</p>
+                  <h2 className="text-sm font-black uppercase tracking-wider text-slate-900">FIELD_MISSIONS_MATRIX</h2>
+                  <p className="text-[8px] font-bold text-blue-600 uppercase tracking-[0.2em] mt-0.5">Active_Node: RAJESH_022</p>
                </div>
             </div>
             <div className="flex gap-4">
                <div className="text-right">
-                  <p className="text-[7px] font-black text-slate-500 uppercase">Pending</p>
-                  <p className="text-sm font-black text-blue-400">{activeAlerts.length}</p>
+                  <p className="text-[7px] font-black text-slate-400 uppercase">Pending</p>
+                  <p className="text-sm font-black text-blue-600">{activeAlerts.length}</p>
                </div>
                <div className="text-right">
                   <p className="text-[7px] font-black text-slate-500 uppercase">Resolved</p>
@@ -2041,21 +2072,21 @@ const CollectorExecutiveView = ({ parcels = [], alerts = [], patchAlertStatus, o
             </div>
 
             <div className="lg:col-span-4 space-y-6">
-               <div className="bg-slate-900 rounded-none p-6 text-white relative overflow-hidden shadow-xl">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest mb-6 flex items-center gap-2 text-blue-400"><Activity size={14} /> Operational Oversight</h4>
+               <div className="bg-white border border-slate-200 rounded-none p-6 text-slate-900 relative overflow-hidden shadow-sm">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest mb-6 flex items-center gap-2 text-blue-600"><Activity size={14} /> Operational Oversight</h4>
                   <div className="space-y-3">
-                     <div className="p-4 bg-white/5 border border-white/10 rounded-none mb-4">
+                     <div className="p-4 bg-slate-50 border border-slate-200 rounded-none mb-4">
                         <div className="flex justify-between items-center mb-2">
-                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Field Missions</span>
-                           <span className="text-blue-400 font-black text-xs">03</span>
+                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Active Field Missions</span>
+                           <span className="text-blue-600 font-black text-xs">03</span>
                         </div>
-                        <div className="h-1.5 w-full bg-white/10 rounded-none overflow-hidden">
-                           <div className="h-full bg-blue-500 w-2/3"></div>
+                        <div className="h-1.5 w-full bg-slate-200 rounded-none overflow-hidden">
+                           <div className="h-full bg-blue-600 w-2/3"></div>
                         </div>
-                        <p className="text-[8px] text-slate-400 font-bold uppercase mt-2">Team Alpha: ON SITE (SW-142)</p>
+                        <p className="text-[8px] text-slate-500 font-bold uppercase mt-2">Team Alpha: ON SITE (SW-142)</p>
                      </div>
-                     <button onClick={() => onTabChange('enforcement')} className="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-none text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3"><Monitor size={14} /> Monitor Live Work</button>
-                     <button onClick={() => alert("ISSUE: District-wide Encroachment Sweep initiated.")} className="w-full py-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-none text-[9px] font-black uppercase tracking-widest transition-all">Mobilize All Taluks</button>
+                     <button onClick={() => onTabChange('enforcement')} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-none text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-xs"><Monitor size={14} /> Monitor Live Work</button>
+                     <button onClick={() => alert("ISSUE: District-wide Encroachment Sweep initiated.")} className="w-full py-4 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 rounded-none text-[9px] font-black uppercase tracking-widest transition-all">Mobilize All Taluks</button>
                   </div>
                </div>
                <Card title="Departmental Readiness" icon={Activity}>
@@ -2217,11 +2248,11 @@ const LegalCoordinationView = () => (
                   </div>
                </div>
             </Card>
-            <div className="bg-slate-900 rounded-none p-4 text-white text-center shadow-xl shadow-slate-200">
-               <div className="w-12 h-12 bg-blue-600 rounded-none flex items-center justify-center mx-auto mb-4"><Gavel size={24} /></div>
-               <h5 className="text-[11px] font-black uppercase tracking-widest mb-2">Legal Coordination</h5>
-               <p className="text-[9px] text-slate-400 font-bold uppercase mb-6 leading-relaxed">Request special legal counsel for complex encroachment stays in Mettur.</p>
-               <button className="w-full py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-none text-[9px] font-black uppercase tracking-widest transition-all">Assign Counsel</button>
+            <div className="bg-white border border-slate-200 rounded-none p-4 text-slate-900 text-center shadow-sm">
+               <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-none flex items-center justify-center mx-auto mb-4 border border-blue-100"><Gavel size={24} /></div>
+               <h5 className="text-[11px] font-black uppercase tracking-widest mb-2 text-slate-900">Legal Coordination</h5>
+               <p className="text-[9px] text-slate-500 font-bold uppercase mb-6 leading-relaxed">Request special legal counsel for complex encroachment stays in Mettur.</p>
+               <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-none text-[9px] font-black uppercase tracking-widest transition-all">Assign Counsel</button>
             </div>
          </div>
       </div>
@@ -2297,9 +2328,9 @@ const RegistryUpdationView = ({ requests = [], onSubmit, user }) => {
                   <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">Tamil Nadu Revenue Department • Secure Node: {formData.loc}</p>
                </div>
                <div className="hidden md:flex gap-4">
-                  <div className="px-6 py-3 bg-slate-900 text-white text-center min-w-[150px] border-b-4 border-blue-500">
+                  <div className="px-6 py-3 bg-white border border-slate-200 text-slate-900 text-center min-w-[150px] border-b-4 border-blue-600 shadow-sm">
                      <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Service Status</p>
-                     <p className="text-xs font-black text-blue-400 uppercase tracking-widest">LIVE_SYNC</p>
+                     <p className="text-xs font-black text-blue-600 uppercase tracking-widest">LIVE_SYNC</p>
                   </div>
                </div>
             </div>
@@ -2441,15 +2472,15 @@ const RegistryUpdationView = ({ requests = [], onSubmit, user }) => {
                   </div>
 
                   {/* Declaration & Submission */}
-                  <div className="bg-slate-900 p-8 flex flex-col md:flex-row justify-between items-center gap-8 border-t-8 border-blue-600">
+                  <div className="bg-white border border-slate-200 p-8 flex flex-col md:flex-row justify-between items-center gap-8 border-t-4 border-blue-600 shadow-sm text-slate-800">
                      <div className="flex gap-4 items-center max-w-md">
-                        <div className="p-3 bg-blue-600/20 border border-blue-500/30 text-blue-400"><Shield size={24} /></div>
+                        <div className="p-3 bg-blue-50 border border-blue-200 text-blue-600"><Shield size={24} /></div>
                         <div>
-                           <p className="text-[10px] font-black uppercase tracking-widest text-white">Registry Integrity Declaration</p>
+                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-900">Registry Integrity Declaration</p>
                            <p className="text-[8px] font-bold text-slate-500 uppercase mt-1 leading-relaxed">I hereby certify that the information provided is verified against field records and complies with the Tamil Nadu Land Revenue Act protocols.</p>
                         </div>
                      </div>
-                     <button type="submit" className="w-full md:w-auto px-12 py-4 bg-white text-slate-900 font-black text-xs uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                     <button type="submit" className="w-full md:w-auto px-12 py-4 bg-blue-600 text-white font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-3 shadow-sm">
                         Authenticate & Transmit <Fingerprint size={18} />
                      </button>
                   </div>
@@ -2734,15 +2765,15 @@ const RegistryCorrectionView = ({ requests = [], onSubmit, user }) => {
                            ))}
                         </div>
                         
-                        <div className="p-6 bg-slate-900 text-white flex flex-col md:flex-row justify-between items-center gap-8">
+                        <div className="p-6 bg-white border border-slate-200 text-slate-900 flex flex-col md:flex-row justify-between items-center gap-8 shadow-sm">
                            <div className="flex items-center gap-5">
-                              <div className="w-12 h-12 bg-white/5 border border-white/10 flex items-center justify-center text-blue-400"><Fingerprint size={24} /></div>
+                              <div className="w-12 h-12 bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600"><Fingerprint size={24} /></div>
                               <div>
-                                 <p className="text-[11px] font-black uppercase tracking-widest">Correction Authenticator</p>
-                                 <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">Digital Signature Node: TN-CORR-0x112</p>
+                                 <p className="text-[11px] font-black uppercase tracking-widest text-slate-900">Correction Authenticator</p>
+                                 <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Digital Signature Node: TN-CORR-0x112</p>
                               </div>
                            </div>
-                           <button type="submit" className="w-full md:w-auto px-12 py-4 bg-rose-600 text-white font-black text-xs uppercase tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-900/20">
+                           <button type="submit" className="w-full md:w-auto px-12 py-4 bg-rose-600 text-white font-black text-xs uppercase tracking-widest hover:bg-rose-700 transition-all shadow-sm">
                               Sign & Log Correction Protocol
                            </button>
                         </div>
@@ -2952,10 +2983,9 @@ const ApprovalsHubView = ({ user, alerts = [], patchAlertStatus, registryRequest
 
 const AdminAIDetectionView = ({ alerts }) => (
    <div className="space-y-6 animate-in fade-in duration-700">
-      <div className="bg-slate-900 p-10 rounded-none text-white mb-8 border border-white/5 relative overflow-hidden group">
-         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-none -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-         <h2 className="text-4xl font-black uppercase tracking-tighter italic">AI Detection Matrix</h2>
-         <p className="text-[10px] text-blue-400 font-bold uppercase tracking-[0.4em] mt-4 flex items-center gap-2"><div className="w-2 h-2 bg-blue-500 animate-pulse"></div> Advanced Neural Network Encroachment Analysis Node</p>
+      <div className="bg-white p-8 rounded-none text-slate-900 mb-8 border border-slate-200 border-l-4 border-blue-600 relative overflow-hidden group shadow-sm">
+         <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900">AI Detection Matrix</h2>
+         <p className="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em] mt-3 flex items-center gap-2"><div className="w-2 h-2 bg-blue-600 animate-pulse"></div> Advanced Neural Network Encroachment Analysis Node</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
          <Card title="Neural Confidence Metrics" icon={Cpu}>
@@ -3690,9 +3720,8 @@ const DistrictMapView = React.memo(({ parcels, alerts, onExport, onMapClick, sel
                   </div>
                </Card>
 
-               <div className="bg-slate-900 rounded-none p-8 text-white relative overflow-hidden group shadow-2xl">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-none -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-blue-600/40 transition-all duration-700"></div>
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-8 flex items-center gap-2"><History size={16} className="text-blue-400" /> Strategic Timeline</h3>
+               <div className="bg-white border border-slate-200 rounded-none p-8 text-slate-900 relative overflow-hidden group shadow-sm">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-8 flex items-center gap-2 text-blue-600"><History size={16} /> Strategic Timeline</h3>
                   <div className="space-y-6">
                      {[
                         { t: '13:02', m: 'Drone Stream Alpha Connected', s: 'SUCCESS' },
@@ -3701,12 +3730,12 @@ const DistrictMapView = React.memo(({ parcels, alerts, onExport, onMapClick, sel
                      ].map((item, i) => (
                         <div key={i} className="flex gap-4 group">
                            <div className="flex flex-col items-center">
-                              <div className="w-2 h-2 rounded-none bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.8)]"></div>
-                              {i < 2 && <div className="w-px h-10 bg-slate-800"></div>}
+                              <div className="w-2 h-2 rounded-none bg-blue-600 shadow-sm"></div>
+                              {i < 2 && <div className="w-px h-10 bg-slate-200"></div>}
                            </div>
                            <div>
-                              <p className="text-[9px] font-black text-slate-500 uppercase">{item.t}</p>
-                              <p className="text-[10px] font-bold text-slate-200 mt-1">{item.m}</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase">{item.t}</p>
+                              <p className="text-[10px] font-bold text-slate-800 mt-1">{item.m}</p>
                            </div>
                         </div>
                      ))}
@@ -3739,12 +3768,12 @@ const DashboardView = React.memo(({ parcels, alerts, setAlerts, onExport, onMapC
       <div className="space-y-6 animate-in fade-in duration-700 pb-10">
          {/* COMMAND CENTER STATUS BAR */}
          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-slate-900 text-white px-5 py-3 flex items-center border-l-4 border-blue-600 shadow-lg">
+            <div className="bg-white border border-slate-200 px-5 py-3 flex items-center border-l-4 border-blue-600 shadow-sm">
                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 bg-white/5 flex items-center justify-center text-blue-400 shrink-0"><Globe size={18} /></div>
+                  <div className="w-8 h-8 bg-blue-50 flex items-center justify-center text-blue-600 shrink-0"><Globe size={18} /></div>
                   <div>
-                     <p className="text-[7px] font-black text-blue-400 uppercase tracking-[0.2em]">Surveillance Range</p>
-                     <p className="text-base font-black tracking-tighter italic leading-none mt-0.5">14,242.8 <span className="text-[8px] text-slate-400 not-italic uppercase ml-1">Ha</span></p>
+                     <p className="text-[7px] font-black text-blue-600 uppercase tracking-[0.2em]">Surveillance Range</p>
+                     <p className="text-base font-black text-slate-900 tracking-tighter italic leading-none mt-0.5">14,242.8 <span className="text-[8px] text-slate-400 not-italic uppercase ml-1">Ha</span></p>
                   </div>
                </div>
             </div>
@@ -3760,12 +3789,12 @@ const DashboardView = React.memo(({ parcels, alerts, setAlerts, onExport, onMapC
                   </div>
                </div>
             </div>
-            <div className="bg-blue-600 text-white px-5 py-3 flex items-center shadow-xl">
+            <div className="bg-white border border-slate-200 border-l-4 border-emerald-500 px-5 py-3 flex items-center shadow-sm">
                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 bg-white/10 flex items-center justify-center text-white shrink-0"><ShieldCheck size={18} /></div>
+                  <div className="w-8 h-8 bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0"><ShieldCheck size={18} /></div>
                   <div>
-                     <p className="text-[7px] font-black text-blue-100 uppercase tracking-[0.2em]">Protection Index</p>
-                     <p className="text-base font-black tracking-tighter leading-none mt-0.5">98.4% <span className="text-[8px] text-blue-200 uppercase font-bold ml-1 tracking-widest">Secured</span></p>
+                     <p className="text-[7px] font-black text-emerald-600 uppercase tracking-[0.2em]">Protection Index</p>
+                     <p className="text-base font-black text-slate-900 tracking-tighter leading-none mt-0.5">98.4% <span className="text-[8px] text-emerald-700 uppercase font-bold ml-1 tracking-widest">Secured</span></p>
                   </div>
                </div>
             </div>
@@ -3904,16 +3933,15 @@ const DashboardView = React.memo(({ parcels, alerts, setAlerts, onExport, onMapC
                   </div>
                </div>
 
-               <div className="bg-slate-900 rounded-none p-5 text-white shadow-2xl relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-600/20 rounded-none -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-blue-600/40 transition-all"></div>
-                  <h3 className="text-[9px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-blue-400"><TrendingUp size={14} /> Equity at Risk</h3>
+               <div className="bg-white border border-slate-200 rounded-none p-5 text-slate-900 shadow-sm relative overflow-hidden group">
+                  <h3 className="text-[9px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 text-blue-600"><TrendingUp size={14} /> Equity at Risk</h3>
                   <div className="space-y-1">
-                     <h2 className="text-3xl font-black tracking-tighter italic leading-none">₹842.4 Cr</h2>
-                     <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-tight mt-1">Est. Land Value Impacted</p>
+                     <h2 className="text-3xl font-black text-slate-900 tracking-tighter italic leading-none">₹842.4 Cr</h2>
+                     <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest leading-tight mt-1">Est. Land Value Impacted</p>
                   </div>
-                  <div className="mt-5 pt-4 border-t border-white/10 grid grid-cols-2 gap-3">
-                     <div><p className="text-[7px] font-bold text-slate-500 uppercase">Recovery</p><p className="text-xs font-black text-green-400">+12.4%</p></div>
-                     <div><p className="text-[7px] font-bold text-slate-500 uppercase">Audit</p><p className="text-xs font-black text-blue-400">94/100</p></div>
+                  <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-2 gap-3">
+                     <div><p className="text-[7px] font-bold text-slate-400 uppercase">Recovery</p><p className="text-xs font-black text-emerald-600">+12.4%</p></div>
+                     <div><p className="text-[7px] font-bold text-slate-400 uppercase">Audit</p><p className="text-xs font-black text-blue-600">94/100</p></div>
                   </div>
                </div>
 
@@ -4130,15 +4158,15 @@ const NotificationCenterPanel = ({ isOpen, onClose, alerts, registryRequests, on
       <div className="fixed inset-0 z-[4500] flex justify-end">
          <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" onClick={onClose} />
          <div className="relative bg-white w-full max-w-sm h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
-            <div className="px-5 py-4 border-b border-slate-200 bg-slate-900 flex justify-between items-center">
+            <div className="px-5 py-4 border-b border-slate-200 bg-white flex justify-between items-center">
                <div className="flex items-center gap-3">
                   <div className="bg-blue-600 p-2 text-white"><Bell size={16} /></div>
                   <div>
-                     <h2 className="text-[10px] font-black text-white uppercase tracking-widest">Command Alerts</h2>
-                     <p className="text-[8px] font-bold text-blue-400 uppercase tracking-widest mt-0.5">{unreadCount} Unread · LIVE</p>
+                     <h2 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Command Alerts</h2>
+                     <p className="text-[8px] font-bold text-blue-600 uppercase tracking-widest mt-0.5">{unreadCount} Unread · LIVE</p>
                   </div>
                </div>
-               <button onClick={onClose} className="p-2 text-slate-400 hover:text-red-400 transition-all"><X size={16} /></button>
+               <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-800 transition-all"><X size={16} /></button>
             </div>
             <div className="px-5 py-2 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                <span className="text-[8px] font-bold text-slate-400 uppercase">{notifications.length} Total</span>
@@ -4166,8 +4194,8 @@ const NotificationCenterPanel = ({ isOpen, onClose, alerts, registryRequests, on
                   );
                })}
             </div>
-            <div className="p-4 bg-slate-900 border-t border-white/5">
-               <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">GEOMMAND · AES-256 Encrypted Channel</p>
+            <div className="p-4 bg-slate-50 border-t border-slate-200">
+               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">GEOMMAND · AES-256 Encrypted Channel</p>
             </div>
          </div>
       </div>
@@ -4557,26 +4585,26 @@ export default function App() {
 
    return (
       <>
-         <div className="flex h-screen bg-slate-100 font-jakarta text-sm antialiased text-slate-800 relative overflow-hidden">
+         <div className="flex h-screen bg-[#f8fafc] font-jakarta text-sm antialiased text-slate-800 relative overflow-hidden">
          {/* Mobile Sidebar Overlay */}
          {isSidebarOpen && (
-            <div className="fixed inset-0 bg-slate-900/40 z-[1900] lg:hidden backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsSidebarOpen(false)}></div>
+            <div className="fixed inset-0 bg-black/40 z-[1900] lg:hidden backdrop-blur-xs animate-in fade-in duration-300" onClick={() => setIsSidebarOpen(false)}></div>
          )}
 
          {/* Sidebar */}
          <aside className={`fixed inset-y-0 left-0 lg:static w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 z-[2000] shadow-sm transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-            <div className="p-6 flex items-center justify-between border-b border-slate-100">
+            <div className="p-6 flex items-center justify-between border-b border-slate-100 bg-white">
                <div className="flex items-center gap-3" onClick={() => setActiveTab('dashboard')} style={{ cursor: 'pointer' }}>
-                  <div className="bg-blue-600 p-2 rounded-none text-white shadow-md flex items-center justify-center shrink-0"><ShieldAlert size={20} /></div>
+                  <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2.5 rounded-xl text-white shadow-md flex items-center justify-center shrink-0 border border-blue-500"><ShieldAlert size={20} /></div>
                   <div>
-                     <h1 className="font-extrabold text-sm tracking-tighter text-slate-900 uppercase">GEOMMAND</h1>
-                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Salem District</p>
+                     <h1 className="font-extrabold text-sm tracking-wider text-slate-900 uppercase">GEOMMAND</h1>
+                     <p className="text-[9px] font-bold text-blue-600 uppercase tracking-widest mt-0.5">Salem District Node</p>
                   </div>
                </div>
                <button className="lg:hidden p-1 text-slate-400 hover:text-slate-800" onClick={() => setIsSidebarOpen(false)}><X size={20} /></button>
             </div>
             <nav className="flex-1 overflow-y-auto custom-scrollbar pb-10">
-                {MENU_STRUCTURE[user.role].map((item, idx) => {
+                {(MENU_STRUCTURE[user.role] || MENU_STRUCTURE.ADMIN).map((item, idx) => {
                    let dynamicBadge = item.badge;
                    if (user.role === 'INSPECTOR' && item.id === 'tasks') {
                       const missionCount = alerts.filter(a => (a.status === 'COLLECTOR_ACCEPTED' || a.status === 'TAHSILDAR_ACCEPTED')).length;
@@ -4595,43 +4623,42 @@ export default function App() {
                    return item.type === 'header' ? (
                        <p key={idx} className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-8 mb-3 px-6">{item.label}</p>
                     ) : (
-                       <button key={item.id} onClick={() => { setActiveTab(item.id); setSubView(null); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-6 py-3.5 transition-all duration-200 group relative ${activeTab === item.id ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-100 z-10' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                          <div className={`w-6 flex justify-center ${activeTab === item.id ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`}>
+                       <button key={item.id} onClick={() => { setActiveTab(item.id); setSubView(null); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-6 py-3.5 transition-all duration-200 group relative ${activeTab === item.id ? 'bg-blue-50 text-blue-700 font-bold border-r-4 border-blue-600 shadow-xs z-10' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                          <div className={`w-6 flex justify-center ${activeTab === item.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600'}`}>
                              <item.icon size={18} />
                           </div>
                           <span className="flex-1 text-left text-[11px] font-bold uppercase tracking-wider">{item.label}</span>
-                          {dynamicBadge && <span className={`${activeTab === item.id ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'} text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm`}>{dynamicBadge}</span>}
-                          {activeTab === item.id && <div className="absolute inset-y-0 left-0 w-1.5 bg-white"></div>}
+                          {dynamicBadge && <span className={`${activeTab === item.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 border border-slate-200'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs`}>{dynamicBadge}</span>}
                        </button>
                     );
                 })}
             </nav>
-            <div className="p-4 border-t border-slate-100 mt-auto bg-slate-50">
+            <div className="p-4 border-t border-slate-200 mt-auto bg-white">
                <div className="flex items-center gap-3 mb-4 px-2">
-                  <div className="w-8 h-8 bg-blue-600 rounded-none flex items-center justify-center text-white font-bold text-xs shadow-sm">{user.avatar}</div>
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm">{user.avatar}</div>
                   <div className="flex-1 min-w-0">
-                     <p className="text-xs font-bold text-slate-800 truncate uppercase">{user.name.split(' ')[0]}</p>
-                     <p className="text-[9px] font-medium text-slate-500 uppercase">{user.role}</p>
+                     <p className="text-xs font-bold text-slate-900 truncate uppercase">{user.name.split(' ')[0]}</p>
+                     <p className="text-[9px] font-mono text-blue-600 uppercase tracking-wider">{user.role}</p>
                   </div>
                </div>
-               <button onClick={async () => { await AuthAPI.logout(); setUser(null); }} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-slate-200 rounded-none text-slate-500 hover:text-red-600 transition-all font-bold text-[10px] uppercase shadow-sm group">
+               <button onClick={async () => { await AuthAPI.logout(); setUser(null); }} className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all font-bold text-[10px] uppercase shadow-xs group cursor-pointer">
                   <LogOut size={14} /><span>Sign Out</span>
                </button>
             </div>
          </aside>
 
-         <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100">
-            <header className="h-16 px-4 sm:px-8 flex items-center justify-between z-40 border-b border-slate-200 bg-white shadow-sm">
+         <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#f8fafc]">
+            <header className="h-16 px-4 sm:px-8 flex items-center justify-between z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-xs text-slate-800">
                <div className="flex items-center gap-4 sm:gap-6">
-                  <button className="lg:hidden p-2 -ml-2 text-slate-600" onClick={() => setIsSidebarOpen(true)}><Menu size={24} /></button>
-                  <div className="hidden sm:flex items-center gap-2">
-                     <Clock size={16} className="text-blue-600" />
-                     <span className="text-[11px] font-black text-slate-800 tracking-wider">
+                  <button className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-slate-800" onClick={() => setIsSidebarOpen(true)}><Menu size={24} /></button>
+                  <div className="hidden sm:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                     <Clock size={15} className="text-blue-600" />
+                     <span className="text-[11px] font-mono font-bold text-slate-700 tracking-wider">
                         {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                      </span>
                   </div>
-                  <div className="hidden sm:block w-px h-6 bg-slate-100"></div>
-                  <h2 className="text-[10px] sm:text-xs font-bold text-slate-800 uppercase tracking-widest truncate max-w-[100px] sm:max-w-none">{subView ? `${activeTab} > ${subView}` : activeTab}</h2>
+                  <div className="hidden sm:block w-px h-6 bg-slate-200"></div>
+                  <h2 className="text-[10px] sm:text-xs font-extrabold text-slate-900 uppercase tracking-widest truncate max-w-[100px] sm:max-w-none">{subView ? `${activeTab} > ${subView}` : activeTab}</h2>
                   <div className="hidden xs:flex gap-1 sm:gap-2"><Badge variant="info">Secure</Badge><Badge variant="success">Live</Badge></div>
                </div>
                <div className="flex items-center gap-3 sm:gap-6">
@@ -4648,7 +4675,7 @@ export default function App() {
                </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-1 sm:p-2 scroll-smooth bg-slate-100 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-5 scroll-smooth bg-[#f8fafc] custom-scrollbar">
                {renderActiveView()}
             </div>
          </main>

@@ -72,18 +72,18 @@ export const StateWarRoomView = ({ alerts = [], parcels = [], onRefresh, onSelec
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* 1. APEX HEADER BANNER */}
-      <div className="bg-slate-900 border-l-4 border-blue-600 text-white p-6 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white border border-slate-200 border-l-4 border-blue-600 text-slate-900 p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest">
+            <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-[9px] font-black uppercase tracking-widest">
               FORT ST. GEORGE APEX NODE
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">MADRAS HIGH COURT COMPLIANCE</span>
+            <span className="text-[10px] text-slate-500 font-mono">MADRAS HIGH COURT COMPLIANCE</span>
           </div>
-          <h1 className="text-2xl font-black uppercase tracking-tight mt-1">
+          <h1 className="text-2xl font-black uppercase tracking-tight mt-1 text-slate-900">
             Tamil Nadu State Land Administration War Room
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Real-time PostGIS surveillance of government poramboke, waterbodies, and highway corridors.
           </p>
         </div>
@@ -92,7 +92,7 @@ export const StateWarRoomView = ({ alerts = [], parcels = [], onRefresh, onSelec
           <select
             value={atrDistrict}
             onChange={(e) => setAtrDistrict(e.target.value)}
-            className="bg-slate-800 text-white text-xs px-2 py-2 border border-slate-700"
+            className="bg-white text-slate-800 text-xs px-2 py-2 border border-slate-300"
           >
             <option value="">-- Select District --</option>
             {Array.from(new Set(alerts.map(a => a.parcel_district || a.district).filter(Boolean))).sort().map(d => (
@@ -104,18 +104,18 @@ export const StateWarRoomView = ({ alerts = [], parcels = [], onRefresh, onSelec
             value={atrWritNo}
             onChange={(e) => setAtrWritNo(e.target.value)}
             placeholder="Writ Petition No"
-            className="bg-slate-800 text-white text-xs px-2 py-2 border border-slate-700 font-mono w-44"
+            className="bg-white text-slate-800 text-xs px-2 py-2 border border-slate-300 font-mono w-44"
           />
           <button
             onClick={onRefresh}
-            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1 border border-slate-700 transition-all"
+            className="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider flex items-center gap-1 border border-slate-300 transition-all shadow-xs"
           >
             <RefreshCcw size={14} /> Refresh
           </button>
           <button
             onClick={handleDownloadHighCourtATR}
             disabled={isExporting}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all"
           >
             <Download size={14} /> {isExporting ? 'Generating...' : 'Court ATR'}
           </button>

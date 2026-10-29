@@ -55,18 +55,18 @@ export const HumanitarianGateView = ({ alerts = [], onRefresh }) => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* 1. WELFARE BANNER */}
-      <div className="bg-slate-900 border-l-4 border-emerald-500 text-white p-6 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white border border-slate-200 border-l-4 border-emerald-500 text-slate-900 p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+            <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
               <HeartHandshake size={11} /> SOCIAL JUSTICE & REHABILITATION
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">TNUHDB STATE COLLABORATION</span>
+            <span className="text-[10px] text-slate-500 font-mono">TNUHDB STATE COLLABORATION</span>
           </div>
-          <h1 className="text-2xl font-black uppercase tracking-tight mt-1">
+          <h1 className="text-2xl font-black uppercase tracking-tight mt-1 text-slate-900">
             Humanitarian Welfare & Vulnerable Citizen Housing Gate
           </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-3xl">
+          <p className="text-xs text-slate-500 mt-1 max-w-3xl">
             In accordance with state welfare policy, zero eviction or demolition is executed against economically vulnerable families,
             thatched huts, or roadside dwellings. These cases are automatically protected and rerouted to the
             Tamil Nadu Urban Habitat Development Board (TNUHDB) for rehabilitation.
@@ -75,7 +75,7 @@ export const HumanitarianGateView = ({ alerts = [], onRefresh }) => {
 
         <button
           onClick={onRefresh}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-slate-700 transition-all shrink-0"
+          className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-slate-300 transition-all shrink-0 shadow-xs"
         >
           <RefreshCcw size={14} /> Refresh
         </button>

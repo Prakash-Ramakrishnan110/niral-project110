@@ -399,23 +399,23 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
     return (
         <div className="space-y-6 animate-in fade-in duration-300 pb-12">
             {/* Executive Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 p-6 text-white border border-slate-800 shadow-xl">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 text-slate-900 border border-slate-200 border-l-4 border-blue-600 shadow-sm">
                 <div>
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-blue-600/30 border border-blue-500/50 rounded-lg">
-                            <Camera className="text-blue-400" size={24} />
+                        <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                            <Camera className="text-blue-600" size={24} />
                         </div>
                         <div>
                             <div className="flex items-center gap-3">
-                                <h2 className="text-2xl font-black uppercase tracking-wider text-white">
+                                <h2 className="text-2xl font-black uppercase tracking-wider text-slate-900">
                                     FIELD EVIDENCE HUB
                                 </h2>
-                                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black px-2.5 py-0.5 border border-emerald-500/40 uppercase tracking-widest flex items-center gap-1.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span className="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2.5 py-0.5 border border-emerald-300 uppercase tracking-widest flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                     LIVE LEGAL & RECON PIPELINE
                                 </span>
                             </div>
-                            <p className="text-xs font-semibold text-slate-400 mt-1">
+                            <p className="text-xs font-semibold text-slate-600 mt-1">
                                 Mobile Ground Photos · Inspector Counter-Sign · Tahsildar Sec 7 Notice · Collector Sec 6 Eviction
                             </p>
                         </div>
@@ -423,14 +423,14 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                 </div>
 
                 <div className="mt-4 md:mt-0 flex items-center gap-3">
-                    <span className="text-[11px] text-slate-400 font-medium">
+                    <span className="text-[11px] text-slate-500 font-medium">
                         Synced: {lastSync.toLocaleTimeString()}
                     </span>
-                    <div className="flex items-center gap-1.5 bg-slate-800 p-1 border border-slate-700">
+                    <div className="flex items-center gap-1.5 bg-slate-50 p-1 border border-slate-200">
                         <select
                             value={boardAtrDistrict}
                             onChange={(e) => setBoardAtrDistrict(e.target.value)}
-                            className="bg-slate-900 text-white text-[11px] px-1.5 py-1 border border-slate-700"
+                            className="bg-white text-slate-800 text-[11px] px-1.5 py-1 border border-slate-300"
                         >
                             <option value="">-- District --</option>
                             {Array.from(new Set(alerts.map(a => a.parcel_district || a.district).filter(Boolean))).sort().map(d => (
@@ -442,7 +442,7 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                             value={boardAtrWritNo}
                             onChange={(e) => setBoardAtrWritNo(e.target.value)}
                             placeholder="Writ No"
-                            className="bg-slate-900 text-white text-[11px] px-1.5 py-1 border border-slate-700 w-28 font-mono"
+                            className="bg-white text-slate-800 text-[11px] px-1.5 py-1 border border-slate-300 w-28 font-mono"
                         />
                         <button 
                             onClick={downloadHighCourtATR}
@@ -731,23 +731,23 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white w-full max-w-4xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden border border-slate-700 animate-in zoom-in-95 duration-200">
                         {/* Modal Header */}
-                        <div className="flex justify-between items-center bg-slate-950 p-4 text-white border-b border-slate-800">
+                        <div className="flex justify-between items-center bg-white p-4 text-slate-900 border-b border-slate-200 border-l-4 border-blue-600">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-600/30 border border-blue-500/40 rounded">
-                                    <Camera size={18} className="text-blue-400" />
+                                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                                    <Camera size={18} className="text-blue-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
+                                    <h3 className="font-black text-sm uppercase tracking-wider text-slate-900 flex items-center gap-2">
                                         FIELD EVIDENCE: {selectedTask.survey} · {selectedTask.taluk}
                                     </h3>
-                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">
                                         Mission ID: #{selectedTask.alertId || selectedTask.id} · Recorded: {selectedTask.date}
                                     </p>
                                 </div>
                             </div>
                             <button 
                                 onClick={() => setSelectedTask(null)}
-                                className="p-2 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                className="p-2 hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
                             >
                                 <X size={20} />
                             </button>
@@ -797,7 +797,7 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                                 {/* Left: High-Res Photo Viewer */}
                                 <div className="lg:col-span-7 space-y-3">
-                                    <div className="relative bg-slate-950 h-80 border border-slate-800 flex items-center justify-center overflow-hidden">
+                                    <div className="relative bg-slate-100 h-80 border border-slate-200 flex items-center justify-center overflow-hidden">
                                         {selectedTask.photos && selectedTask.photos.length > 0 ? (
                                             <img 
                                                 src={selectedTask.photos[activePhotoIdx] || selectedTask.primaryPhoto} 
@@ -929,26 +929,26 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                     )}
 
                                     {/* ─── NEXT GOVERNMENT ACTION ENGINE ───────────────────────────── */}
-                                    <div className="p-4 bg-gradient-to-br from-slate-900 to-blue-950 text-white border border-slate-800 space-y-3">
+                                    <div className="p-4 bg-white text-slate-900 border border-slate-200 border-l-4 border-blue-600 shadow-sm space-y-3">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-amber-400 text-xs font-black uppercase tracking-wider">
-                                                <Gavel size={15} /> NEXT PRESCRIBED GOVERNMENT ACTION
+                                            <div className="flex items-center gap-2 text-slate-800 text-xs font-black uppercase tracking-wider">
+                                                <Gavel size={15} className="text-amber-600" /> NEXT PRESCRIBED GOVERNMENT ACTION
                                             </div>
-                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-800 border border-slate-700 text-[9px] font-mono font-bold text-slate-300">
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 border border-slate-200 text-[9px] font-mono font-bold text-slate-700">
                                                 <span>OPERATOR:</span>
-                                                <span className={isVAO ? 'text-emerald-400' : isInspector ? 'text-amber-400' : 'text-blue-400'}>
+                                                <span className={isVAO ? 'text-emerald-700' : isInspector ? 'text-amber-700' : 'text-blue-700'}>
                                                     {currentUserRole}
                                                 </span>
                                             </div>
                                         </div>
 
                                         {(selectedTask.status === 'NEW' || selectedTask.status === 'VAO_ASSIGNED' || selectedTask.status === 'PENDING') && (
-                                            <div className="p-3 bg-blue-950/70 border border-blue-600/50 text-blue-200 text-xs rounded space-y-1">
-                                                <div className="flex items-center gap-2 font-black text-blue-400">
+                                            <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 text-xs rounded space-y-1">
+                                                <div className="flex items-center gap-2 font-black text-blue-800">
                                                     <Clock size={14} />
                                                     <span>ON-SITE RECON IN PROGRESS (VAO MOBILE SQUAD)</span>
                                                 </div>
-                                                <p className="text-[10.5px] text-blue-300/80 leading-relaxed">
+                                                <p className="text-[10.5px] text-blue-700 leading-relaxed">
                                                     Assigned to Village Administrative Officer (VAO). Ground reconnaissance with geo-tagged photos and boundary checks currently pending upload from field officer mobile app.
                                                 </p>
                                             </div>
@@ -957,18 +957,18 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                         {selectedTask.status === 'VAO_SUBMITTED' && (
                                             <div className="space-y-3">
                                                 {isVAO ? (
-                                                    <div className="p-3 bg-amber-950/70 border border-amber-600/50 text-amber-200 text-xs rounded">
+                                                    <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded">
                                                         <div className="flex items-center gap-2 font-black mb-1">
-                                                            <Lock size={14} className="text-amber-400" />
+                                                            <Lock size={14} className="text-amber-700" />
                                                             <span>AWAITING REVENUE INSPECTOR COUNTER-SIGN</span>
                                                         </div>
-                                                        <p className="text-[10.5px] text-amber-300/80 leading-relaxed">
+                                                        <p className="text-[10.5px] text-amber-800 leading-relaxed">
                                                             You are logged in as <b>VAO</b>. Ground Recon submitted. The Revenue Inspector must counter-verify against the FMB map before statutory proceedings begin.
                                                         </p>
                                                     </div>
                                                 ) : (
                                                     <div>
-                                                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                                                        <p className="text-[11px] text-slate-700 leading-relaxed">
                                                             Field officer has uploaded on-site proof. Revenue Inspector must counter-verify boundary against FMB.
                                                         </p>
                                                         <button 
@@ -983,19 +983,19 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                                 )}
 
                                                 {/* Safety / Error Branching Buttons */}
-                                                <div className="pt-2 border-t border-slate-800/80 flex gap-2">
+                                                <div className="pt-2 border-t border-slate-200 flex gap-2">
                                                     <button 
                                                         onClick={() => setActionModal('FALSE_ALARM')}
-                                                        className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-slate-700 cursor-pointer"
+                                                        className="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-slate-300 cursor-pointer"
                                                     >
-                                                        <ShieldX size={13} className="text-amber-400" /> Mark False Alarm
+                                                        <ShieldX size={13} className="text-amber-600" /> Mark False Alarm
                                                     </button>
                                                     {(!isVAO) && (
                                                         <button 
                                                             onClick={() => setActionModal('REJECT_BOUNDARY')}
-                                                            className="flex-1 py-1.5 px-2 bg-rose-950/80 hover:bg-rose-900 text-rose-300 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-rose-800/60 cursor-pointer"
+                                                            className="flex-1 py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-rose-200 cursor-pointer"
                                                         >
-                                                            <Ban size={13} className="text-rose-400" /> Reject (FMB Error)
+                                                            <Ban size={13} className="text-rose-600" /> Reject (FMB Error)
                                                         </button>
                                                     )}
                                                 </div>
@@ -1005,18 +1005,18 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                         {(selectedTask.status === 'INSPECTOR_APPROVED' || selectedTask.status === 'COLLECTOR_ACCEPTED') && (
                                             <div className="space-y-3">
                                                 {!isTahsildar ? (
-                                                    <div className="p-3 bg-purple-950/70 border border-purple-600/50 text-purple-200 text-xs rounded">
+                                                    <div className="p-3 bg-purple-50 border border-purple-200 text-purple-900 text-xs rounded">
                                                         <div className="flex items-center gap-2 font-black mb-1">
-                                                            <Lock size={14} className="text-purple-400" />
+                                                            <Lock size={14} className="text-purple-700" />
                                                             <span>STATUTORY NOTICE LOCKED (TAHSILDAR ONLY)</span>
                                                         </div>
-                                                        <p className="text-[10.5px] text-purple-300/80 leading-relaxed">
+                                                        <p className="text-[10.5px] text-purple-800 leading-relaxed">
                                                             Under Section 7 of TN Act III of 1905, only the <b>Tahsildar / Collector</b> has legal power to issue a 15-day Show Cause Notice. (Logged in as: <b>{currentUserRole}</b>)
                                                         </p>
                                                     </div>
                                                 ) : (
                                                     <div>
-                                                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                                                        <p className="text-[11px] text-slate-700 leading-relaxed">
                                                             Counter-verification signed. Tahsildar must issue a 15-day statutory Show Cause Notice to the occupant under <b>Section 7 of TN Act III of 1905</b>.
                                                         </p>
                                                         <button 
@@ -1030,12 +1030,12 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                                 )}
 
                                                 {/* Safety dismiss button */}
-                                                <div className="pt-2 border-t border-slate-800/80">
+                                                <div className="pt-2 border-t border-slate-200">
                                                     <button 
                                                         onClick={() => setActionModal('FALSE_ALARM')}
-                                                        className="w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-slate-700 cursor-pointer"
+                                                        className="w-full py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-slate-300 cursor-pointer"
                                                     >
-                                                        <ShieldX size={13} className="text-amber-400" /> Dismiss as False Alarm / Permissible Use
+                                                        <ShieldX size={13} className="text-amber-600" /> Dismiss as False Alarm / Permissible Use
                                                     </button>
                                                 </div>
                                             </div>
@@ -1044,18 +1044,18 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                         {selectedTask.status === 'SECTION_7_ISSUED' && (
                                             <div className="space-y-3">
                                                 {!isTahsildar ? (
-                                                    <div className="p-3 bg-rose-950/70 border border-rose-600/50 text-rose-200 text-xs rounded">
+                                                    <div className="p-3 bg-rose-50 border border-rose-200 text-rose-900 text-xs rounded">
                                                         <div className="flex items-center gap-2 font-black mb-1">
-                                                            <Lock size={14} className="text-rose-400" />
+                                                            <Lock size={14} className="text-rose-700" />
                                                             <span>EVICTION WARRANT LOCKED (TAHSILDAR / COLLECTOR ONLY)</span>
                                                         </div>
-                                                        <p className="text-[10.5px] text-rose-300/80 leading-relaxed">
+                                                        <p className="text-[10.5px] text-rose-800 leading-relaxed">
                                                             Only the <b>Tahsildar or District Collector</b> has statutory power to order Section 6 Eviction with Police Bandobast. (Logged in as: <b>{currentUserRole}</b>)
                                                         </p>
                                                     </div>
                                                 ) : (
                                                     <div>
-                                                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                                                        <p className="text-[11px] text-slate-700 leading-relaxed">
                                                             Section 7 Notice served. Objection period elapsed or disallowed. Collector/Tahsildar must issue the final <b>Section 6 Summary Eviction Order</b> with police bandobast.
                                                         </p>
                                                         <button 
@@ -1069,12 +1069,12 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                                 )}
 
                                                 {/* Safety / Legal objection button */}
-                                                <div className="pt-2 border-t border-slate-800/80">
+                                                <div className="pt-2 border-t border-slate-200">
                                                     <button 
                                                         onClick={() => setActionModal('CANCEL_LEGAL')}
-                                                        className="w-full py-1.5 px-2 bg-indigo-950/90 hover:bg-indigo-900 text-indigo-200 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-indigo-700/60 cursor-pointer"
+                                                        className="w-full py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-indigo-200 cursor-pointer"
                                                     >
-                                                        <Scale size={13} className="text-indigo-400" /> Cancel Eviction (Valid Patta / Court Stay Produced)
+                                                        <Scale size={13} className="text-indigo-600" /> Cancel Eviction (Valid Patta / Court Stay Produced)
                                                     </button>
                                                 </div>
                                             </div>
@@ -1083,18 +1083,18 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                         {selectedTask.status === 'SECTION_6_ORDERED' && (
                                             <div className="space-y-3">
                                                 {isVAO ? (
-                                                    <div className="p-3 bg-amber-950/70 border border-amber-600/50 text-amber-200 text-xs rounded">
+                                                    <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded">
                                                         <div className="flex items-center gap-2 font-black mb-1">
-                                                            <Lock size={14} className="text-amber-400" />
+                                                            <Lock size={14} className="text-amber-700" />
                                                             <span>RESTORATION SIGN-OFF LOCKED</span>
                                                         </div>
-                                                        <p className="text-[10.5px] text-amber-300/80 leading-relaxed">
+                                                        <p className="text-[10.5px] text-amber-800 leading-relaxed">
                                                             Revenue Demolition Squad (RI / Tahsildar with Police escort) must execute demolition and confirm restoration.
                                                         </p>
                                                     </div>
                                                 ) : (
                                                     <div>
-                                                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                                                        <p className="text-[11px] text-slate-700 leading-relaxed">
                                                             Eviction warrant active. Revenue squad, JCB machinery, and Police bandobast deployed. Confirm physical demolition to restore land.
                                                         </p>
                                                         <button 
@@ -1110,29 +1110,29 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                         )}
 
                                         {(selectedTask.status === 'RESOLVED' || selectedTask.status === 'SUCCESS' || selectedTask.status === 'RESTORED') && (
-                                            <div className="p-2.5 bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center gap-2">
-                                                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                                            <div className="p-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                                                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
                                                 <span>LAND OFFICIALLY RESTORED · TAMIL NILAM REGISTRY UPDATED</span>
                                             </div>
                                         )}
 
                                         {selectedTask.status === 'FALSE_POSITIVE' && (
-                                            <div className="p-2.5 bg-slate-900 border border-slate-700 text-slate-300 text-xs font-bold flex items-center gap-2">
-                                                <CheckCircle2 size={16} className="text-slate-400 shrink-0" />
+                                            <div className="p-2.5 bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold flex items-center gap-2">
+                                                <CheckCircle2 size={16} className="text-slate-600 shrink-0" />
                                                 <span>ALERT DISMISSED AS FALSE ALARM · NO ENCROACHMENT FOUND</span>
                                             </div>
                                         )}
 
                                         {selectedTask.status === 'REJECTED_BOUNDARY' && (
-                                            <div className="p-2.5 bg-rose-950 border border-rose-800 text-rose-300 text-xs font-bold flex items-center gap-2">
-                                                <Ban size={16} className="text-rose-400 shrink-0" />
+                                            <div className="p-2.5 bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold flex items-center gap-2">
+                                                <Ban size={16} className="text-rose-600 shrink-0" />
                                                 <span>REJECTED · FMB BOUNDARY SURVEY MISMATCH</span>
                                             </div>
                                         )}
 
                                         {selectedTask.status === 'CANCELLED_LEGAL' && (
-                                            <div className="p-2.5 bg-indigo-950 border border-indigo-700 text-indigo-300 text-xs font-bold flex items-center gap-2">
-                                                <Scale size={16} className="text-indigo-400 shrink-0" />
+                                            <div className="p-2.5 bg-indigo-50 border border-indigo-300 text-indigo-800 text-xs font-bold flex items-center gap-2">
+                                                <Scale size={16} className="text-indigo-600 shrink-0" />
                                                 <span>EVICTION CANCELLED · VALID PATTA / COURT STAY CONFIRMED</span>
                                             </div>
                                         )}
@@ -1157,10 +1157,10 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
             {/* ─── ACTION TRIGGER SUB-MODAL ────────────────────────────────────────────── */}
             {actionModal && selectedTask && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-lg shadow-2xl border border-slate-700 overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="bg-slate-950 p-4 text-white flex justify-between items-center">
-                            <h4 className="text-xs font-black uppercase tracking-wider flex items-center gap-2">
-                                <Gavel size={16} className="text-amber-400" />
+                    <div className="bg-white w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-white p-4 text-slate-900 border-b border-slate-200 border-l-4 border-blue-600 flex justify-between items-center">
+                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                                <Gavel size={16} className="text-amber-600" />
                                 {actionModal === 'SEC_7' && 'ISSUE SECTION 7 SHOW CAUSE NOTICE'}
                                 {actionModal === 'SEC_6' && 'ISSUE SECTION 6 FINAL EVICTION ORDER'}
                                 {actionModal === 'RESTORE' && 'CONFIRM DEMOLITION & RECLAIM LAND'}
@@ -1168,7 +1168,7 @@ export const FieldOpsTaskBoard = ({ alerts = [], user = {}, patchAlertStatus }) 
                                 {actionModal === 'REJECT_BOUNDARY' && 'REJECT ALERT (FMB BOUNDARY MISMATCH)'}
                                 {actionModal === 'CANCEL_LEGAL' && 'CANCEL PROCEEDINGS (LEGAL PATTA / STAY)'}
                             </h4>
-                            <button onClick={() => setActionModal(null)} className="text-slate-400 hover:text-white cursor-pointer">
+                            <button onClick={() => setActionModal(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                                 <X size={18} />
                             </button>
                         </div>

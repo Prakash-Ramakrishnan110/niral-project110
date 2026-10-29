@@ -213,33 +213,32 @@ export const GovernmentLandRegistryView = ({ user }) => {
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
             {/* Header */}
-            <div className="bg-slate-900 p-8 border-b-4 border-blue-600 shadow-2xl relative overflow-hidden">
-                <div className="absolute right-0 top-0 h-full w-1/3 bg-blue-600/10 skew-x-12 translate-x-1/2" />
+            <div className="bg-white p-8 border border-slate-200 border-l-4 border-blue-600 shadow-sm relative overflow-hidden">
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="bg-blue-600 p-2 rounded-none text-white shadow-lg"><Landmark size={24} /></div>
-                            <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Official Government Land Registry</h2>
+                            <div className="bg-blue-600 p-2 rounded-none text-white shadow-sm"><Landmark size={24} /></div>
+                            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Official Government Land Registry</h2>
                         </div>
                         <div className="flex items-center gap-2">
-                            <p className="text-blue-200 text-xs font-bold uppercase tracking-widest">
-                                Jurisdiction: <span className="text-white bg-blue-600/30 px-2 py-0.5">{user?.jurisdiction?.level || 'STATE'} - {user?.jurisdiction?.value || 'All'}</span>
+                            <p className="text-slate-600 text-xs font-bold uppercase tracking-widest">
+                                Jurisdiction: <span className="text-blue-700 bg-blue-50 px-2 py-0.5 border border-blue-200">{user?.jurisdiction?.level || 'STATE'} - {user?.jurisdiction?.value || 'All'}</span>
                             </p>
                             <Badge variant="info" className="ml-2 animate-pulse">Live Sync Active</Badge>
                         </div>
                     </div>
                     <div className="flex gap-4 flex-wrap">
-                        <div className="bg-white/5 border border-white/10 p-4 rounded-none min-w-[120px]">
-                            <p className="text-blue-400 text-[8px] font-black uppercase mb-1">Total Protected</p>
-                            <p className="text-2xl font-black text-white">{loading ? '...' : stats.total}</p>
+                        <div className="bg-slate-50 border border-slate-200 p-4 rounded-none min-w-[120px]">
+                            <p className="text-blue-600 text-[8px] font-black uppercase mb-1">Total Protected</p>
+                            <p className="text-2xl font-black text-slate-900">{loading ? '...' : stats.total}</p>
                         </div>
-                        <div className="bg-red-600 p-4 rounded-none min-w-[120px] shadow-lg">
-                            <p className="text-white/80 text-[8px] font-black uppercase mb-1">Active Threats</p>
-                            <p className="text-2xl font-black text-white">{loading ? '...' : stats.encroached}</p>
+                        <div className="bg-rose-50 border border-rose-200 p-4 rounded-none min-w-[120px]">
+                            <p className="text-rose-700 text-[8px] font-black uppercase mb-1">Active Threats</p>
+                            <p className="text-2xl font-black text-rose-700">{loading ? '...' : stats.encroached}</p>
                         </div>
-                        <div className="bg-amber-600 p-4 rounded-none min-w-[120px] shadow-lg">
-                            <p className="text-white/80 text-[8px] font-black uppercase mb-1">Roadside Parcels</p>
-                            <p className="text-2xl font-black text-white">{loading ? '...' : stats.roadside}</p>
+                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-none min-w-[120px]">
+                            <p className="text-amber-700 text-[8px] font-black uppercase mb-1">Roadside Parcels</p>
+                            <p className="text-2xl font-black text-amber-700">{loading ? '...' : stats.roadside}</p>
                         </div>
                     </div>
                 </div>
@@ -433,13 +432,13 @@ export const GovernmentLandRegistryView = ({ user }) => {
                     )}
 
                     {/* Navigation Shortcut */}
-                    <div className="bg-slate-900 p-6 text-white shadow-xl">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2"><Navigation size={14} className="text-blue-400" /> Operational Jump</h4>
+                    <div className="bg-white border border-slate-200 border-l-4 border-blue-600 p-6 text-slate-900 shadow-sm">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2"><Navigation size={14} className="text-blue-600" /> Operational Jump</h4>
                         <div className="space-y-2">
-                            <button className="w-full py-2.5 bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-between px-3">
+                            <button className="w-full py-2.5 bg-slate-50 border border-slate-200 text-slate-700 text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center justify-between px-3">
                                 View District Map <ArrowRight size={12} />
                             </button>
-                            <button className="w-full py-2.5 bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-between px-3">
+                            <button className="w-full py-2.5 bg-slate-50 border border-slate-200 text-slate-700 text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center justify-between px-3">
                                 AI Hub Monitor <ArrowRight size={12} />
                             </button>
                         </div>
