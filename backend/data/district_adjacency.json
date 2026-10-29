@@ -1,0 +1,42 @@
+[
+  {
+    "district": "Salem",
+    "adjacent": "Namakkal"
+  },
+  {
+    "district": "Salem",
+    "adjacent": "Dharmapuri"
+  },
+  {
+    "district": "Salem",
+    "adjacent": "Erode"
+  },
+  {
+    "district": "Salem",
+    "adjacent": "Kallakurichi"
+  },
+  {
+    "district": "Salem",
+    "adjacent": "Tiruchirappalli"
+  },
+  {
+    "district": "Coimbatore",
+    "adjacent": "Tiruppur"
+  },
+  {
+    "district": "Coimbatore",
+    "adjacent": "Nilgiris"
+  },
+  {
+    "district": "Coimbatore",
+    "adjacent": "Erode"
+  },
+  {
+    "district": "Chennai",
+    "adjacent": "Tiruvallur"
+  },
+  {
+    "district": "Chennai",
+    "adjacent": "Chengalpattu"
+  }
+]

@@ -1,0 +1,487 @@
+{
+  "state": {
+    "code": "TN",
+    "lgd_code": 33,
+    "name_en": "Tamil Nadu",
+    "name_ta": "தமிழ்நாடு"
+  },
+  "districts": [
+    {
+      "code": "TN-ARI",
+      "lgd_code": 602,
+      "name_en": "Ariyalur",
+      "name_ta": "அரியலூர்"
+    },
+    {
+      "code": "TN-CGL",
+      "lgd_code": 730,
+      "name_en": "Chengalpattu",
+      "name_ta": "செங்கல்பட்டு"
+    },
+    {
+      "code": "TN-CHN",
+      "lgd_code": 565,
+      "name_en": "Chennai",
+      "name_ta": "சென்னை"
+    },
+    {
+      "code": "TN-CBE",
+      "lgd_code": 566,
+      "name_en": "Coimbatore",
+      "name_ta": "கோயம்புத்தூர்"
+    },
+    {
+      "code": "TN-CUD",
+      "lgd_code": 567,
+      "name_en": "Cuddalore",
+      "name_ta": "கடலூர்"
+    },
+    {
+      "code": "TN-DPI",
+      "lgd_code": 568,
+      "name_en": "Dharmapuri",
+      "name_ta": "தர்மபுரி"
+    },
+    {
+      "code": "TN-DGL",
+      "lgd_code": 569,
+      "name_en": "Dindigul",
+      "name_ta": "திண்டுக்கல்"
+    },
+    {
+      "code": "TN-ERD",
+      "lgd_code": 570,
+      "name_en": "Erode",
+      "name_ta": "ஈரோடு"
+    },
+    {
+      "code": "TN-KLK",
+      "lgd_code": 731,
+      "name_en": "Kallakurichi",
+      "name_ta": "கள்ளக்குறிச்சி"
+    },
+    {
+      "code": "TN-KCH",
+      "lgd_code": 571,
+      "name_en": "Kancheepuram",
+      "name_ta": "காஞ்சிபுரம்"
+    },
+    {
+      "code": "TN-KKI",
+      "lgd_code": 572,
+      "name_en": "Kanniyakumari",
+      "name_ta": "கன்னியாகுமரி"
+    },
+    {
+      "code": "TN-KRR",
+      "lgd_code": 573,
+      "name_en": "Karur",
+      "name_ta": "கரூர்"
+    },
+    {
+      "code": "TN-KGI",
+      "lgd_code": 574,
+      "name_en": "Krishnagiri",
+      "name_ta": "கிருஷ்ணகிரி"
+    },
+    {
+      "code": "TN-MDU",
+      "lgd_code": 575,
+      "name_en": "Madurai",
+      "name_ta": "மதுரை"
+    },
+    {
+      "code": "TN-MYL",
+      "lgd_code": 732,
+      "name_en": "Mayiladuthurai",
+      "name_ta": "மயிலாடுதுறை"
+    },
+    {
+      "code": "TN-NGP",
+      "lgd_code": 576,
+      "name_en": "Nagapattinam",
+      "name_ta": "நாகப்பட்டினம்"
+    },
+    {
+      "code": "TN-NKL",
+      "lgd_code": 577,
+      "name_en": "Namakkal",
+      "name_ta": "நாமக்கல்"
+    },
+    {
+      "code": "TN-NLG",
+      "lgd_code": 578,
+      "name_en": "Nilgiris",
+      "name_ta": "நீலகிரி"
+    },
+    {
+      "code": "TN-PBL",
+      "lgd_code": 579,
+      "name_en": "Perambalur",
+      "name_ta": "பெரம்பலூர்"
+    },
+    {
+      "code": "TN-PDK",
+      "lgd_code": 580,
+      "name_en": "Pudukkottai",
+      "name_ta": "புதுக்கோட்டை"
+    },
+    {
+      "code": "TN-RMD",
+      "lgd_code": 581,
+      "name_en": "Ramanathapuram",
+      "name_ta": "ராமநாதபுரம்"
+    },
+    {
+      "code": "TN-RPT",
+      "lgd_code": 733,
+      "name_en": "Ranipet",
+      "name_ta": "ராணிப்பேட்டை"
+    },
+    {
+      "code": "TN-SLM",
+      "lgd_code": 582,
+      "name_en": "Salem",
+      "name_ta": "சேலம்"
+    },
+    {
+      "code": "TN-SVG",
+      "lgd_code": 583,
+      "name_en": "Sivaganga",
+      "name_ta": "சிவகங்கை"
+    },
+    {
+      "code": "TN-TKS",
+      "lgd_code": 734,
+      "name_en": "Tenkasi",
+      "name_ta": "தென்காசி"
+    },
+    {
+      "code": "TN-TNJ",
+      "lgd_code": 584,
+      "name_en": "Thanjavur",
+      "name_ta": "தஞ்சாவூர்"
+    },
+    {
+      "code": "TN-THN",
+      "lgd_code": 585,
+      "name_en": "Theni",
+      "name_ta": "தேனி"
+    },
+    {
+      "code": "TN-TTK",
+      "lgd_code": 586,
+      "name_en": "Thoothukudi",
+      "name_ta": "தூத்துக்குடி"
+    },
+    {
+      "code": "TN-TRY",
+      "lgd_code": 587,
+      "name_en": "Tiruchirappalli",
+      "name_ta": "திருச்சிராப்பள்ளி"
+    },
+    {
+      "code": "TN-TNL",
+      "lgd_code": 588,
+      "name_en": "Tirunelveli",
+      "name_ta": "திருநெல்வேலி"
+    },
+    {
+      "code": "TN-TPR",
+      "lgd_code": 735,
+      "name_en": "Tirupathur",
+      "name_ta": "திருப்பத்தூர்"
+    },
+    {
+      "code": "TN-TUP",
+      "lgd_code": 634,
+      "name_en": "Tiruppur",
+      "name_ta": "திருப்பூர்"
+    },
+    {
+      "code": "TN-TLR",
+      "lgd_code": 589,
+      "name_en": "Tiruvallur",
+      "name_ta": "திருவள்ளூர்"
+    },
+    {
+      "code": "TN-TVM",
+      "lgd_code": 590,
+      "name_en": "Tiruvannamalai",
+      "name_ta": "திருவண்ணாமலை"
+    },
+    {
+      "code": "TN-TVR",
+      "lgd_code": 591,
+      "name_en": "Tiruvarur",
+      "name_ta": "திருவாரூர்"
+    },
+    {
+      "code": "TN-VLR",
+      "lgd_code": 592,
+      "name_en": "Vellore",
+      "name_ta": "வேலூர்"
+    },
+    {
+      "code": "TN-VPM",
+      "lgd_code": 593,
+      "name_en": "Viluppuram",
+      "name_ta": "விழுப்புரம்"
+    },
+    {
+      "code": "TN-VNR",
+      "lgd_code": 594,
+      "name_en": "Virudhunagar",
+      "name_ta": "விருதுநகர்"
+    }
+  ],
+  "taluks": [
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-ATT",
+      "lgd_code": 5601,
+      "name_en": "Attur",
+      "name_ta": "ஆத்தூர்"
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-EDP",
+      "lgd_code": 5602,
+      "name_en": "Edappadi",
+      "name_ta": "எடப்பாடி"
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-MTR",
+      "lgd_code": 5603,
+      "name_en": "Mettur",
+      "name_ta": "மேட்டூர்"
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-OML",
+      "lgd_code": 5604,
+      "name_en": "Omalur",
+      "name_ta": "ஓமலூர்"
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-SLMS",
+      "lgd_code": 5605,
+      "name_en": "Salem South",
+      "name_ta": "சேலம் தெற்கு"
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-SLMW",
+      "lgd_code": 5606,
+      "name_en": "Salem West",
+      "name_ta": "சேலம் மேற்கு"
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-SNK",
+      "lgd_code": 5607,
+      "name_en": "Sankagiri",
+      "name_ta": "சங்ககிரி"
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-YCD",
+      "lgd_code": 5608,
+      "name_en": "Yercaud",
+      "name_ta": "ஏற்காடு"
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-SLM",
+      "lgd_code": 5609,
+      "name_en": "Salem",
+      "name_ta": "சேலம்"
+    },
+    {
+      "district_code": "TN-CBE",
+      "code": "TN-CBE-CBN",
+      "lgd_code": 5501,
+      "name_en": "Coimbatore North",
+      "name_ta": "கோயம்புத்தூர் வடக்கு"
+    },
+    {
+      "district_code": "TN-CHN",
+      "code": "TN-CHN-EGM",
+      "lgd_code": 5401,
+      "name_en": "Egmore",
+      "name_ta": "எழும்பூர்"
+    }
+  ],
+  "villages": [
+    {
+      "taluk_code": "TN-SLM-ATT",
+      "code": "TN-SLM-ATT-COR",
+      "lgd_code": 634001,
+      "name_en": "Attur NH-79 Corridor",
+      "name_ta": "ஆத்தூர் தேசிய நெடுஞ்சாலை 79"
+    },
+    {
+      "taluk_code": "TN-SLM-ATT",
+      "code": "TN-SLM-ATT-TWN",
+      "lgd_code": 634002,
+      "name_en": "Attur Town",
+      "name_ta": "ஆத்தூர் நகரம்"
+    },
+    {
+      "taluk_code": "TN-SLM-ATT",
+      "code": "TN-SLM-ATT-NRS",
+      "lgd_code": 634003,
+      "name_en": "Narasingapuram",
+      "name_ta": "நரசிங்கபுரம்"
+    },
+    {
+      "taluk_code": "TN-SLM-EDP",
+      "code": "TN-SLM-EDP-TWN",
+      "lgd_code": 634004,
+      "name_en": "Edappadi Town",
+      "name_ta": "எடப்பாடி நகரம்"
+    },
+    {
+      "taluk_code": "TN-SLM-EDP",
+      "code": "TN-SLM-EDP-PLM",
+      "lgd_code": 634005,
+      "name_en": "Poolampatti",
+      "name_ta": "பூலாம்பட்டி"
+    },
+    {
+      "taluk_code": "TN-SLM-MTR",
+      "code": "TN-SLM-MTR-KLT",
+      "lgd_code": 634006,
+      "name_en": "Kolathur",
+      "name_ta": "கொளத்தூர்"
+    },
+    {
+      "taluk_code": "TN-SLM-MTR",
+      "code": "TN-SLM-MTR-MCH",
+      "lgd_code": 634007,
+      "name_en": "Mecheri",
+      "name_ta": "மேச்சேரி"
+    },
+    {
+      "taluk_code": "TN-SLM-MTR",
+      "code": "TN-SLM-MTR-DAM",
+      "lgd_code": 634008,
+      "name_en": "Mettur Dam",
+      "name_ta": "மேட்டூர் அணை"
+    },
+    {
+      "taluk_code": "TN-SLM-OML",
+      "code": "TN-SLM-OML-NTH",
+      "lgd_code": 634009,
+      "name_en": "Omalur North",
+      "name_ta": "ஓமலூர் வடக்கு"
+    },
+    {
+      "taluk_code": "TN-SLM-OML",
+      "code": "TN-SLM-OML-STH",
+      "lgd_code": 634010,
+      "name_en": "Omalur South",
+      "name_ta": "ஓமலூர் தெற்கு"
+    },
+    {
+      "taluk_code": "TN-SLM-OML",
+      "code": "TN-SLM-OML-TRM",
+      "lgd_code": 634011,
+      "name_en": "Tharamangalam",
+      "name_ta": "தாரமங்கலம்"
+    },
+    {
+      "taluk_code": "TN-SLM-SLMS",
+      "code": "TN-SLM-SLMS-ANN",
+      "lgd_code": 634012,
+      "name_en": "Annathanapatty",
+      "name_ta": "அன்னதானப்பட்டி"
+    },
+    {
+      "taluk_code": "TN-SLM-SLMS",
+      "code": "TN-SLM-SLMS-DAD",
+      "lgd_code": 634013,
+      "name_en": "Dadagapatty",
+      "name_ta": "தாதகாப்பட்டி"
+    },
+    {
+      "taluk_code": "TN-SLM-SLMS",
+      "code": "TN-SLM-SLMS-KND",
+      "lgd_code": 634014,
+      "name_en": "Kondalampatti Bypass",
+      "name_ta": "கொண்டலாம்பட்டி பைபாஸ்"
+    },
+    {
+      "taluk_code": "TN-SLM-SLMW",
+      "code": "TN-SLM-SLMW-HST",
+      "lgd_code": 634015,
+      "name_en": "Hasthampatti Roundtana",
+      "name_ta": "அஸ்தம்பட்டி ரவுண்டானா"
+    },
+    {
+      "taluk_code": "TN-SLM-SLMW",
+      "code": "TN-SLM-SLMW-JGR",
+      "lgd_code": 634016,
+      "name_en": "Jagir Ammapalayam",
+      "name_ta": "ஜாகீர் அம்மாபாளையம்"
+    },
+    {
+      "taluk_code": "TN-SLM-SLMW",
+      "code": "TN-SLM-SLMW-KND",
+      "lgd_code": 634017,
+      "name_en": "Kandhampatty",
+      "name_ta": "கந்தம்பட்டி"
+    },
+    {
+      "taluk_code": "TN-SLM-SLMW",
+      "code": "TN-SLM-SLMW-KNK",
+      "lgd_code": 634018,
+      "name_en": "Kannankurichi",
+      "name_ta": "கண்ணங்குறிச்சி"
+    },
+    {
+      "taluk_code": "TN-SLM-SLMW",
+      "code": "TN-SLM-SLMW-SRM",
+      "lgd_code": 634019,
+      "name_en": "Suramangalam",
+      "name_ta": "சுரமங்கலம்"
+    },
+    {
+      "taluk_code": "TN-SLM-SNK",
+      "code": "TN-SLM-SNK-TWN",
+      "lgd_code": 634020,
+      "name_en": "Sankagiri Town",
+      "name_ta": "சங்ககிரி நகரம்"
+    },
+    {
+      "taluk_code": "TN-SLM-SNK",
+      "code": "TN-SLM-SNK-THV",
+      "lgd_code": 634021,
+      "name_en": "Thevur",
+      "name_ta": "தேவூர்"
+    },
+    {
+      "taluk_code": "TN-SLM-YCD",
+      "code": "TN-SLM-YCD-KLY",
+      "lgd_code": 634022,
+      "name_en": "Kiliyur",
+      "name_ta": "கிளியூர்"
+    },
+    {
+      "taluk_code": "TN-SLM-YCD",
+      "code": "TN-SLM-YCD-TWN",
+      "lgd_code": 634023,
+      "name_en": "Yercaud Town",
+      "name_ta": "ஏற்காடு நகரம்"
+    },
+    {
+      "taluk_code": "TN-CBE-CBN",
+      "code": "TN-CBE-CBN-KLP",
+      "lgd_code": 635001,
+      "name_en": "Kalapatti",
+      "name_ta": "காளப்பட்டி"
+    }
+  ]
+}

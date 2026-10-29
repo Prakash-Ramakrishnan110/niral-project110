@@ -1,0 +1,160 @@
+{
+  "revenue_divisions": [
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-DIV-SLM",
+      "name_en": "Salem",
+      "name_ta": "சேலம்",
+      "taluk_codes": [
+        "TN-SLM-SLMW",
+        "TN-SLM-SLMS",
+        "TN-SLM-YCD",
+        "TN-SLM-SLM"
+      ]
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-DIV-MTR",
+      "name_en": "Mettur",
+      "name_ta": "மேட்டூர்",
+      "taluk_codes": [
+        "TN-SLM-MTR",
+        "TN-SLM-OML"
+      ]
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-DIV-ATT",
+      "name_en": "Attur",
+      "name_ta": "ஆத்தூர்",
+      "taluk_codes": [
+        "TN-SLM-ATT"
+      ]
+    },
+    {
+      "district_code": "TN-SLM",
+      "code": "TN-SLM-DIV-SNK",
+      "name_en": "Sankagiri",
+      "name_ta": "சங்ககிரி",
+      "taluk_codes": [
+        "TN-SLM-SNK",
+        "TN-SLM-EDP"
+      ]
+    },
+    {
+      "district_code": "TN-CBE",
+      "code": "TN-CBE-DIV-CBE",
+      "name_en": "Coimbatore North",
+      "name_ta": "கோயம்புத்தூர் வடக்கு",
+      "taluk_codes": [
+        "TN-CBE-CBN"
+      ]
+    }
+  ],
+  "firkas": [
+    {
+      "taluk_code": "TN-SLM-SLMW",
+      "code": "TN-SLM-SLMW-FRK-SRM",
+      "name_en": "Suramangalam",
+      "name_ta": "சுரமங்கலம்",
+      "village_codes": [
+        "TN-SLM-SLMW-SRM",
+        "TN-SLM-SLMW-HST",
+        "TN-SLM-SLMW-JGR"
+      ]
+    },
+    {
+      "taluk_code": "TN-SLM-SLMW",
+      "code": "TN-SLM-SLMW-FRK-KNK",
+      "name_en": "Kannankurichi",
+      "name_ta": "கண்ணங்குறிச்சி",
+      "village_codes": [
+        "TN-SLM-SLMW-KNK",
+        "TN-SLM-SLMW-KND"
+      ]
+    },
+    {
+      "taluk_code": "TN-SLM-SLMS",
+      "code": "TN-SLM-SLMS-FRK-KND",
+      "name_en": "Kondalampatti",
+      "name_ta": "கொண்டலாம்பட்டி",
+      "village_codes": [
+        "TN-SLM-SLMS-ANN",
+        "TN-SLM-SLMS-DAD",
+        "TN-SLM-SLMS-KND"
+      ]
+    },
+    {
+      "taluk_code": "TN-SLM-ATT",
+      "code": "TN-SLM-ATT-FRK-ATT",
+      "name_en": "Attur",
+      "name_ta": "ஆத்தூர்",
+      "village_codes": [
+        "TN-SLM-ATT-COR",
+        "TN-SLM-ATT-TWN",
+        "TN-SLM-ATT-NRS"
+      ]
+    },
+    {
+      "taluk_code": "TN-SLM-EDP",
+      "code": "TN-SLM-EDP-FRK-EDP",
+      "name_en": "Edappadi",
+      "name_ta": "எடப்பாடி",
+      "village_codes": [
+        "TN-SLM-EDP-TWN",
+        "TN-SLM-EDP-PLM"
+      ]
+    },
+    {
+      "taluk_code": "TN-SLM-MTR",
+      "code": "TN-SLM-MTR-FRK-MTR",
+      "name_en": "Mettur",
+      "name_ta": "மேட்டூர்",
+      "village_codes": [
+        "TN-SLM-MTR-KLT",
+        "TN-SLM-MTR-MCH",
+        "TN-SLM-MTR-DAM"
+      ]
+    },
+    {
+      "taluk_code": "TN-SLM-OML",
+      "code": "TN-SLM-OML-FRK-OML",
+      "name_en": "Omalur",
+      "name_ta": "ஓமலூர்",
+      "village_codes": [
+        "TN-SLM-OML-NTH",
+        "TN-SLM-OML-STH",
+        "TN-SLM-OML-TRM"
+      ]
+    },
+    {
+      "taluk_code": "TN-SLM-SNK",
+      "code": "TN-SLM-SNK-FRK-SNK",
+      "name_en": "Sankagiri",
+      "name_ta": "சங்ககிரி",
+      "village_codes": [
+        "TN-SLM-SNK-TWN",
+        "TN-SLM-SNK-THV"
+      ]
+    },
+    {
+      "taluk_code": "TN-SLM-YCD",
+      "code": "TN-SLM-YCD-FRK-YCD",
+      "name_en": "Yercaud",
+      "name_ta": "ஏற்காடு",
+      "village_codes": [
+        "TN-SLM-YCD-KLY",
+        "TN-SLM-YCD-TWN"
+      ]
+    },
+    {
+      "taluk_code": "TN-CBE-CBN",
+      "code": "TN-CBE-CBN-FRK-KLP",
+      "name_en": "Kalapatti",
+      "name_ta": "காளப்பட்டி",
+      "village_codes": [
+        "TN-CBE-CBN-KLP"
+      ]
+    }
+  ]
+}

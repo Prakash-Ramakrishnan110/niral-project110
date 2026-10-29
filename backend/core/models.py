@@ -290,3 +290,156 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} ({self.role}) - {self.district or 'Statewide'}"
 
+
+# ==============================================================================
+# STATEWIDE ADMINISTRATIVE JURISDICTION HIERARCHY (PART 4.1)
+# State › District › Revenue Division (RDO) › Taluk › Firka › Revenue Village
+# ==============================================================================
+
+class State(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=10, unique=True, help_text="e.g. TN")
+    lgd_code = models.IntegerField(unique=True, null=True, blank=True)
+    name_en = models.CharField(max_length=100)
+    name_ta = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['name_en']
+
+    def __str__(self):
+        return f"{self.name_en} ({self.code})"
+
+
+class District(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    state = models.ForeignKey(State, on_delete=models.CASCADE, related_name='districts')
+    code = models.CharField(max_length=20, unique=True, help_text="e.g. TN-SLM")
+    lgd_code = models.IntegerField(unique=True, null=True, blank=True)
+    name_en = models.CharField(max_length=100, db_index=True)
+    name_ta = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['name_en']
+
+    def __str__(self):
+        return f"{self.name_en} District ({self.code})"
+
+
+class RevenueDivision(models.Model):
+    """
+    RDO Circle / Sub-Collector Division under Revenue Administration.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='revenue_divisions')
+    code = models.CharField(max_length=30, unique=True, help_text="e.g. TN-SLM-RDO-SLM")
+    name_en = models.CharField(max_length=100)
+    name_ta = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['district__name_en', 'name_en']
+        unique_together = ('district', 'name_en')
+
+    def __str__(self):
+        return f"{self.name_en} Division ({self.district.name_en})"
+
+
+class Taluk(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='taluks')
+    revenue_division = models.ForeignKey(RevenueDivision, on_delete=models.SET_NULL, null=True, blank=True, related_name='taluks')
+    code = models.CharField(max_length=30, unique=True, help_text="e.g. TN-SLM-SLMW")
+    lgd_code = models.IntegerField(null=True, blank=True)
+    name_en = models.CharField(max_length=100, db_index=True)
+    name_ta = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['district__name_en', 'name_en']
+        unique_together = ('district', 'name_en')
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.revenue_division and self.revenue_division.district_id != self.district_id:
+            raise ValidationError("Taluk's Revenue Division must belong to the same District.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name_en} Taluk ({self.district.name_en})"
+
+
+class Firka(models.Model):
+    """
+    Revenue Inspector (RI) Circle.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    taluk = models.ForeignKey(Taluk, on_delete=models.CASCADE, related_name='firkas')
+    code = models.CharField(max_length=40, unique=True, help_text="e.g. TN-SLM-SLMW-SRM")
+    name_en = models.CharField(max_length=100, db_index=True)
+    name_ta = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['taluk__name_en', 'name_en']
+        unique_together = ('taluk', 'name_en')
+
+    def __str__(self):
+        return f"{self.name_en} Firka ({self.taluk.name_en})"
+
+
+class RevenueVillage(models.Model):
+    """
+    Revenue Village presided by Village Administrative Officer (VAO).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='villages')
+    taluk = models.ForeignKey(Taluk, on_delete=models.CASCADE, related_name='villages')
+    firka = models.ForeignKey(Firka, on_delete=models.SET_NULL, null=True, blank=True, related_name='villages')
+    code = models.CharField(max_length=50, unique=True, help_text="e.g. TN-SLM-SLMW-KNK")
+    lgd_code = models.IntegerField(null=True, blank=True)
+    name_en = models.CharField(max_length=150, db_index=True)
+    name_ta = models.CharField(max_length=150)
+    boundary = models.MultiPolygonField(srid=4326, null=True, blank=True)
+
+    class Meta:
+        ordering = ['district__name_en', 'taluk__name_en', 'name_en']
+        unique_together = ('taluk', 'name_en')
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.taluk and self.taluk.district_id != self.district_id:
+            raise ValidationError("Village's Taluk must belong to the Village's District.")
+        if self.firka and self.firka.taluk_id != self.taluk_id:
+            raise ValidationError("Village's Firka must belong to the Village's Taluk.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name_en} ({self.taluk.name_en}, {self.district.name_en})"
+
+
+class DistrictAdjacency(models.Model):
+    """
+    Pairwise district adjacency for cross-district peer audit selection.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='adjacencies_from')
+    adjacent_district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='adjacencies_to')
+
+    class Meta:
+        unique_together = ('district', 'adjacent_district')
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.district_id == self.adjacent_district_id:
+            raise ValidationError("A district cannot be adjacent to itself.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.district.name_en} <-> {self.adjacent_district.name_en}"
+
