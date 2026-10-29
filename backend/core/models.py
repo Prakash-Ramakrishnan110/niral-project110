@@ -206,9 +206,16 @@ class EncroachmentAlert(models.Model):
         return f"Alert {self.id} - {self.tier} - {self.status}"
 
 class FieldVerification(models.Model):
+    VERDICT_CHOICES = [
+        ('ENCROACHMENT_CONFIRMED', 'Encroachment Confirmed'),
+        ('FALSE_POSITIVE', 'False Positive (No Encroachment Found)'),
+        ('UNCERTAIN_NEEDS_REVISIT', 'Uncertain / Joint Survey Needed'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     alert = models.OneToOneField(EncroachmentAlert, on_delete=models.CASCADE, related_name='verification')
     officer_name = models.CharField(max_length=255)
+    verdict = models.CharField(max_length=40, choices=VERDICT_CHOICES, default='ENCROACHMENT_CONFIRMED')
     gps_lat = models.FloatField()
     gps_lon = models.FloatField()
     photos = models.JSONField(default=list, blank=True, null=True)

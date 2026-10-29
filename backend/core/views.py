@@ -456,39 +456,82 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         alert_id = request.data.get('alert')
-        officer_name = request.user.get_full_name() or request.user.username
-        if alert_id:
-            try:
-                existing = FieldVerification.objects.get(alert_id=alert_id)
-                data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
-                data['officer_name'] = officer_name
-                serializer = self.get_serializer(existing, data=data, partial=True)
-                serializer.is_valid(raise_exception=True)
-                verification = serializer.save()
-                
-                alert = verification.alert
-                requested_status = request.data.get('status', 'VAO_SUBMITTED')
-                alert.status = requested_status
-                if request.data.get('remarks'):
-                    alert.resolution_notes = request.data.get('remarks')
-                alert.save()
-                
-                headers = self.get_success_headers(serializer.data)
-                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-            except FieldVerification.DoesNotExist:
-                pass
-                
-        return super().create(request, *args, **kwargs)
+        if not alert_id:
+            return Response({"error": "alert field is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-    def perform_create(self, serializer):
-        officer_name = self.request.user.get_full_name() or self.request.user.username
-        verification = serializer.save(officer_name=officer_name)
-        alert = verification.alert
-        requested_status = self.request.data.get('status', 'VAO_SUBMITTED')
-        alert.status = requested_status
-        if self.request.data.get('remarks'):
-            alert.resolution_notes = self.request.data.get('remarks')
+        try:
+            alert = EncroachmentAlert.objects.select_related('parcel').get(id=alert_id)
+        except EncroachmentAlert.DoesNotExist:
+            return Response({"error": "Specified EncroachmentAlert not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Scoping check: Field officers can only submit verifications for their assigned district/taluk
+        user = request.user
+        profile = getattr(user, 'profile', None)
+        if profile and profile.role not in STATEWIDE_ROLES:
+            if profile.district and alert.parcel.district and profile.district.lower() != alert.parcel.district.lower():
+                return Response(
+                    {"error": f"Access Denied: Alert is in {alert.parcel.district} District; your account is restricted to {profile.district}."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            if profile.role in ['TAHSILDAR', 'INSPECTOR', 'VAO'] and profile.taluk and alert.parcel.taluk and profile.taluk.lower() != alert.parcel.taluk.lower():
+                return Response(
+                    {"error": f"Access Denied: Alert is in {alert.parcel.taluk} Taluk; your account is restricted to {profile.taluk}."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Officer identity is ALWAYS derived server-side from JWT
+        officer_display = f"{user.get_full_name() or user.username} ({profile.role if profile else 'OFFICER'})"
+
+        # Verdict drives the state machine (client CANNOT supply arbitrary status)
+        verdict = request.data.get('verdict', 'ENCROACHMENT_CONFIRMED')
+        valid_verdicts = ['ENCROACHMENT_CONFIRMED', 'FALSE_POSITIVE', 'UNCERTAIN_NEEDS_REVISIT']
+        if verdict not in valid_verdicts:
+            return Response({
+                "error": f"Invalid verdict '{verdict}'. Allowed values: {', '.join(valid_verdicts)}."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Geofence check: verify officer GPS within parcel boundary or 500m buffer
+        gps_lat = request.data.get('gps_lat')
+        gps_lon = request.data.get('gps_lon')
+        if gps_lat is not None and gps_lon is not None and alert.parcel and alert.parcel.geom:
+            from django.contrib.gis.geos import Point
+            officer_point = Point(float(gps_lon), float(gps_lat), srid=4326)
+            dist_deg = officer_point.distance(alert.parcel.geom)
+            # ~0.005 degrees is approx 550m
+            if dist_deg > 0.005 and not request.data.get('allow_geofence_override'):
+                return Response({
+                    "error": "Geofence Check Failed: Device GPS location is outside parcel boundary (>500m). Set allow_geofence_override=true with remarks if physical obstruction prevented approach."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Prepare verified data payload
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        data['officer_name'] = officer_display
+        data['verdict'] = verdict
+        data.pop('status', None)  # Client status override stripped
+
+        existing = FieldVerification.objects.filter(alert=alert).first()
+        if existing:
+            serializer = self.get_serializer(existing, data=data, partial=True)
+        else:
+            serializer = self.get_serializer(data=data)
+
+        serializer.is_valid(raise_exception=True)
+        verification = serializer.save(officer_name=officer_display, verdict=verdict)
+
+        # State machine transition strictly driven by verdict
+        if verdict == 'ENCROACHMENT_CONFIRMED':
+            alert.status = 'VAO_SUBMITTED'
+        elif verdict == 'FALSE_POSITIVE':
+            alert.status = 'FALSE_POSITIVE'
+        elif verdict == 'UNCERTAIN_NEEDS_REVISIT':
+            alert.status = 'VAO_ASSIGNED'
+
+        user_remarks = request.data.get('remarks', '')
+        alert.resolution_notes = f"[{verdict}] {user_remarks}".strip()
         alert.save()
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class RegistryProposalViewSet(viewsets.ModelViewSet):
