@@ -52,5 +52,5 @@ All statutory citations, judicial headers, procedural timelines, and affidavit w
 - [ ] **TD-02:** Replace synthetic FMB offset heuristics with real CollabLand FMB geometry parsing when official survey files are provided.
 - [ ] **TD-03:** Deploy Celery + Redis task queue for asynchronous PDF generation and Copernicus satellite ingestion.
 - [ ] **TD-04:** Add real QR code image rendering on Section 7 notices linking to public verification endpoint `/api/v1/verify/{doc_hash}/`.
-- [ ] **TD-05:** Stop-gap UserProfile jurisdiction matching is single-string case-insensitive (district/taluk/village). Multi-taluk jurisdictions for RDOs, firka-level scoping for Revenue Inspectors, and additional charge villages for VAOs are fixed by OfficerAssignment in Workstream 1.
+- [x] **TD-05:** ~~Stop-gap UserProfile jurisdiction matching is single-string case-insensitive (district/taluk/village).~~ **RESOLVED** via `OfficerAssignment` and `ScopedOfficerQuerysetMixin` with canonical hierarchy models (`District`, `Taluk`, `RevenueVillage`), tenures, and deny-by-default scoping.
 - [ ] **TD-06:** In production, httpOnly refresh cookie transmission requires web frontend and Django API to be hosted on the same origin (reverse proxy) to satisfy SameSite=Strict / Secure cookie policies.
