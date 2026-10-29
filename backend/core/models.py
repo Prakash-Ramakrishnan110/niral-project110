@@ -87,10 +87,22 @@ class DistrictLegalConfig(models.Model):
     section7_reply_window_days = models.IntegerField(default=15, help_text="Statutory show-cause reply deadline in days")
     section6_vacate_window_days = models.IntegerField(default=7, help_text="Eviction warrant vacate grace period in days")
     
-    # Judicial Order Registry Configuration
+    # Operative Judicial Order Registry Configuration
     operative_writ_petition_no = models.CharField(max_length=150, blank=True, null=True, help_text="Writ petition case number for High Court compliance ATR")
     high_court_bench_name = models.CharField(max_length=200, blank=True, null=True, help_text="Designated High Court bench")
     high_court_order_date = models.CharField(max_length=50, blank=True, null=True, help_text="Operative High Court order date (DD-MM-YYYY)")
+
+    # Statutory Evidence and Procedural Guards
+    fmb_certified_survey_required = models.BooleanField(
+        default=True,
+        help_text="Requires certified FMB survey measurements or explicit officer override before issuing Section 7 notice"
+    )
+    default_no_reply_action = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Action when Section 7 reply window elapses without reply. If NULL, action is unknown and transitions are denied by default."
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -126,23 +138,87 @@ LaneConfig = DistrictLegalConfig
 
 
 class EncroachmentAlert(models.Model):
+    # Canonical Lifecycle States (28 States)
+    STATE_NEW = 'NEW'
+    STATE_TIER1_ESCALATED = 'TIER1_ESCALATED'
+    STATE_COLLECTOR_REVIEWED = 'COLLECTOR_REVIEWED'
+    STATE_WATCHING = 'WATCHING'
+    STATE_VAO_ASSIGNED = 'VAO_ASSIGNED'
+    STATE_IN_FIELD_VERIFICATION = 'IN_FIELD_VERIFICATION'
+    STATE_VAO_SUBMITTED = 'VAO_SUBMITTED'
+    STATE_FALSE_POSITIVE_CLAIMED = 'FALSE_POSITIVE_CLAIMED'
+    STATE_PEER_AUDIT_PENDING = 'PEER_AUDIT_PENDING'
+    STATE_FALSE_POSITIVE_CONFIRMED = 'FALSE_POSITIVE_CONFIRMED'
+    STATE_REINSTATED = 'REINSTATED'
+    STATE_INSPECTOR_APPROVED = 'INSPECTOR_APPROVED'
+    STATE_REJECTED_BOUNDARY = 'REJECTED_BOUNDARY'
+    STATE_CLOSED_PRIVATE_PATTA = 'CLOSED_PRIVATE_PATTA'
+    STATE_PANDAL_GRACE_PERIOD = 'PANDAL_GRACE_PERIOD'
+    STATE_TEMPORARY_OCCUPANCY_RESOLVED = 'TEMPORARY_OCCUPANCY_RESOLVED'
+    STATE_NOTICE_PREPARATION = 'NOTICE_PREPARATION'
+    STATE_SECTION_7_ISSUED = 'SECTION_7_ISSUED'
+    STATE_NOTICE_REPLY_PENDING = 'NOTICE_REPLY_PENDING'
+    STATE_HEARING_SCHEDULED = 'HEARING_SCHEDULED'
+    STATE_SECTION_6_ORDERED = 'SECTION_6_ORDERED'
+    STATE_EVICTION_SCHEDULED = 'EVICTION_SCHEDULED'
+    STATE_EVICTION_EXECUTED = 'EVICTION_EXECUTED'
+    STATE_REENCROACHMENT_FLAGGED = 'REENCROACHMENT_FLAGGED'
+    STATE_COURT_STAY_HOLD = 'COURT_STAY_HOLD'
+    STATE_CLOSED_COURT_QUASHED = 'CLOSED_COURT_QUASHED'
+    STATE_REHABILITATION_ROUTED = 'REHABILITATION_ROUTED'
+    STATE_REHABILITATION_COMPLETED = 'REHABILITATION_COMPLETED'
+    STATE_EXPIRED_NO_RECURRENCE = 'EXPIRED_NO_RECURRENCE'
+
+    # Legacy Transition States
+    STATE_TRIAGE_LEGACY = 'TRIAGE_LEGACY'
+    STATE_TAHSILDAR_ACCEPTED_LEGACY = 'TAHSILDAR_ACCEPTED_LEGACY'
+    STATE_VAO_ASSIGNED_LEGACY = 'VAO_ASSIGNED_LEGACY'
+    STATE_COLLECTOR_ACCEPTED_LEGACY = 'COLLECTOR_ACCEPTED_LEGACY'
+
     STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('In-Verification', 'In-Verification'),
-        ('Confirmed', 'Confirmed'),
-        ('False-Positive', 'False-Positive'),
-        ('Resolved', 'Resolved'),
-        ('NEW', 'NEW'),
-        ('COLLECTOR_ACCEPTED', 'COLLECTOR_ACCEPTED'),
-        ('TAHSILDAR_ACCEPTED', 'TAHSILDAR_ACCEPTED'),
-        ('VAO_ASSIGNED', 'VAO_ASSIGNED'),
-        ('VAO_SUBMITTED', 'VAO_SUBMITTED'),
-        ('INSPECTOR_APPROVED', 'INSPECTOR_APPROVED'),
-        ('SECTION_7_ISSUED', 'SECTION_7_ISSUED'),
-        ('SECTION_6_ORDERED', 'SECTION_6_ORDERED'),
-        ('FALSE_POSITIVE', 'FALSE_POSITIVE'),
-        ('REJECTED_BOUNDARY', 'REJECTED_BOUNDARY'),
-        ('CANCELLED_LEGAL', 'CANCELLED_LEGAL'),
+        (STATE_NEW, 'New Detection Flagged'),
+        (STATE_TIER1_ESCALATED, 'Tier 1 Critical Escalated'),
+        (STATE_COLLECTOR_REVIEWED, 'Collector Reviewed'),
+        (STATE_WATCHING, 'Satellite Observation Window / Watching'),
+        (STATE_VAO_ASSIGNED, 'VAO Field Assigned'),
+        (STATE_IN_FIELD_VERIFICATION, 'In Field Verification'),
+        (STATE_VAO_SUBMITTED, 'VAO Findings Submitted'),
+        (STATE_FALSE_POSITIVE_CLAIMED, 'False Positive Claimed (Field Officer)'),
+        (STATE_PEER_AUDIT_PENDING, 'Peer Audit Pending (Independent Officer)'),
+        (STATE_FALSE_POSITIVE_CONFIRMED, 'False Positive Confirmed (Case Closed)'),
+        (STATE_REINSTATED, 'Reinstated (Peer Audit Overturned False Positive)'),
+        (STATE_INSPECTOR_APPROVED, 'Revenue Inspector Endorsed'),
+        (STATE_REJECTED_BOUNDARY, 'Boundary Rejected (Re-demarcation Required)'),
+        (STATE_CLOSED_PRIVATE_PATTA, 'Closed (Valid Private Patta Verified)'),
+        (STATE_PANDAL_GRACE_PERIOD, 'Temporary Pandal Grace Period (Tahsildar Approved)'),
+        (STATE_TEMPORARY_OCCUPANCY_RESOLVED, 'Temporary Occupancy Resolved (Dismantled)'),
+        (STATE_NOTICE_PREPARATION, 'Statutory Notice Preparation'),
+        (STATE_SECTION_7_ISSUED, 'Section 7 Show-Cause Notice Issued'),
+        (STATE_NOTICE_REPLY_PENDING, 'Notice Reply Period Pending (15 Days)'),
+        (STATE_HEARING_SCHEDULED, 'Personal Hearing Scheduled'),
+        (STATE_SECTION_6_ORDERED, 'Section 6 Eviction Order Passed'),
+        (STATE_EVICTION_SCHEDULED, 'Eviction Scheduled with Bandobast'),
+        (STATE_EVICTION_EXECUTED, 'Eviction Executed (Land Restored)'),
+        (STATE_REENCROACHMENT_FLAGGED, 'Re-encroachment Detected on Restored Land'),
+        (STATE_COURT_STAY_HOLD, 'Court Stay Order in Force (Clocks Paused)'),
+        (STATE_CLOSED_COURT_QUASHED, 'Closed (Proceedings Quashed by Court Order)'),
+        (STATE_REHABILITATION_ROUTED, 'TNUHDB Humanitarian Rehabilitation Routed'),
+        (STATE_REHABILITATION_COMPLETED, 'TNUHDB Rehabilitation Allotment Completed'),
+        (STATE_EXPIRED_NO_RECURRENCE, 'Expired (No Recurrence Observed)'),
+
+        # Legacy
+        (STATE_TRIAGE_LEGACY, 'Legacy Triage (Unmigrated Pending)'),
+        (STATE_TAHSILDAR_ACCEPTED_LEGACY, 'Legacy Tahsildar Accepted (Unmigrated)'),
+        (STATE_VAO_ASSIGNED_LEGACY, 'Legacy VAO Assigned (Unmigrated)'),
+        (STATE_COLLECTOR_ACCEPTED_LEGACY, 'Legacy Collector Accepted (Unmigrated)'),
+
+        # Deprecated raw statuses retained during transition
+        ('Pending', 'Legacy Pending'),
+        ('TAHSILDAR_ACCEPTED', 'Legacy Tahsildar Accepted'),
+        ('COLLECTOR_ACCEPTED', 'Legacy Collector Accepted'),
+        ('Confirmed', 'Legacy Confirmed'),
+        ('False-Positive', 'Legacy False-Positive'),
+        ('Resolved', 'Legacy Resolved'),
     ]
 
     TIER_CHOICES = [
@@ -191,6 +267,13 @@ class EncroachmentAlert(models.Model):
     # Court Stay & SLA Clock Pause
     stay_commenced_at = models.DateTimeField(null=True, blank=True, help_text="Timestamp when court stay commenced; pauses SLA clocks")
     paused_sla_remaining_seconds = models.IntegerField(null=True, blank=True, help_text="Remaining seconds on statutory SLA when stay commenced")
+    previous_state = models.CharField(max_length=50, blank=True, null=True, help_text="State prior to court stay hold or temporary divergence")
+
+    # Workflow Governance & Legal Safety Overrides
+    legacy_status = models.CharField(max_length=50, blank=True, null=True, db_index=True, help_text="Original raw status string prior to Part 14 state machine migration")
+    approver_unverified = models.BooleanField(default=False, help_text="True if action/order was approved under unverified legacy workflow")
+    fmb_certified_acknowledged = models.BooleanField(default=False, help_text="Explicit officer acknowledgement if Section 7 notice is issued with indicative FMB sketch")
+    fmb_acknowledgement_reason = models.TextField(blank=True, null=True, help_text="Mandatory officer explanation when proceeding with indicative FMB sketch")
 
     def is_sla_breached(self):
         from django.utils import timezone
@@ -233,6 +316,30 @@ class FieldVerification(models.Model):
 
     def __str__(self):
         return f"Verification for {self.alert.id}"
+
+
+class CaseAuditEvent(models.Model):
+    """
+    Immutable audit log for state machine transitions and statutory compliance actions.
+    Records transition actor, from/to states, rationale, and metadata.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    alert = models.ForeignKey(EncroachmentAlert, on_delete=models.CASCADE, related_name='audit_events')
+    actor = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='case_audit_actions')
+    actor_role = models.CharField(max_length=30, blank=True, default='')
+    action = models.CharField(max_length=80)
+    from_state = models.CharField(max_length=50)
+    to_state = models.CharField(max_length=50)
+    reason = models.TextField(blank=True, default='')
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.alert_id} | {self.from_state} -> {self.to_state} by {self.actor or 'System'}"
+
 
 class RegistryProposal(models.Model):
     TYPE_CHOICES = [

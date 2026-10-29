@@ -118,3 +118,4 @@ class Command(BaseCommand):
         if stats['errors']:
             for err in stats['errors'][:10]:
                 self.stderr.write(self.style.WARNING(f"    * {err}"))
+

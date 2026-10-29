@@ -143,3 +143,4 @@ class JurisdictionScopeService:
         if not allowed:
             return False, f"Role {role} is not authorized for statutory action: {action}"
         return True, "Authorized"
+
