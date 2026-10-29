@@ -196,4 +196,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ── TNGIS Integration ─────────────────────────────────────────────────────────
 # Set to False once official API credentials are obtained from CLA / TNeGA.
-TNGIS_DEMO_MODE = os.environ.get('TNGIS_DEMO_MODE', 'True').lower() in ('1', 'true', 'yes')
+TNGIS_DEMO_MODE = os.environ.get('TNGIS_DEMO_MODE', 'False').lower() in ('1', 'true', 'yes')
