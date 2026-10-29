@@ -174,3 +174,4 @@ class Command(BaseCommand):
 
             self.stdout.write(self.style.SUCCESS(f"Migration completed successfully. {updated_total} alerts updated."))
         self.stdout.write("=" * 80)
+

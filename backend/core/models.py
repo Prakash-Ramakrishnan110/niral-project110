@@ -104,6 +104,20 @@ class DistrictLegalConfig(models.Model):
         help_text="Action when Section 7 reply window elapses without reply. If NULL, action is unknown and transitions are denied by default."
     )
 
+    # Lane Configuration & Audit Sampling (Section 7.1)
+    fast_lane_audit_pct = models.FloatField(
+        default=20.0,
+        help_text="Percentage of high-lane alerts automatically sampled for independent peer audit"
+    )
+    min_sample_size_accuracy = models.IntegerField(
+        default=30,
+        help_text="Minimum verification count n before publishing verified accuracy percentage"
+    )
+    recheck_days_low = models.IntegerField(
+        default=30,
+        help_text="Observation window days for low lane watching"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -275,6 +289,24 @@ class EncroachmentAlert(models.Model):
     fmb_certified_acknowledged = models.BooleanField(default=False, help_text="Explicit officer acknowledgement if Section 7 notice is issued with indicative FMB sketch")
     fmb_acknowledgement_reason = models.TextField(blank=True, null=True, help_text="Mandatory officer explanation when proceeding with indicative FMB sketch")
 
+    # Detection Snapshots & Recall Control Checks (Section 7.1 - 7.2)
+    snapshot_confidence = models.FloatField(null=True, blank=True, help_text="Model confidence score at time of detection")
+    snapshot_lane = models.CharField(max_length=30, blank=True, null=True, help_text="HIGH, MEDIUM, or LOW lane at detection time")
+    snapshot_model_version = models.CharField(max_length=50, default='v1.0-sentinel2-resnet50', help_text="Model version identifier")
+    snapshot_scene_ids = models.JSONField(default=list, blank=True, help_text="Sentinel-2 or satellite scene identifiers used for detection")
+    detected_area_sqm = models.FloatField(default=0.0, help_text="Detected change area in square meters")
+    is_control_check = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Sampled control check parcel to measure recall/false negatives; excluded from officer work queues"
+    )
+
+    @property
+    def verification(self):
+        """Returns primary non-peer-audit verification, or latest verification."""
+        v = self.verifications.filter(audit_of__isnull=True).order_by('-verified_at').first()
+        return v or self.verifications.order_by('-verified_at').first()
+
     def is_sla_breached(self):
         from django.utils import timezone
         if self.sla_deadline and self.status in ['NEW', 'Pending', 'VAO_ASSIGNED']:
@@ -303,19 +335,50 @@ class FieldVerification(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    alert = models.OneToOneField(EncroachmentAlert, on_delete=models.CASCADE, related_name='verification')
+    alert = models.ForeignKey(EncroachmentAlert, on_delete=models.CASCADE, related_name='verifications')
+    verifier = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='verifications')
+    officer_assignment = models.ForeignKey('core.OfficerAssignment', on_delete=models.SET_NULL, null=True, blank=True, related_name='verifications')
     officer_name = models.CharField(max_length=255)
     verdict = models.CharField(max_length=40, choices=VERDICT_CHOICES, default='ENCROACHMENT_CONFIRMED')
     gps_lat = models.FloatField()
     gps_lon = models.FloatField()
+    distance_to_parcel_meters = models.FloatField(default=0.0)
+    geofence_ok = models.BooleanField(default=True)
     photos = models.JSONField(default=list, blank=True, null=True)
     remarks = models.TextField()
     action_plan = models.TextField(blank=True, null=True)
     implementation_details = models.TextField(blank=True, null=True)
+
+    # Immutability snapshots captured at time of verification (Section 7.2)
+    snapshot_confidence = models.FloatField(null=True, blank=True)
+    snapshot_lane = models.CharField(max_length=30, blank=True, null=True)
+    snapshot_model_version = models.CharField(max_length=50, blank=True, default='')
+    client_created_at = models.DateTimeField(null=True, blank=True)
+    idempotency_key = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+
+    # Peer Audit Link (Section 7.2)
+    audit_of = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='peer_audits',
+        help_text="Links an independent peer audit to the original field verification"
+    )
+
     verified_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['alert'],
+                condition=models.Q(audit_of__isnull=True),
+                name='unique_primary_verification_per_alert'
+            )
+        ]
+
     def __str__(self):
-        return f"Verification for {self.alert.id}"
+        return f"Verification for {self.alert.id} ({self.verdict})"
 
 
 class CaseAuditEvent(models.Model):
