@@ -21,7 +21,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'Tahsildar (Salem West)', 
       user: 'tah_salem_west', 
       canonical: 'tahsildar_salem_west',
-      pass: 'DemoAdmin@2026!', 
+      pass: 'Demo@TahSalem2026!', 
       role: 'TAHSILDAR', 
       officer: 'S. Murugan',
       jurisdiction: 'Salem West Taluk',
@@ -32,7 +32,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'District Collector (Salem)', 
       user: 'col_salem', 
       canonical: 'collector_salem',
-      pass: 'DemoAdmin@2026!', 
+      pass: 'Demo@ColSalem2026!', 
       role: 'COLLECTOR', 
       officer: 'R. Brindha Devi IAS',
       jurisdiction: 'Salem District Apex',
@@ -43,7 +43,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'State Apex / CS (Secretariat)', 
       user: 'apex_tn', 
       canonical: 'state_apex_officer',
-      pass: 'DemoAdmin@2026!', 
+      pass: 'Demo@StateApex2026!', 
       role: 'STATE_APEX', 
       officer: 'Dr. K. Manivasan IAS',
       jurisdiction: 'Statewide Tamil Nadu',
@@ -54,7 +54,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'DVAC Auditor (Vigilance)', 
       user: 'dvac_auditor', 
       canonical: 'vigilance_officer',
-      pass: 'DemoAdmin@2026!', 
+      pass: 'Demo@Vigilance2026!', 
       role: 'VIGILANCE', 
       officer: 'DVAC Audit Division',
       jurisdiction: 'Statutory Audit (Read-Only)',
@@ -65,7 +65,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'Field VAO (Kannankurichi)', 
       user: 'vao_kannan', 
       canonical: 'vao_kannankurichi',
-      pass: 'DemoAdmin@2026!', 
+      pass: 'Demo@VaoKannan2026!', 
       role: 'VAO', 
       officer: 'K. Prakash',
       jurisdiction: 'Kannankurichi Village',
@@ -76,7 +76,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'GIS System Administrator', 
       user: 'admin', 
       canonical: 'admin_gis_officer',
-      pass: 'DemoAdmin@2026!', 
+      pass: 'Demo@GisAdmin2026!', 
       role: 'ADMIN_GIS', 
       officer: 'GIS Operations Core',
       jurisdiction: 'System Core & Layers',
@@ -106,8 +106,8 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
         }
       }
 
-      if (data?.user) {
-        onLoginSuccess(data.user);
+      if (data?.user || data?.access) {
+        onLoginSuccess(data?.user);
       }
     } catch (err) {
       const resp = err.response;
@@ -320,7 +320,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex justify-between">
                     <span>Officer Security Key / Password</span>
-                    <span className="text-[10px] text-blue-600 font-mono font-bold">DemoAdmin@2026!</span>
+                    <span className="text-[10px] text-blue-600 font-mono font-bold">{password}</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">

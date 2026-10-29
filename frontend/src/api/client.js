@@ -16,8 +16,10 @@ export function setAccessToken(token) {
 }
 
 export function clearAccessToken() {
-  inMemoryAccessToken = null;
-  notifyAuthChange(null);
+  if (inMemoryAccessToken !== null) {
+    inMemoryAccessToken = null;
+    notifyAuthChange(null);
+  }
 }
 
 export function subscribeAuthChange(listener) {
@@ -85,6 +87,11 @@ apiClient.interceptors.response.use(
         originalRequest.url?.includes('/auth/login') ||
         originalRequest.url?.includes('/auth/token/refresh')
       ) {
+        return Promise.reject(error);
+      }
+
+      // If we don't have an access token and this is /auth/me/, user is simply unauthenticated
+      if (!inMemoryAccessToken && originalRequest.url?.includes('/auth/me')) {
         return Promise.reject(error);
       }
 
