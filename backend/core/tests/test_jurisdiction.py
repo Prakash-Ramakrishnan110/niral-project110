@@ -67,3 +67,4 @@ class JurisdictionHierarchyTests(TestCase):
         # Self-adjacency must be prevented
         with self.assertRaises(ValidationError):
             DistrictAdjacency(district=self.dist_slm, adjacent_district=self.dist_slm).clean()
+

@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from django.utils import timezone
 import uuid
 
 class LandParcel(models.Model):
@@ -28,6 +29,12 @@ class LandParcel(models.Model):
     village_name = models.CharField(max_length=100, blank=True, null=True)
     village_ta = models.CharField(max_length=100, blank=True, null=True)
     village_lgd_code = models.CharField(max_length=20, default='608142', blank=True, null=True)
+    
+    # Canonical Hierarchy References (Part 4.1)
+    district_ref = models.ForeignKey('District', on_delete=models.SET_NULL, null=True, blank=True, related_name='parcels')
+    taluk_ref = models.ForeignKey('Taluk', on_delete=models.SET_NULL, null=True, blank=True, related_name='parcels')
+    village_ref = models.ForeignKey('RevenueVillage', on_delete=models.SET_NULL, null=True, blank=True, related_name='parcels')
+    
     area_extent = models.CharField(max_length=50, default='2.50 Acres', blank=True, null=True)
     occupied_extent = models.CharField(max_length=50, blank=True, null=True)
     is_occupied = models.BooleanField(default=False)
@@ -442,4 +449,145 @@ class DistrictAdjacency(models.Model):
 
     def __str__(self):
         return f"{self.district.name_en} <-> {self.adjacent_district.name_en}"
+
+
+# ==============================================================================
+# GOVERNMENT OFFICER ASSIGNMENTS & STATUTORY AUTHORITY (PART 4.2)
+# ==============================================================================
+
+class OfficerAssignment(models.Model):
+    """
+    Effective-dated officer assignment binding a user to an administrative post and jurisdiction node.
+    Supports transfers, vacancies, and additional charges.
+    """
+    ROLE_CHOICES = [
+        ('STATE_APEX', 'State Apex / Chief Secretary'),
+        ('CLA_STATE', 'Commissioner of Land Administration (CLA)'),
+        ('COLLECTOR', 'District Collector / District Magistrate'),
+        ('RDO', 'Revenue Divisional Officer (RDO) / Sub-Collector'),
+        ('TAHSILDAR', 'Tahsildar (Taluk Magistrate)'),
+        ('INSPECTOR', 'Revenue Inspector (Firka Level)'),
+        ('VAO', 'Village Administrative Officer (VAO)'),
+        ('ADMIN_GIS', 'GIS & State Data Administrator'),
+        ('VIGILANCE', 'Vigilance & Anti-Corruption Officer (Read-Only Audit)'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='assignments')
+    role = models.CharField(max_length=30, choices=ROLE_CHOICES)
+    designation = models.CharField(max_length=150, blank=True, null=True, help_text="Official designation title")
+    
+    # Jurisdiction Node References
+    district = models.ForeignKey(District, on_delete=models.CASCADE, null=True, blank=True, related_name='officer_assignments')
+    division = models.ForeignKey(RevenueDivision, on_delete=models.SET_NULL, null=True, blank=True, related_name='officer_assignments')
+    taluk = models.ForeignKey(Taluk, on_delete=models.SET_NULL, null=True, blank=True, related_name='officer_assignments')
+    firka = models.ForeignKey(Firka, on_delete=models.SET_NULL, null=True, blank=True, related_name='officer_assignments')
+    village = models.ForeignKey(RevenueVillage, on_delete=models.SET_NULL, null=True, blank=True, related_name='officer_assignments')
+
+    # Effective-dating & charge flags
+    start_date = models.DateField(default=timezone.now)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    is_additional_charge = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-start_date', 'user__username']
+
+    def is_currently_effective(self):
+        from django.utils import timezone
+        today = timezone.now().date()
+        if not self.is_active:
+            return False
+        if self.start_date > today:
+            return False
+        if self.end_date and self.end_date < today:
+            return False
+        return True
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # Statewide roles must have no local jurisdiction
+        if self.role in ('STATE_APEX', 'CLA_STATE', 'ADMIN_GIS', 'VIGILANCE'):
+            if self.district or self.taluk or self.village or self.firka or self.division:
+                raise ValidationError(f"Statewide role {self.role} must not be scoped to a local jurisdiction node.")
+        elif self.role == 'COLLECTOR':
+            if not self.district:
+                raise ValidationError("Collector assignment must have a valid District.")
+            if self.taluk or self.village:
+                raise ValidationError("Collector assignment must be district-scoped only (taluk/village must be null).")
+        elif self.role == 'RDO':
+            if not self.district:
+                raise ValidationError("RDO assignment must have a valid District.")
+            if not (self.division or self.taluk):
+                raise ValidationError("RDO assignment must specify a Revenue Division or Taluk.")
+        elif self.role == 'TAHSILDAR':
+            if not self.district or not self.taluk:
+                raise ValidationError("Tahsildar assignment must have both District and Taluk.")
+            if self.taluk.district_id != self.district_id:
+                raise ValidationError("Taluk does not belong to the selected District.")
+        elif self.role == 'INSPECTOR':
+            if not self.district or not self.taluk:
+                raise ValidationError("Inspector assignment must have District and Taluk.")
+            if self.firka and self.firka.taluk_id != self.taluk_id:
+                raise ValidationError("Firka does not belong to the selected Taluk.")
+        elif self.role == 'VAO':
+            if not self.district or not self.taluk or not self.village:
+                raise ValidationError("VAO assignment must have District, Taluk, and Revenue Village.")
+            if self.village.taluk_id != self.taluk_id:
+                raise ValidationError("Village does not belong to the selected Taluk.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        scope = self.village or self.firka or self.taluk or self.division or self.district or "Statewide"
+        chg = " [ADDITIONAL CHARGE]" if self.is_additional_charge else ""
+        return f"{self.user.username} as {self.role} @ {scope}{chg}"
+
+
+class StatutoryNoticeAuthority(models.Model):
+    """
+    Deny-by-default legal authority registry controlling statutory actions under TN Act III of 1905.
+    Every non-configured authority defaults to NOT ALLOWED.
+    """
+    ACTION_CHOICES = [
+        ('ISSUE_SECTION_7', 'Issue Section 7 Show-Cause Notice'),
+        ('RECORD_SERVICE_7', 'Record Service of Section 7 Notice'),
+        ('SCHEDULE_HEARING', 'Schedule Statutory Hearing'),
+        ('PASS_SECTION_6_ORDER', 'Pass Section 6 Eviction Order'),
+        ('ISSUE_SECTION_6_WARRANT', 'Issue Section 6 Eviction Warrant'),
+        ('GRANT_PANDAL_GRACE', 'Grant Temporary Pandal Grace Period'),
+        ('RECLASSIFY_STRUCTURE', 'Reclassify Structure Category'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    role = models.CharField(max_length=30, choices=OfficerAssignment.ROLE_CHOICES)
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    is_allowed = models.BooleanField(default=False)
+    
+    # Compliance metadata (Part 0 Step 5: zero fabricated facts)
+    legal_source_reference = models.CharField(max_length=255, default='UNVERIFIED – pending legal review')
+    verified_by_legal_officer = models.BooleanField(default=False)
+    notes = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ('role', 'action')
+        ordering = ['action', 'role']
+
+    @classmethod
+    def check_authority(cls, role, action):
+        """
+        Deny-by-default check: Returns True only if explicitly configured as is_allowed=True.
+        """
+        auth = cls.objects.filter(role=role, action=action).first()
+        return bool(auth and auth.is_allowed)
+
+    def __str__(self):
+        status = "ALLOWED" if self.is_allowed else "DENIED"
+        return f"[{status}] {self.role} -> {self.action}"
+
 

@@ -138,3 +138,4 @@ class Command(BaseCommand):
             sys.exit(1)
         else:
             self.stdout.write(self.style.SUCCESS("\n[SUCCESS] 100% of database records match canonical hierarchy! Ready for migration approval."))
+
