@@ -189,7 +189,74 @@ export const AuthAPI = {
 };
 
 // ----------------------------------------------------
-// REAL BACKEND API SERVICES
+// STATUTORY CASE & DASHBOARD PRODUCTION APIS (Part 14 Step 6 & 7)
+// ----------------------------------------------------
+export const DashboardAPI = {
+  async getSummary() {
+    const res = await apiClient.get('/dashboard/summary/');
+    return res.data;
+  },
+};
+
+export const CaseAPI = {
+  async getCases(params = {}) {
+    const res = await apiClient.get('/cases/', { params });
+    return res.data;
+  },
+
+  async getCaseDetail(caseId) {
+    const res = await apiClient.get(`/cases/${caseId}/`);
+    return res.data;
+  },
+
+  async executeTransition(caseId, { target_state, expected_version, reason = '', action = null, metadata = {} }, idempotencyKey = null) {
+    const headers = {};
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+    const res = await apiClient.post(`/cases/${caseId}/transitions/`, {
+      target_state,
+      expected_version,
+      reason,
+      action,
+      metadata,
+    }, { headers });
+    return res.data;
+  },
+
+  async downloadSection7Notice(caseId, surveyNo = 'Survey') {
+    return downloadBlob(
+      `${API_BASE}/cases/${caseId}/documents/section-7/`,
+      `Section7_ShowCause_Case_${caseId}_Survey_${String(surveyNo).replace(/\//g, '_')}.pdf`
+    );
+  },
+
+  async downloadSection6Warrant(caseId, surveyNo = 'Survey') {
+    return downloadBlob(
+      `${API_BASE}/cases/${caseId}/documents/section-6/`,
+      `Section6_EvictionWarrant_Case_${caseId}_Survey_${String(surveyNo).replace(/\//g, '_')}.pdf`
+    );
+  },
+
+  async downloadCaseATR(caseId, writNo = 'W.P. 18251/2023') {
+    return downloadBlob(
+      `${API_BASE}/cases/${caseId}/documents/atr/?writ_number=${encodeURIComponent(writNo)}`,
+      `HighCourt_ATR_Case_${caseId}.pdf`
+    );
+  },
+};
+
+export const SyncAPI = {
+  async getChanges(sinceCursor = null, limit = 50) {
+    const params = { limit };
+    if (sinceCursor) params.since = sinceCursor;
+    const res = await apiClient.get('/sync/changes/', { params });
+    return res.data;
+  },
+};
+
+// ----------------------------------------------------
+// LEGACY BACKEND API SERVICES (For existing components)
 // ----------------------------------------------------
 export const LandAPI = {
   // 1. ALERTS
@@ -241,7 +308,7 @@ export const LandAPI = {
   async downloadSection7Notice(alertId, surveyNo = 'Survey') {
     return downloadBlob(
       `${API_BASE}/alerts/${alertId}/download_section_7/`,
-      `Section7_Notice_Alert_${alertId}_Survey_${surveyNo.replace(/\//g, '_')}.pdf`
+      `Section7_Notice_Alert_${alertId}_Survey_${String(surveyNo).replace(/\//g, '_')}.pdf`
     );
   },
 

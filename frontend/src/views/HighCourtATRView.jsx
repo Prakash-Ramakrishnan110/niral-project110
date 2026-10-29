@@ -116,7 +116,7 @@ export const HighCourtATRView = ({ alerts = [], onRefresh }) => {
         <div className="p-4 bg-green-50 border-2 border-green-500 text-green-800 flex items-center gap-3 animate-in slide-in-from-top duration-300">
           <CheckCircle2 size={18} className="text-green-600 shrink-0" />
           <p className="text-xs font-bold uppercase tracking-wide">
-            Court-Admissible Action Taken Report (ATR) PDF generated successfully and downloaded with embedded FMB cadastral exhibits and sworn verification clause.
+            Draft Action Taken Report (ATR) PDF generated successfully for officer review and sworn execution with embedded indicative FMB cadastral exhibits.
           </p>
         </div>
       )}
