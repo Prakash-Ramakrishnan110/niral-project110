@@ -188,3 +188,4 @@ class AccuracyLedgerTests(TestCase):
         gaps = AccuracyLedgerService.detect_satellite_coverage_gaps(district='Salem', max_gap_days=5)
         self.assertTrue(len(gaps) > 0)
         self.assertEqual(gaps[0]['gap_status'], 'COVERAGE_GAP')
+

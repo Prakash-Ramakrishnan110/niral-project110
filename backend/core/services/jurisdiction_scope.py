@@ -44,6 +44,53 @@ class JurisdictionScopeService:
         return None
 
     @classmethod
+    def get_user_scope(cls, user) -> dict:
+        """Derives primary administrative scope (district, taluk, village) from active assignments or profile."""
+        if not user or not user.is_authenticated:
+            return {'district': None, 'taluk': None, 'village': None, 'level': 'NONE'}
+        
+        assignment = cls.get_effective_assignments(user).first()
+        if assignment:
+            district_name = assignment.district.name_en if assignment.district else None
+            taluk_name = assignment.taluk.name_en if assignment.taluk else None
+            village_name = assignment.village.name_en if assignment.village else None
+            level = 'STATE'
+            if village_name:
+                level = 'VILLAGE'
+            elif taluk_name:
+                level = 'TALUK'
+            elif district_name:
+                level = 'DISTRICT'
+            return {
+                'level': level,
+                'district': district_name,
+                'taluk': taluk_name,
+                'village': village_name,
+            }
+
+        # Fallback to UserProfile
+        profile = getattr(user, 'profile', None)
+        if profile:
+            level = 'STATE'
+            if profile.village:
+                level = 'VILLAGE'
+            elif profile.taluk:
+                level = 'TALUK'
+            elif profile.district:
+                level = 'DISTRICT'
+            return {
+                'level': level,
+                'district': profile.district,
+                'taluk': profile.taluk,
+                'village': profile.village,
+            }
+
+        if user.is_superuser:
+            return {'level': 'STATE', 'district': None, 'taluk': None, 'village': None}
+
+        return {'level': 'NONE', 'district': None, 'taluk': None, 'village': None}
+
+    @classmethod
     def is_readonly(cls, user):
         """STATE_APEX and VIGILANCE are strictly read-only."""
         role = cls.get_primary_role(user)

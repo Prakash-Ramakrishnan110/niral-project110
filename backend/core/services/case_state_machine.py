@@ -30,6 +30,14 @@ class AuthorizationError(StateMachineError):
     pass
 
 
+class ConcurrencyConflictError(StateMachineError):
+    """Raised when an alert version mismatch occurs (HTTP 409 Conflict)."""
+    def __init__(self, message, current_version=None, expected_version=None):
+        super().__init__(message)
+        self.current_version = current_version
+        self.expected_version = expected_version
+
+
 class CaseStateMachine:
     """
     Statutory workflow state machine enforcing Tamil Nadu Land Encroachment Act III of 1905
@@ -446,6 +454,7 @@ class CaseStateMachine:
         reason: str = "",
         action: str = None,
         metadata: dict = None,
+        expected_version: int = None,
         dry_run: bool = False,
     ) -> tuple[bool, str, CaseAuditEvent | None]:
         """
@@ -455,6 +464,15 @@ class CaseStateMachine:
         metadata = dict(metadata or {})
         current_state = alert.status
         actor_role = cls.get_user_role(actor)
+
+        # 0. Concurrency Check: Optimistic Locking (Section 8)
+        if expected_version is not None and alert.version != expected_version:
+            raise ConcurrencyConflictError(
+                f"Concurrent modification detected on alert {alert.id}. "
+                f"Expected version {expected_version}, but current server version is {alert.version}.",
+                current_version=alert.version,
+                expected_version=expected_version,
+            )
 
         # 1. Vigilance Read-Only Lock
         if actor_role == 'VIGILANCE':
@@ -591,9 +609,10 @@ class CaseStateMachine:
         if dry_run:
             return True, f"Dry-run transition from {current_state} to {target_state} validated successfully.", None
 
-        # 5. Apply State Update
+        # 5. Apply State Update and Increment Version
         action_name = action or f"TRANSITION_{current_state}_TO_{target_state}"
         alert.status = target_state
+        alert.version = (alert.version or 1) + 1
         if reason:
             alert.resolution_notes = f"{alert.resolution_notes or ''}\n[{target_state} by {actor_role}]: {reason}".strip()
         alert.save()
@@ -608,6 +627,27 @@ class CaseStateMachine:
             to_state=target_state,
             reason=reason,
             metadata=metadata,
+        )
+
+        # 7. Record Commit-Safe ChangeFeedEvent (Section 8)
+        from core.models import ChangeFeedEvent
+        parcel = getattr(alert, 'parcel', None)
+        ChangeFeedEvent.objects.create(
+            entity_type='ALERT',
+            entity_id=str(alert.id),
+            version=alert.version,
+            action=action_name,
+            scope_district=getattr(parcel, 'district', None),
+            scope_taluk=getattr(parcel, 'taluk', None),
+            scope_village=getattr(parcel, 'village_name', None),
+            payload={
+                'status': alert.status,
+                'from_state': current_state,
+                'to_state': target_state,
+                'tier': alert.tier,
+                'actor_role': actor_role,
+                'version': alert.version,
+            }
         )
 
         return True, f"Transitioned from {current_state} to {target_state}.", audit_event

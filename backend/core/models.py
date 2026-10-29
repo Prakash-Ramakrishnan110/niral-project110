@@ -249,6 +249,7 @@ class EncroachmentAlert(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    version = models.PositiveIntegerField(default=1, db_index=True, help_text="Optimistic concurrency version; increments on every mutation")
     parcel = models.ForeignKey(LandParcel, on_delete=models.CASCADE, related_name='alerts')
     detection_date = models.DateTimeField(auto_now_add=True)
     confidence_score = models.FloatField(default=0.0)
@@ -402,6 +403,57 @@ class CaseAuditEvent(models.Model):
 
     def __str__(self):
         return f"{self.alert_id} | {self.from_state} -> {self.to_state} by {self.actor or 'System'}"
+
+
+class IdempotencyKeyRecord(models.Model):
+    """
+    Network idempotency store for field officer submissions and state transitions.
+    Prevents duplicate submissions over flaky rural networks (Section 8).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    key = models.CharField(max_length=120, unique=True, db_index=True)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, null=True, blank=True)
+    endpoint = models.CharField(max_length=255)
+    request_hash = models.CharField(max_length=64, blank=True)
+    response_status = models.IntegerField(default=200)
+    response_body = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"IdempotencyKey {self.key} ({self.endpoint})"
+
+
+class ChangeFeedEvent(models.Model):
+    """
+    Commit-safe append-only change feed for real-time dashboard and mobile sync (Section 8).
+    Enables cursor-based incremental sync without 5-second polling loops.
+    """
+    id = models.BigAutoField(primary_key=True)
+    entity_type = models.CharField(max_length=40, db_index=True)
+    entity_id = models.CharField(max_length=64, db_index=True)
+    version = models.PositiveIntegerField(default=1)
+    action = models.CharField(max_length=100, db_index=True)  # CREATED, UPDATED, TRANSITIONED, DELETEDTED, UPDATED, TRANSITIONED, DELETED
+    scope_district = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    scope_taluk = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    scope_village = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        indexes = [
+            models.Index(fields=['created_at', 'id'], name='change_feed_cursor_idx'),
+            models.Index(fields=['scope_district', 'created_at'], name='change_feed_dist_idx'),
+        ]
+
+    def cursor(self) -> str:
+        return f"{self.created_at.isoformat()}:{self.id}"
+
+    def __str__(self):
+        return f"Change {self.id}: {self.entity_type} {self.entity_id} ({self.action})"
 
 
 class RegistryProposal(models.Model):

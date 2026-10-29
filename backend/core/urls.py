@@ -8,6 +8,7 @@ from .views import (
 from .auth_views import (
     LoginView, CustomTokenRefreshView, LogoutView, CurrentUserView
 )
+from .sync_views import SyncChangesView
 
 router = DefaultRouter()
 router.register(r'parcels', LandParcelViewSet)
@@ -26,6 +27,7 @@ urlpatterns = [
 
     # Restful Resources & Domain Workflows
     path('', include(router.urls)),
+    path('sync/changes/', SyncChangesView.as_view(), name='sync-changes'),
     path('tngis/<str:action>/', TNGISProxyView.as_view(), name='tngis-proxy'),
     path('smart-alert/', SmartAlertView.as_view(), name='smart-alert'),
     path('compliance/high-court-atr/', HighCourtATRView.as_view(), name='high-court-atr'),
