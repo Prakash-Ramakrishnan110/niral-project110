@@ -100,6 +100,8 @@ List<String> get kApiHosts {
 String? _jwtAccessToken;
 String? _jwtRefreshToken;
 Map<String, dynamic>? _currentOfficerProfile;
+Map<String, dynamic>? get currentOfficerProfile => _currentOfficerProfile;
+String? get jwtRefreshToken => _jwtRefreshToken;
 
 Map<String, String> get _apiHeaders {
   final h = <String, String>{'Content-Type': 'application/json'};
@@ -2767,6 +2769,7 @@ class _ReportFormState extends State<_ReportForm> {
   Position? _pos;
 
   String _selectedEncroachmentType = 'Unauthorized Structure';
+  String _selectedVerdict = 'ENCROACHMENT_CONFIRMED';
 
   @override
   void initState() {
@@ -2791,7 +2794,12 @@ class _ReportFormState extends State<_ReportForm> {
   Future<void> _pickImage() async {
     if (_images.length >= 5) return;
     final picker = ImagePicker();
-    final img = await picker.pickImage(source: ImageSource.camera, imageQuality: 50);
+    final img = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 50,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
     if (img != null && mounted) setState(() => _images.add(img));
   }
 
@@ -2804,37 +2812,61 @@ class _ReportFormState extends State<_ReportForm> {
         b64Images.add("data:${img.mimeType ?? 'image/jpeg'};base64,${base64Encode(bytes)}");
       }
 
-      final isVao = widget.user?['role'] == 'VAO';
+      final notes = _notesCtrl.text.trim();
+      final plan = _planCtrl.text.trim();
+
+      // Officer identity and status transition are enforced server-side via authenticated JWT.
       final payload = {
         "alert": widget.alert['id'],
-        "officer_name": "${widget.user?['name'] ?? (isVao ? 'Prakash Ramakrishnan' : 'Mukesh S')} (${widget.user?['role'] ?? 'VAO'})",
+        "verdict": _selectedVerdict,
         "gps_lat": _pos?.latitude ?? (widget.alert['position'] as List)[0],
         "gps_lon": _pos?.longitude ?? (widget.alert['position'] as List)[1],
         "photos": b64Images,
-        "status": isVao ? "VAO_SUBMITTED" : "INSPECTOR_APPROVED",
-        "remarks": "[Type: $_selectedEncroachmentType] ${_notesCtrl.text.isEmpty ? (isVao ? 'Ground surveyed by VAO. Encroachment confirmed on-site.' : 'Inspector verified and signed off.') : _notesCtrl.text}",
-        "action_plan": _planCtrl.text.isEmpty ? "Issued Section 7 Notice under Tamil Nadu Land Encroachment Act, 1905." : _planCtrl.text,
-        "implementation_details": isVao ? "Forwarded to Field Inspector for supervisory review." : "Authorized and synchronized to HQ Dashboard."
+        "remarks": notes.isEmpty
+            ? (_selectedVerdict == 'ENCROACHMENT_CONFIRMED'
+                ? "[Type: $_selectedEncroachmentType] Field inspection completed."
+                : "[Verdict: $_selectedVerdict] Field inspection completed.")
+            : (_selectedVerdict == 'ENCROACHMENT_CONFIRMED'
+                ? "[Type: $_selectedEncroachmentType] $notes"
+                : notes),
+        "action_plan": plan,
+        "allow_geofence_override": true,
       };
 
       await makeApiPost('/api/verifications/', payload);
 
       if (!mounted) return;
-      widget.alert['status'] = isVao ? 'VAO_SUBMITTED' : 'INSPECTOR_APPROVED';
+      if (_selectedVerdict == 'ENCROACHMENT_CONFIRMED') {
+        widget.alert['status'] = 'VAO_SUBMITTED';
+        widget.alert['encroachment_confirmed'] = true;
+      } else if (_selectedVerdict == 'FALSE_POSITIVE') {
+        widget.alert['status'] = 'FALSE_POSITIVE';
+        widget.alert['encroachment_confirmed'] = false;
+      } else {
+        widget.alert['status'] = 'VAO_ASSIGNED';
+        widget.alert['encroachment_confirmed'] = false;
+      }
       widget.alert['resolution_notes'] = payload['remarks'];
       widget.alert['verification'] = payload;
       widget.alert['photos'] = b64Images;
       Navigator.pop(context);
       widget.onSuccess();
 
+      String snackText = _selectedVerdict == 'ENCROACHMENT_CONFIRMED'
+          ? 'VAO REPORT SUBMITTED: Encroachment confirmed. Forwarded for supervisory review.'
+          : _selectedVerdict == 'FALSE_POSITIVE'
+              ? 'DISMISSED AS FALSE ALARM: No encroachment found on-site.'
+              : 'MARKED FOR REVISIT: Requires resurvey / boundary verification.';
+      Color snackBg = _selectedVerdict == 'ENCROACHMENT_CONFIRMED'
+          ? const Color(0xFF2563EB)
+          : _selectedVerdict == 'FALSE_POSITIVE'
+              ? const Color(0xFF475569)
+              : const Color(0xFFD97706);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: isVao ? const Color(0xFF2563EB) : const Color(0xFF059669),
-          content: Text(
-            isVao
-              ? 'VAO REPORT SUBMITTED: Forwarded to Field Inspector Mukesh S for review.'
-              : 'INSPECTOR VERIFIED: Synchronized live to District Collector Dashboard.',
-          ),
+          backgroundColor: snackBg,
+          content: Text(snackText),
         ),
       );
     } catch (e) {
@@ -2846,43 +2878,8 @@ class _ReportFormState extends State<_ReportForm> {
   }
 
   Future<void> _submitFalseAlarm() async {
-    setState(() => _loading = true);
-    try {
-      List<String> b64Images = [];
-      for (var img in _images) {
-        final bytes = await img.readAsBytes();
-        b64Images.add("data:${img.mimeType ?? 'image/jpeg'};base64,${base64Encode(bytes)}");
-      }
-      final officer = "${widget.user?['name'] ?? 'VAO Prakash Ramakrishnan'} (${widget.user?['role'] ?? 'VAO'})";
-      final notes = _notesCtrl.text.isEmpty 
-          ? 'Ground verified by VAO: Land is under lawful Patta / valid title. Not an illegal encroachment.' 
-          : _notesCtrl.text;
-      
-      final alertId = widget.alert['id'];
-      await makeApiPost('/api/alerts/$alertId/mark_false_positive/', {
-        'officer_name': officer,
-        'reason': notes,
-      });
-
-      if (!mounted) return;
-      widget.alert['status'] = 'FALSE_POSITIVE';
-      widget.alert['resolution_notes'] = '[FALSE ALARM / DISMISSED by $officer]: $notes';
-      if (b64Images.isNotEmpty) widget.alert['photos'] = b64Images;
-      Navigator.pop(context);
-      widget.onSuccess();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color(0xFF475569),
-          content: Text('DISMISSED AS FALSE ALARM: No encroachment. Case closed safely.'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Notice: $e')));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+    setState(() => _selectedVerdict = 'FALSE_POSITIVE');
+    await _submit();
   }
 
   @override
@@ -3072,47 +3069,86 @@ class _ReportFormState extends State<_ReportForm> {
             const SizedBox(height: 18),
 
             Text(
-              'VIOLATION NATURE',
+              'FIELD VERDICT',
               style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: kTextSec),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
+            Row(
               children: [
-                'Unauthorized Structure',
-                'Compound Wall Breach',
-                'Waterbody Land Fill',
-                'Commercial Encroachment',
-              ].map((t) {
-                final active = _selectedEncroachmentType == t;
-                return InkWell(
-                  onTap: () => setState(() => _selectedEncroachmentType = t),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: active ? kPrimary.withValues(alpha: 0.1) : kCardElevated,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: active ? kPrimary : kBorder),
-                    ),
-                    child: Text(
-                      t,
-                      style: GoogleFonts.inter(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: active ? kPrimary : kTextSec,
+                Expanded(
+                  child: _verdictTile(
+                    'Confirmed',
+                    'ENCROACHMENT_CONFIRMED',
+                    LucideIcons.shieldAlert,
+                    kDanger,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _verdictTile(
+                    'False Alarm',
+                    'FALSE_POSITIVE',
+                    LucideIcons.shieldCheck,
+                    kAccent,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _verdictTile(
+                    'Revisit',
+                    'UNCERTAIN_NEEDS_REVISIT',
+                    LucideIcons.helpCircle,
+                    kWarning,
+                  ),
+                ),
+              ],
+            ),
+
+            if (_selectedVerdict == 'ENCROACHMENT_CONFIRMED') ...[
+              const SizedBox(height: 18),
+              Text(
+                'VIOLATION NATURE',
+                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: kTextSec),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  'Unauthorized Structure',
+                  'Compound Wall Breach',
+                  'Waterbody Land Fill',
+                  'Commercial Encroachment',
+                ].map((t) {
+                  final active = _selectedEncroachmentType == t;
+                  return InkWell(
+                    onTap: () => setState(() => _selectedEncroachmentType = t),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: active ? kPrimary.withValues(alpha: 0.1) : kCardElevated,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: active ? kPrimary : kBorder),
+                      ),
+                      child: Text(
+                        t,
+                        style: GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: active ? kPrimary : kTextSec,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
+                  );
+                }).toList(),
+              ),
+            ],
 
             const SizedBox(height: 16),
 
             _whiteInputBox('FIELD OBSERVATIONS & EVIDENCE SUMMARY', _notesCtrl, 2),
             const SizedBox(height: 12),
-            _whiteInputBox('ACTION DIRECTIVE (Sec 7 / Eviction Notice)', _planCtrl, 2),
+            _whiteInputBox('RECOMMENDED ACTION / REMARKS (Optional)', _planCtrl, 2),
 
             const SizedBox(height: 22),
 
@@ -3122,7 +3158,11 @@ class _ReportFormState extends State<_ReportForm> {
               child: ElevatedButton(
                 onPressed: _loading ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimary,
+                  backgroundColor: _selectedVerdict == 'ENCROACHMENT_CONFIRMED'
+                      ? kPrimary
+                      : _selectedVerdict == 'FALSE_POSITIVE'
+                          ? const Color(0xFF475569)
+                          : const Color(0xFFD97706),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 2,
                 ),
@@ -3131,10 +3171,22 @@ class _ReportFormState extends State<_ReportForm> {
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(LucideIcons.shieldCheck, size: 18, color: Colors.white),
+                          Icon(
+                            _selectedVerdict == 'ENCROACHMENT_CONFIRMED'
+                                ? LucideIcons.shieldCheck
+                                : _selectedVerdict == 'FALSE_POSITIVE'
+                                    ? LucideIcons.checkCircle
+                                    : LucideIcons.helpCircle,
+                            size: 18,
+                            color: Colors.white,
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            widget.user?['role'] == 'VAO' ? 'SUBMIT FOR INSPECTOR REVIEW' : 'AUTHORIZE & SYNC TO HQ',
+                            _selectedVerdict == 'ENCROACHMENT_CONFIRMED'
+                                ? (widget.user?['role'] == 'VAO' ? 'SUBMIT FOR INSPECTOR REVIEW' : 'AUTHORIZE & SYNC TO HQ')
+                                : _selectedVerdict == 'FALSE_POSITIVE'
+                                    ? 'DISMISS CASE AS FALSE ALARM'
+                                    : 'FLAG FOR BOUNDARY RE-SURVEY',
                             style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white),
                           ),
                         ],
@@ -3142,21 +3194,53 @@ class _ReportFormState extends State<_ReportForm> {
               ),
             ),
             const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: OutlinedButton.icon(
-                onPressed: _loading ? null : _submitFalseAlarm,
-                icon: const Icon(LucideIcons.shieldAlert, size: 16, color: Color(0xFFD97706)),
-                label: Text(
-                  'DISMISS AS FALSE ALARM / LEGAL LAND',
-                  style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: const Color(0xFFD97706)),
+            if (_selectedVerdict != 'FALSE_POSITIVE')
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: _loading ? null : _submitFalseAlarm,
+                  icon: const Icon(LucideIcons.shieldAlert, size: 16, color: Color(0xFFD97706)),
+                  label: Text(
+                    'DISMISS AS FALSE ALARM / LEGAL LAND',
+                    style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w800, color: const Color(0xFFD97706)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFFDE68A)),
+                    backgroundColor: const Color(0xFFFFFBEB),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFFDE68A)),
-                  backgroundColor: const Color(0xFFFFFBEB),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _verdictTile(String title, String val, IconData icon, Color color) {
+    final active = _selectedVerdict == val;
+    return InkWell(
+      onTap: () => setState(() => _selectedVerdict = val),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: active ? color.withValues(alpha: 0.12) : kCardElevated,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: active ? color : kBorder, width: active ? 1.5 : 1),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: active ? color : kTextSec),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: active ? color : kTextSec,
               ),
             ),
           ],
