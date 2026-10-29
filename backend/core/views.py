@@ -10,10 +10,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
-from .models import LandParcel, EncroachmentAlert, FieldVerification, RegistryProposal
+from .models import LandParcel, EncroachmentAlert, FieldVerification, RegistryProposal, DistrictLegalConfig
 from .serializers import (
     LandParcelSerializer, EncroachmentAlertSerializer, 
-    FieldVerificationSerializer, RegistryProposalSerializer
+    FieldVerificationSerializer, RegistryProposalSerializer, DistrictLegalConfigSerializer
 )
 from .permissions import (
     IsVigilanceReadOnly, get_user_role,
@@ -669,4 +669,21 @@ class HighCourtATRView(APIView):
             return response
         except Exception as e:
             return Response({"error": f"Failed to generate High Court ATR: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DistrictLegalConfigViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Exposes configurable confidence thresholds, statutory SLAs, and legal parameters.
+    Read-only for authenticated officers.
+    """
+    queryset = DistrictLegalConfig.objects.all()
+    serializer_class = DistrictLegalConfigSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        district = self.request.query_params.get('district')
+        if district:
+            qs = DistrictLegalConfig.objects.filter(district__iexact=district.strip())
+            if qs.exists():
+                return qs
+        return DistrictLegalConfig.objects.all()
 

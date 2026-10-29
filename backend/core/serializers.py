@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
-from .models import LandParcel, EncroachmentAlert, FieldVerification, RegistryProposal
+from .models import LandParcel, EncroachmentAlert, FieldVerification, RegistryProposal, DistrictLegalConfig
 
 class LandParcelSerializer(GeoFeatureModelSerializer):
     class Meta:
@@ -50,5 +50,10 @@ class RegistryProposalSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = RegistryProposal
+        fields = "__all__"
+
+class DistrictLegalConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DistrictLegalConfig
         fields = "__all__"
 

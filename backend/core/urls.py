@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     LandParcelViewSet, EncroachmentAlertViewSet, 
-    FieldVerificationViewSet, RegistryProposalViewSet,
+    FieldVerificationViewSet, RegistryProposalViewSet, DistrictLegalConfigViewSet,
     TNGISProxyView, SmartAlertView, HighCourtATRView
 )
 from .auth_views import (
@@ -14,6 +14,7 @@ router.register(r'parcels', LandParcelViewSet)
 router.register(r'alerts', EncroachmentAlertViewSet)
 router.register(r'verifications', FieldVerificationViewSet)
 router.register(r'registry-proposals', RegistryProposalViewSet)
+router.register(r'config/legal', DistrictLegalConfigViewSet, basename='district-legal-config')
 
 
 urlpatterns = [

@@ -43,6 +43,66 @@ class LandParcel(models.Model):
     def __str__(self):
         return f"{self.survey_number}/{self.subdivision} ({self.village_code})"
 
+class DistrictLegalConfig(models.Model):
+    """
+    Configurable confidence thresholds, statutory SLAs, and legal court order mappings.
+    Eliminates hardcoded tier percentages, SLA timers, and notice windows.
+    If district is None, serves as statewide fallback configuration.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    district = models.CharField(max_length=100, blank=True, null=True, unique=True, help_text="District name or NULL for statewide default")
+    
+    # Confidence Tier Thresholds
+    tier1_confidence_min = models.FloatField(default=0.80, help_text="Minimum confidence for Tier 1 Critical (default 0.80 / 80%)")
+    tier2_confidence_min = models.FloatField(default=0.50, help_text="Minimum confidence for Tier 2 Medium Risk (default 0.50 / 50%)")
+    
+    # Operational SLA Timers (in days)
+    tier1_sla_days = models.IntegerField(default=2, help_text="SLA in days for Tier 1 Critical alerts (e.g. 2 days / 48 hrs)")
+    tier2_sla_days = models.IntegerField(default=7, help_text="SLA in days for Tier 2 Medium alerts (e.g. 7 days)")
+    tier3_sla_days = models.IntegerField(default=30, help_text="SLA in days for Tier 3 Monitoring alerts (e.g. 30 days)")
+    
+    # Statutory Windows under TN Act III of 1905
+    section7_reply_window_days = models.IntegerField(default=15, help_text="Statutory show-cause reply deadline in days")
+    section6_vacate_window_days = models.IntegerField(default=7, help_text="Eviction warrant vacate grace period in days")
+    
+    # Judicial Order Registry Configuration
+    operative_writ_petition_no = models.CharField(max_length=150, blank=True, null=True, help_text="Writ petition case number for High Court compliance ATR")
+    high_court_bench_name = models.CharField(max_length=200, blank=True, null=True, help_text="Designated High Court bench")
+    high_court_order_date = models.CharField(max_length=50, blank=True, null=True, help_text="Operative High Court order date (DD-MM-YYYY)")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def get_config_for_district(cls, district=None):
+        if district:
+            cfg = cls.objects.filter(district__iexact=district.strip()).first()
+            if cfg:
+                return cfg
+        state_cfg = cls.objects.filter(district__isnull=True).first()
+        if state_cfg:
+            return state_cfg
+        return cls(district=None)
+
+    def resolve_tier_and_sla(self, confidence_score: float, base_time=None):
+        from datetime import timedelta
+        from django.utils import timezone
+        now = base_time or timezone.now()
+        if confidence_score >= self.tier1_confidence_min:
+            return 'TIER_1_CRITICAL', now + timedelta(days=self.tier1_sla_days)
+        elif confidence_score >= self.tier2_confidence_min:
+            return 'TIER_2_MEDIUM', now + timedelta(days=self.tier2_sla_days)
+        else:
+            return 'TIER_3_MONITORING', now + timedelta(days=self.tier3_sla_days)
+
+    def __str__(self):
+        return f"Legal Config ({self.district or 'Statewide Default'})"
+
+
+# Alias for LaneConfig
+LaneConfig = DistrictLegalConfig
+
+
 class EncroachmentAlert(models.Model):
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
@@ -64,9 +124,9 @@ class EncroachmentAlert(models.Model):
     ]
 
     TIER_CHOICES = [
-        ('TIER_1_CRITICAL', 'Tier 1: Critical (80-100% - Collector Direct)'),
-        ('TIER_2_MEDIUM', 'Tier 2: Medium Risk (50-79% - VAO 7-Day SLA)'),
-        ('TIER_3_MONITORING', 'Tier 3: Low (<50% - Satellite Sentinel Watch)'),
+        ('TIER_1_CRITICAL', 'Tier 1 Critical'),
+        ('TIER_2_MEDIUM', 'Tier 2 Medium'),
+        ('TIER_3_MONITORING', 'Tier 3 Monitoring'),
     ]
 
     STRUCTURE_CHOICES = [
@@ -115,6 +175,17 @@ class EncroachmentAlert(models.Model):
         if self.sla_deadline and self.status in ['NEW', 'Pending', 'VAO_ASSIGNED']:
             return timezone.now() > self.sla_deadline
         return False
+
+    def save(self, *args, **kwargs):
+        if not self.tier or not self.sla_deadline:
+            district = getattr(getattr(self, 'parcel', None), 'district', None)
+            cfg = DistrictLegalConfig.get_config_for_district(district)
+            calc_tier, calc_sla = cfg.resolve_tier_and_sla(self.confidence_score)
+            if not self.tier:
+                self.tier = calc_tier
+            if not self.sla_deadline:
+                self.sla_deadline = calc_sla
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Alert {self.id} - {self.tier} - {self.status}"
