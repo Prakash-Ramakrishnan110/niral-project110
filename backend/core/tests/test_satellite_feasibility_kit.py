@@ -130,3 +130,4 @@ class SatelliteFeasibilityKitTests(TestCase):
         finally:
             if os.path.exists(tmp_csv):
                 os.remove(tmp_csv)
+

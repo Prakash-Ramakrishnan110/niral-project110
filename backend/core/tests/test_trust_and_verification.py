@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from rest_framework.test import APIClient
 from rest_framework import status
-from core.models import LandParcel, EncroachmentAlert, CaseAuditEvent
+from core.models import LandParcel, EncroachmentAlert, CaseAuditEvent, DistrictLegalConfig
 from core.services.legal_notice_pdf import LegalNoticePDFGenerator
 
 
@@ -21,6 +21,12 @@ class TrustAndVerificationTests(TestCase):
     """
 
     def setUp(self):
+        self.legal_config = DistrictLegalConfig.objects.create(
+            district='Salem',
+            section7_reply_window_days=15,
+            section6_vacate_window_days=7,
+            statutory_notice_authority='Tahsildar'
+        )
         self.user = User.objects.create_user(username='test_tahsildar', password='Password123!')
         poly = Polygon(((78.14, 11.64), (78.16, 11.64), (78.16, 11.66), (78.14, 11.66), (78.14, 11.64)))
         self.parcel = LandParcel.objects.create(
@@ -158,7 +164,8 @@ class TrustAndVerificationTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
         self.assertTrue(data['verified'])
-        self.assertEqual(data['statutory_status'], 'VALID_TAMPER_EVIDENT_DOCUMENT')
+        self.assertEqual(data['statutory_status'], 'RECORDED_IN_AUDIT_LOG')
+        self.assertEqual(data['document_status'], 'RECORDED_IN_AUDIT_LOG')
         self.assertIn('issue_date', data)
         self.assertIn('issuing_authority', data)
         self.assertEqual(data['cadastral_details']['survey_number'], '101/1A')

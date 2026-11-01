@@ -177,6 +177,8 @@ class SatelliteFeasibilityKit:
         smallest_area = min(detected_areas) if detected_areas else None
 
         return {
+            'benchmark_label': 'FIXTURE SELF-TEST / OFFLINE BENCHMARK',
+            'copernicus_live_query': False,
             'summary': {
                 'total_sites_evaluated': total,
                 'true_positives': tp,
@@ -209,3 +211,4 @@ class SatelliteFeasibilityKit:
                 sites.append(row)
 
         return self.evaluate_sites(sites)
+

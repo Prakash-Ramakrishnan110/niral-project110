@@ -74,13 +74,13 @@ void main() {
       expect(find.text('Notes: Notice issued by Tahsildar.'), findsOneWidget);
 
       // Verify local inspection section
-      expect(find.text('YOUR LOCAL INSPECTION'), findsOneWidget);
+      expect(find.text('YOUR LOCAL INSPECTION (Pending Submission)'), findsOneWidget);
       expect(find.text('Verdict: ENCROACHMENT_CONFIRMED'), findsOneWidget);
       expect(find.text('Remarks: My on-site finding: active construction continuing.'), findsOneWidget);
 
       // Verify choice actions
       expect(find.text('Discard Local Draft'), findsOneWidget);
-      expect(find.text('Overwrite Server State'), findsOneWidget);
+      expect(find.text('Re-apply my changes on latest version'), findsOneWidget);
 
       // Tap Discard Local Draft
       await tester.tap(find.text('Discard Local Draft'));

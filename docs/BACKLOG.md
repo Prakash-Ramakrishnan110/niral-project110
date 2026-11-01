@@ -60,23 +60,23 @@ All statutory citations, judicial headers, procedural timelines, and affidavit w
 
 ---
 
-## 4. Next Build Order (Strict Sequential Milestones)
+## 4. Revised Master Milestones & Build Order
 
 Each milestone must include automated tests and stop for user review prior to database migrations:
 
-1. **Lanes and Accuracy Ledger:**
-   - Wilson 95% confidence intervals per confidence lane (High / Medium / Low).
-   - Minimum sample size threshold $n$ before publishing verified accuracy percentage.
-2. **Watch Zones & Review Scheduler:**
-   - Background periodic worker using Celery + Redis.
-   - Low-lane watch zone re-checks and statutory review timers.
-3. **ExternalSource Registry & Adapters:**
-   - Model registry for 8 external government adapters (TNGIS, CollabLand, Tamil Nilam, STAR 3.0, TNUHDB, Copernicus, CCTNS, CM Helpline).
-   - All 8 adapters created and disabled by default.
-4. **Tamil Text Rendering & PDF Font Tests:**
-   - Automated visual and text-extraction tests verifying zero mojibake or glyph clipping for Tamil script in ReportLab notices.
-5. **Dharmapuri Hierarchy Import:**
-   - Import script ready for certified Dharmapuri District revenue hierarchy upon user provision of official data files.
-6. **Load Testing, Observability & Privacy Documentation:**
-   - Locust load tests for statutory verify and work-queue endpoints.
-   - Structured JSON logging and statutory data privacy documentation pursuant to DPDP Act 2023.
+- **M0: Foundation & Trust Architecture (In Hardening)**
+  - Open items: Law Dept sign-off on notice wording, Pleader verification of writ number, authority delegation confirmation (no Tahsildar default), and strict config refusal when no `DistrictLegalConfig` exists.
+- **M1: Field Operations & Mobile Evidence App (Built, Field Test Pending)**
+  - Open items: Field trial on physical Android device with cellular toggling, conflict resolution re-apply flow, and official Survey Dept FMB sample files.
+- **M2: Lanes & Accuracy Ledger (Next Up - Step 1)**
+  - Wilson 95% binomial confidence intervals per confidence lane (High / Medium / Low).
+  - Priority classes A to D (by land type) kept strictly separate from confidence lanes.
+  - Minimum sample size threshold $n < 30$ displaying `"Insufficient data (n < 30)"`.
+- **M3: Watch Zones & Review Scheduler**
+  - Celery worker + Redis message broker for low-lane watch zones and review timers.
+- **M4: Data-Source Layer (8 Adapters)**
+  - `ExternalSource` model registry for 8 government adapters (all disabled by default).
+- **M5: Remaining Web Pages + Tamil Text + Real Salem Data Import**
+  - Remaining role web views, ReportLab Tamil font tests, and import hierarchy for pilot district (Salem, data to be supplied).
+- **M6: Detection Test + Load Tests + Monitoring + Privacy Docs + Pilot Report**
+  - Ground-truth satellite detection benchmark, Locust load tests, DPDP Act 2023 compliance document, and executive pilot report.

@@ -51,6 +51,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("\n" + "=" * 75))
         self.stdout.write(self.style.SUCCESS("  SATELLITE CHANGE DETECTION FEASIBILITY BENCHMARK REPORT"))
+        self.stdout.write(self.style.WARNING("  [LABEL: FIXTURE SELF-TEST / OFFLINE BENCHMARK - NOT A LIVE COPERNICUS QUERY]"))
         self.stdout.write(self.style.SUCCESS("=" * 75))
         self.stdout.write(f"  Total Ground-Truth Sites : {summary['total_sites_evaluated']}")
         self.stdout.write(f"  True Positives (TP)      : {summary['true_positives']}")
@@ -72,3 +73,4 @@ class Command(BaseCommand):
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(report, f, indent=2)
             self.stdout.write(self.style.SUCCESS(f"Saved full JSON evaluation report to: {out_path}"))
+

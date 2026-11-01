@@ -93,13 +93,74 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
     await context.close();
   });
 
+  test.describe('Role-Based Authority: One Allowed & One Hidden Action per Role', () => {
+    const ROLE_RULES = [
+      {
+        role: 'TAHSILDAR',
+        index: 0,
+        allowedSelector: 'text=Taluk Statutory Authority',
+        hiddenSelector: 'text=Madras High Court ATR Docket',
+      },
+      {
+        role: 'COLLECTOR',
+        index: 1,
+        allowedSelector: 'text=District Collector & Executive Magistrate',
+        hiddenSelector: 'text=On-Ground Evidence Capture',
+      },
+      {
+        role: 'STATE_APEX',
+        index: 2,
+        allowedSelector: 'text=Statewide Strategic Land Bank',
+        hiddenSelector: 'text=Temporary Pandal Grace Discretion',
+      },
+      {
+        role: 'VIGILANCE',
+        index: 3,
+        allowedSelector: 'text=Vigilance & Anti-Corruption Audit',
+        hiddenSelector: 'text=Issue Eviction Warrant',
+      },
+      {
+        role: 'VAO',
+        index: 4,
+        allowedSelector: 'text=Village Administrative Officer',
+        hiddenSelector: 'text=Madras High Court ATR Docket',
+      },
+      {
+        role: 'ADMIN_GIS',
+        index: 5,
+        allowedSelector: 'text=Cadastral GIS & Sentinel-2 Infrastructure',
+        hiddenSelector: 'text=Pass Section 6 Eviction Order',
+      },
+    ];
+
+    for (const r of ROLE_RULES) {
+      test(`${r.role}: allowed action visible, disallowed action hidden`, async ({ browser }) => {
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        await page.goto('http://localhost:5173/');
+
+        const launchBtn = page.getByRole('button', { name: 'Launch' }).nth(r.index);
+        await expect(launchBtn).toBeVisible({ timeout: 10000 });
+        await launchBtn.click();
+        await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
+
+        // Allowed action is visible
+        await expect(page.locator(r.allowedSelector).first()).toBeVisible({ timeout: 10000 });
+
+        // Disallowed action is strictly hidden / not visible
+        await expect(page.locator(r.hiddenSelector)).not.toBeVisible();
+
+        await context.close();
+      });
+    }
+  });
+
   test.describe('End-to-End Officer Journeys', () => {
     test('Journey 1: Standard Login navigates to dashboard', async ({ browser }) => {
       const context = await browser.newContext();
       const page = await context.newPage();
 
       await page.goto('http://localhost:5173/');
-      // Click Launch on first preset
       const launchBtn = page.getByRole('button', { name: 'Launch' }).first();
       await expect(launchBtn).toBeVisible({ timeout: 10000 });
       await launchBtn.click();
@@ -114,11 +175,9 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
       const page = await context.newPage();
 
       await page.goto('http://localhost:5173/');
-      // Tahsildar (Salem West)
       await page.getByRole('button', { name: 'Launch' }).first().click();
       await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
 
-      // Salem West should be present
       await expect(page.locator('text=Salem West')).toBeVisible();
 
       // Cross-district data (e.g. Coimbatore North) must be completely absent from rendered view
@@ -136,7 +195,6 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
       await page.getByRole('button', { name: 'Launch' }).first().click();
       await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
 
-      // Click Hearings action card
       const hearingsCard = page.locator('text=Schedule Hearing').first();
       if (await hearingsCard.isVisible()) {
         await hearingsCard.click();
@@ -153,7 +211,6 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
       const page = await context.newPage();
 
       await page.goto('http://localhost:5173/');
-      // Click Launch for VAO (index 4)
       await page.getByRole('button', { name: 'Launch' }).nth(4).click();
       await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
 
@@ -166,10 +223,7 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
       const context = await browser.newContext();
       const page = await context.newPage();
 
-      // Navigate directly to protected route without authentication
       await page.goto('http://localhost:5173/dashboard');
-
-      // Must display authentication prompt
       await expect(page.locator('text=Revenue Officer Authentication Required')).toBeVisible({ timeout: 10000 });
       await expect(page.locator('text=Sign In with Officer Credentials')).toBeVisible();
       await context.close();

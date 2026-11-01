@@ -5069,12 +5069,25 @@ void showConcurrencyConflictDialog({
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('YOUR LOCAL INSPECTION',
+                  Text('YOUR LOCAL INSPECTION (Pending Submission)',
                       style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: kAccent)),
                   const SizedBox(height: 4),
                   Text('Verdict: ${localPayload['verdict']}', style: GoogleFonts.inter(fontSize: 11, color: kText)),
                   Text('Remarks: ${localPayload['remarks']}', style: GoogleFonts.inter(fontSize: 11, color: kTextSec)),
                 ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Text(
+                'DIFF: Server is at version ${conflictData['current_version'] ?? 'N/A'}. Choosing "Re-apply" increments version and attaches your local inspection findings onto the latest state.',
+                style: GoogleFonts.inter(fontSize: 10, color: kTextSec, fontStyle: FontStyle.italic),
               ),
             ),
           ],
@@ -5107,7 +5120,7 @@ void showConcurrencyConflictDialog({
               );
             }
           },
-          child: Text('Overwrite Server State', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: Text('Re-apply my changes on latest version', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ],
     ),

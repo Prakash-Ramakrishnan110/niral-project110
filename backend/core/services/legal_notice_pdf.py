@@ -103,8 +103,10 @@ class LegalNoticePDFGenerator:
         notice_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC7/{datetime.now().year}/{str(alert.id)[:8].upper()}"
         issue_date = datetime.now().strftime("%d-%m-%Y")
         from core.models import DistrictLegalConfig, StatutoryNoticeAuthority
-        district_cfg = DistrictLegalConfig.get_config_for_district(district)
-        reply_window = district_cfg.section7_reply_window_days if district_cfg else 15
+        district_cfg = DistrictLegalConfig.objects.filter(district__iexact=district.strip()).first() or DistrictLegalConfig.objects.filter(district__isnull=True).first()
+        if not district_cfg:
+            raise ValueError(f"Statutory Configuration Error: No statutory legal configuration found for district '{district}'. Notice generation refuses to proceed without an active DistrictLegalConfig.")
+        reply_window = district_cfg.section7_reply_window_days
         reply_deadline = (datetime.now() + timedelta(days=reply_window)).strftime("%d-%m-%Y")
         auth_s7 = StatutoryNoticeAuthority.objects.filter(action='ISSUE_SECTION_7', is_allowed=True).first()
         sig_designation = f"{auth_s7.role.upper()} & EXECUTIVE AUTHORITY [UNVERIFIED]" if auth_s7 else "STATUTORY AUTHORITY PENDING OFFICIAL DESIGNATION" 
@@ -370,8 +372,10 @@ class LegalNoticePDFGenerator:
         warrant_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC6_WARRANT/{datetime.now().year}/{str(alert.id)[:8].upper()}"
         issue_date = datetime.now().strftime("%d-%m-%Y")
         from core.models import DistrictLegalConfig, StatutoryNoticeAuthority
-        district_cfg = DistrictLegalConfig.get_config_for_district(district)
-        vacate_window = district_cfg.section6_vacate_window_days if district_cfg else 7
+        district_cfg = DistrictLegalConfig.objects.filter(district__iexact=district.strip()).first() or DistrictLegalConfig.objects.filter(district__isnull=True).first()
+        if not district_cfg:
+            raise ValueError(f"Statutory Configuration Error: No statutory legal configuration found for district '{district}'. Eviction warrant generation refuses to proceed without an active DistrictLegalConfig.")
+        vacate_window = district_cfg.section6_vacate_window_days
         auth_s6 = StatutoryNoticeAuthority.objects.filter(action='PASS_SECTION_6_ORDER', is_allowed=True).first()
         sig_designation_s6 = f"{auth_s6.role.upper()} & EXECUTIVE AUTHORITY [UNVERIFIED]" if auth_s6 else "STATUTORY AUTHORITY PENDING OFFICIAL DESIGNATION"
 

@@ -302,3 +302,12 @@ class ProductionEndpointsTests(TestCase):
         resp = self.client.get(f'/api/cases/{vulnerable_alert.id}/documents/section-6/')
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('VULNERABLE_HOUSING', resp.data['error'])
+
+    def test_notice_generation_refuses_when_no_legal_config(self):
+        from core.models import DistrictLegalConfig
+        DistrictLegalConfig.objects.all().delete()
+
+        self.client.force_authenticate(user=self.u_tah_slmw)
+        resp = self.client.get(f'/api/cases/{self.alert_1.id}/documents/section-7/')
+        self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn('No statutory legal configuration found', resp.data['error'])
