@@ -1,3 +1,6 @@
+from .evidence_views import (
+    EvidenceUploadUrlView, EvidenceDirectUploadView, EvidenceViewUrlView
+)
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
@@ -41,4 +44,9 @@ urlpatterns = [
     # Public Statutory Document Verification Endpoints (TD-04)
     path('notices/verify/<str:doc_hash>/', PublicNoticeVerifyView.as_view(), name='public-notice-verify'),
     path('v1/verify/<str:doc_hash>/', PublicNoticeVerifyView.as_view(), name='public-notice-verify-v1'),
+
+    # Evidence Object Storage & Presigned URLs (M1-02)
+    path('evidence/upload-url/', EvidenceUploadUrlView.as_view(), name='evidence-upload-url'),
+    path('evidence/upload/<str:signed_token>/', EvidenceDirectUploadView.as_view(), name='evidence-direct-upload'),
+    path('evidence/view/<str:signed_token>/', EvidenceViewUrlView.as_view(), name='evidence-view-file'),
 ]

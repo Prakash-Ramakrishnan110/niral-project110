@@ -197,3 +197,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ── TNGIS Integration ─────────────────────────────────────────────────────────
 # Set to False once official API credentials are obtained from CLA / TNeGA.
 TNGIS_DEMO_MODE = os.environ.get('TNGIS_DEMO_MODE', 'False').lower() in ('1', 'true', 'yes')
+
+# Media and Evidence Object Storage Settings (M1-02)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', '')
+MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', '')
+MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', '')
+MINIO_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'geommand-evidence')

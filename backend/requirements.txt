@@ -11,3 +11,4 @@ djangorestframework-simplejwt==5.5.1
 django-axes==8.3.1
 pypdf==6.21.2
 # GeoDjango dependencies (usually installed via system packages in Docker)
+boto3==1.43.123
