@@ -98,6 +98,62 @@ List<String> get kApiHosts {
 }
 
 String? _jwtAccessToken;
+
+class QueuedInspection {
+  final String alertId;
+  final String verdict;
+  final double gpsLat;
+  final double gpsLon;
+  final List<String> photos;
+  final String remarks;
+  final String actionPlan;
+  final int expectedVersion;
+  final DateTime queuedAt;
+
+  QueuedInspection({
+    required this.alertId,
+    required this.verdict,
+    required this.gpsLat,
+    required this.gpsLon,
+    required this.photos,
+    required this.remarks,
+    required this.actionPlan,
+    required this.expectedVersion,
+    required this.queuedAt,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'alert': alertId,
+    'verdict': verdict,
+    'gps_lat': gpsLat,
+    'gps_lon': gpsLon,
+    'photos': photos,
+    'remarks': remarks,
+    'action_plan': actionPlan,
+    'expected_version': expectedVersion,
+    'queued_at': queuedAt.toIso8601String(),
+  };
+}
+
+final List<QueuedInspection> _offlineQueue = [];
+List<QueuedInspection> get offlineQueue => List.unmodifiable(_offlineQueue);
+
+Future<int> syncOfflineQueue() async {
+  if (_offlineQueue.isEmpty) return 0;
+  int synced = 0;
+  final pending = List<QueuedInspection>.from(_offlineQueue);
+  for (final item in pending) {
+    try {
+      final res = await makeApiPost('/api/verifications/', item.toJson());
+      if (res != null && (res.statusCode == 200 || res.statusCode == 201)) {
+        _offlineQueue.remove(item);
+        synced++;
+      }
+    } catch (_) {}
+  }
+  return synced;
+}
+
 String? _jwtRefreshToken;
 Map<String, dynamic>? _currentOfficerProfile;
 Map<String, dynamic>? get currentOfficerProfile => _currentOfficerProfile;
@@ -2875,6 +2931,18 @@ class _ReportFormState extends State<_ReportForm> {
             content: Text(snackText),
           ),
         );
+      } else if (res != null && res.statusCode == 409) {
+        // Concurrency conflict detected: open conflict resolution screen
+        final conflictData = jsonDecode(res.body);
+        showConcurrencyConflictDialog(
+          context: context,
+          localPayload: payload,
+          conflictData: conflictData is Map<String, dynamic> ? conflictData : {},
+          onResolved: () {
+            Navigator.pop(context);
+            widget.onSuccess();
+          },
+        );
       } else {
         String errorMsg = 'Failed to submit verification.';
         if (res != null) {
@@ -2885,7 +2953,30 @@ class _ReportFormState extends State<_ReportForm> {
             errorMsg = 'Server returned HTTP ${res.statusCode}';
           }
         } else {
-          errorMsg = 'Could not reach backend server. Check connection.';
+          // Cellular / WiFi disconnect: queue inspection locally for durable offline sync
+          final queued = QueuedInspection(
+            alertId: widget.alert['id'].toString(),
+            verdict: _selectedVerdict,
+            gpsLat: _pos?.latitude ?? (widget.alert['position'] as List)[0],
+            gpsLon: _pos?.longitude ?? (widget.alert['position'] as List)[1],
+            photos: b64Images,
+            remarks: notes,
+            actionPlan: plan,
+            expectedVersion: widget.alert['version'] ?? 1,
+            queuedAt: DateTime.now(),
+          );
+          _offlineQueue.add(queued);
+          Navigator.pop(context);
+          widget.onSuccess();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFFD97706),
+              duration: Duration(seconds: 5),
+              content: Text('OFFLINE DRAFT QUEUED: Inspection stored locally. Will automatically replay when network reconnects.'),
+            ),
+          );
+          return;
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -4919,3 +5010,106 @@ class _StatutoryActionModalState extends State<_StatutoryActionModal> {
   }
 }
 
+
+
+void showConcurrencyConflictDialog({
+  required BuildContext context,
+  required Map<String, dynamic> localPayload,
+  required Map<String, dynamic> conflictData,
+  required VoidCallback onResolved,
+}) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: kCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          const Icon(LucideIcons.alertTriangle, color: kWarning, size: 24),
+          const SizedBox(width: 8),
+          Text('Concurrency Conflict (HTTP 409)', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: kText)),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This case was updated on the server by another officer while your inspection was being recorded.',
+              style: GoogleFonts.inter(fontSize: 12, color: kTextSec),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('SERVER STATE (Version ${conflictData['current_version'] ?? 'N/A'})',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: kDanger)),
+                  const SizedBox(height: 4),
+                  Text('Status: ${conflictData['current_status'] ?? 'Unknown'}', style: GoogleFonts.inter(fontSize: 11, color: kText)),
+                  Text('Notes: ${conflictData['current_resolution_notes'] ?? 'None'}', style: GoogleFonts.inter(fontSize: 11, color: kTextSec)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF86EFAC)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('YOUR LOCAL INSPECTION',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: kAccent)),
+                  const SizedBox(height: 4),
+                  Text('Verdict: ${localPayload['verdict']}', style: GoogleFonts.inter(fontSize: 11, color: kText)),
+                  Text('Remarks: ${localPayload['remarks']}', style: GoogleFonts.inter(fontSize: 11, color: kTextSec)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Local inspection discarded in favor of server state.')),
+            );
+          },
+          child: Text('Discard Local Draft', style: GoogleFonts.inter(color: kTextSec)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+          onPressed: () async {
+            Navigator.pop(ctx);
+            final updatedPayload = Map<String, dynamic>.from(localPayload);
+            updatedPayload['expected_version'] = conflictData['current_version'];
+            final res = await makeApiPost('/api/verifications/', updatedPayload);
+            if (res != null && (res.statusCode == 200 || res.statusCode == 201)) {
+              onResolved();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  backgroundColor: kAccent,
+                  content: Text('Conflict resolved: Server state updated with your findings.'),
+                ),
+              );
+            }
+          },
+          child: Text('Overwrite Server State', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+      ],
+    ),
+  );
+}

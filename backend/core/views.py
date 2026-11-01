@@ -465,6 +465,21 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
         except EncroachmentAlert.DoesNotExist:
             return Response({"error": "Specified EncroachmentAlert not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Optimistic concurrency check (409 Conflict)
+        expected_version = request.data.get('expected_version')
+        if expected_version is not None:
+            try:
+                exp_v = int(expected_version)
+                if alert.version != exp_v:
+                    return Response({
+                        "error": "Concurrent modification conflict: case was modified by another officer or supervisor.",
+                        "current_version": alert.version,
+                        "current_status": alert.status,
+                        "current_resolution_notes": alert.resolution_notes,
+                    }, status=status.HTTP_409_CONFLICT)
+            except (ValueError, TypeError):
+                pass
+
         # Scoping check: Field officers can only submit verifications for their assigned district/taluk
         user = request.user
         profile = getattr(user, 'profile', None)
@@ -573,6 +588,7 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
 
         user_remarks = request.data.get('remarks', '')
         alert.resolution_notes = f"[{verdict}] {user_remarks}".strip()
+        alert.version = (alert.version or 1) + 1
         alert.save()
 
         headers = self.get_success_headers(serializer.data)
