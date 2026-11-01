@@ -1,16 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import LoginModal from './components/LoginModal';
-import ExecutiveDashboardView from './views/ExecutiveDashboardView';
-import WorkQueueView from './views/WorkQueueView';
-import CourtStaysView from './views/CourtStaysView';
-import HearingsView from './views/HearingsView';
-import RehabilitationView from './views/RehabilitationView';
-import TacticalMapView from './views/TacticalMapView';
-import VAOMobileView from './views/VAOMobileView';
-import { HighCourtATRView } from './views/HighCourtATRView';
 import { AuthAPI, subscribeAuthChange } from './api/client';
+
+// Route-level code splitting (dynamic imports)
+const ExecutiveDashboardView = lazy(() => import('./views/ExecutiveDashboardView'));
+const WorkQueueView = lazy(() => import('./views/WorkQueueView'));
+const CourtStaysView = lazy(() => import('./views/CourtStaysView'));
+const HearingsView = lazy(() => import('./views/HearingsView'));
+const RehabilitationView = lazy(() => import('./views/RehabilitationView'));
+const TacticalMapView = lazy(() => import('./views/TacticalMapView'));
+const VAOMobileView = lazy(() => import('./views/VAOMobileView'));
+const HighCourtATRView = lazy(() => import('./views/HighCourtATRView').then(m => ({ default: m.HighCourtATRView })));
+
+function RouteLoading() {
+  return (
+    <div className="flex flex-col items-center justify-center p-12">
+      <div className="w-8 h-8 border-3 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-2" />
+      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Loading Console Module...</span>
+    </div>
+  );
+}
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -72,17 +83,19 @@ export default function App() {
         {/* MAIN BODY ROUTED VIEWS */}
         <main className="flex-1">
           {currentUser ? (
-            <Routes key={currentUser?.id || 'guest'}>
-              <Route path="/dashboard" element={<ExecutiveDashboardView onRefreshData={fetchCurrentUser} />} />
-              <Route path="/cases" element={<WorkQueueView />} />
-              <Route path="/court-stays" element={<CourtStaysView />} />
-              <Route path="/hearings" element={<HearingsView />} />
-              <Route path="/rehabilitation" element={<RehabilitationView />} />
-              <Route path="/map" element={<TacticalMapView />} />
-              <Route path="/field-queue" element={<VAOMobileView />} />
-              <Route path="/atr" element={<HighCourtATRView alerts={[]} onRefresh={fetchCurrentUser} />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
+            <Suspense fallback={<RouteLoading />}>
+              <Routes key={currentUser?.id || 'guest'}>
+                <Route path="/dashboard" element={<ExecutiveDashboardView onRefreshData={fetchCurrentUser} />} />
+                <Route path="/cases" element={<WorkQueueView />} />
+                <Route path="/court-stays" element={<CourtStaysView />} />
+                <Route path="/hearings" element={<HearingsView />} />
+                <Route path="/rehabilitation" element={<RehabilitationView />} />
+                <Route path="/map" element={<TacticalMapView />} />
+                <Route path="/field-queue" element={<VAOMobileView />} />
+                <Route path="/atr" element={<HighCourtATRView alerts={[]} onRefresh={fetchCurrentUser} />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </Suspense>
           ) : (
             <div className="max-w-2xl mx-auto py-20 px-4 text-center">
               <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto mb-4 shadow-xs">
