@@ -1,4 +1,5 @@
 import os
+import secrets
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 from core.models import UserProfile
@@ -199,37 +200,15 @@ class Command(BaseCommand):
             },
         ]
 
-        DEMO_ROLE_PASSWORDS = {
-            'TAHSILDAR': 'Demo@TahSalem2026!',
-            'COLLECTOR': 'Demo@ColSalem2026!',
-            'STATE_APEX': 'Demo@StateApex2026!',
-            'CLA_STATE': 'Demo@ClaState2026!',
-            'ADMIN_GIS': 'Demo@GisAdmin2026!',
-            'VIGILANCE': 'Demo@Vigilance2026!',
-            'RDO': 'Demo@RdoSalem2026!',
-            'INSPECTOR': 'Demo@InspSalem2026!',
-            'VAO': 'Demo@VaoKannan2026!',
-        }
-
-        def resolve_user_password(udata):
-            if os.environ.get('DEMO_USER_PASSWORD'):
-                return os.environ.get('DEMO_USER_PASSWORD')
-            role = udata.get('role', 'OFFICER')
-            dist = udata.get('district') or 'TN'
-            base = DEMO_ROLE_PASSWORDS.get(role, 'Demo@Officer2026!')
-            if dist == 'Coimbatore':
-                return base.replace('Salem', 'Cbe')
-            elif dist == 'Chennai':
-                return base.replace('Salem', 'Chn')
-            return base
-
         created_count = 0
         updated_count = 0
+        generated_credentials = []
 
         for udata in demo_users:
             uname = udata['username']
             user, created = User.objects.get_or_create(username=uname)
-            user_pwd = resolve_user_password(udata)
+            # Generate per-user random password at runtime; never hardcoded in source
+            user_pwd = os.environ.get('DEMO_USER_PASSWORD') or secrets.token_urlsafe(12)
             user.set_password(user_pwd)
             user.first_name = udata['first_name']
             user.last_name = udata['last_name']
@@ -244,6 +223,13 @@ class Command(BaseCommand):
             profile.village = udata['village']
             profile.save()
 
+            generated_credentials.append({
+                'username': uname,
+                'role': udata['role'],
+                'district': udata['district'] or 'Statewide',
+                'password': user_pwd
+            })
+
             if created:
                 created_count += 1
             else:
@@ -254,3 +240,9 @@ class Command(BaseCommand):
                 f"[SUCCESS] Provisioned {created_count} new demo users ({updated_count} updated) across Salem, Coimbatore, and Chennai."
             )
         )
+        self.stdout.write(self.style.WARNING("=" * 80))
+        self.stdout.write(self.style.WARNING("  RUNTIME PROVISIONED DEMO CREDENTIALS (GENERATED ONCE - NEVER COMMITTED)"))
+        self.stdout.write(self.style.WARNING("=" * 80))
+        for cred in generated_credentials:
+            self.stdout.write(f"  {cred['username']:<22} | {cred['role']:<14} | {cred['district']:<14} | {cred['password']}")
+        self.stdout.write(self.style.WARNING("=" * 80))

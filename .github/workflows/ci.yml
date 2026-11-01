@@ -81,3 +81,25 @@ jobs:
         run: |
           npm ci || npm install
           npm run build
+
+      - name: Run Playwright E2E Test Suite
+        working-directory: frontend
+        env:
+          VITE_DEMO: 'true'
+          VITE_DEMO_PASSWORD: 'CIPassword2026!'
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: land_records
+          DB_USER: landuser
+          DB_PASSWORD: landpassword
+          DJANGO_SETTINGS_MODULE: config.settings
+          SECRET_KEY: ci-test-secret-key-3.15.2
+          GEOMMAND_ENV: demo
+          DEMO_USER_PASSWORD: 'CIPassword2026!'
+        run: |
+          python backend/manage.py seed_demo_users
+          nohup python backend/manage.py runserver 0.0.0.0:8000 > /tmp/django.log 2>&1 &
+          nohup npm run dev -- --host 127.0.0.1 --port 5173 > /tmp/vite.log 2>&1 &
+          sleep 5
+          npx playwright install --with-deps chromium
+          npx playwright test

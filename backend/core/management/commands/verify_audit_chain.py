@@ -63,3 +63,4 @@ class Command(BaseCommand):
             f"OK: Verified {total_events} audit events across {total_cases} cases. "
             f"Cryptographic SHA-256 hash chain is 100% valid (0 tamper violations)."
         ))
+

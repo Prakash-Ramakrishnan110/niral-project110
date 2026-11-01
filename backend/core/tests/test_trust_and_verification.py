@@ -148,7 +148,7 @@ class TrustAndVerificationTests(TestCase):
         self.assertIn('/verify/', audit_ev.metadata['verify_url'])
 
     def test_public_verify_endpoint_valid_digest(self):
-        """Public endpoint GET /api/notices/verify/<hash>/ verifies valid document."""
+        """Public endpoint GET /api/notices/verify/<hash>/ verifies valid document with zero PII."""
         # Generate notice to register it
         LegalNoticePDFGenerator.generate_section_7_pdf(self.alert)
         digest = LegalNoticePDFGenerator.compute_notice_digest(self.alert, '7')
@@ -159,9 +159,16 @@ class TrustAndVerificationTests(TestCase):
         data = response.json()
         self.assertTrue(data['verified'])
         self.assertEqual(data['statutory_status'], 'VALID_TAMPER_EVIDENT_DOCUMENT')
+        self.assertIn('issue_date', data)
+        self.assertIn('issuing_authority', data)
         self.assertEqual(data['cadastral_details']['survey_number'], '101/1A')
         self.assertEqual(data['cadastral_details']['district'], 'Salem')
         self.assertTrue(data['audit_chain_verified'])
+
+        # Strict Privacy Shield assertion: Zero Citizen PII
+        self.assertNotIn('occupant', data)
+        self.assertNotIn('owner_name', data)
+        self.assertIn('privacy_notice', data)
 
         # Test alternative v1 alias
         v1_url = f'/api/v1/verify/{digest}/'

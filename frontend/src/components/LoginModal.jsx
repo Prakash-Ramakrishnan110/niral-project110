@@ -14,7 +14,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'Tahsildar (Salem West)', 
       user: 'tah_salem_west', 
       canonical: 'tahsildar_salem_west',
-      pass: 'Demo@TahSalem2026!', 
+      pass: import.meta.env.VITE_DEMO_PASSWORD || '', 
       role: 'TAHSILDAR', 
       officer: 'S. Murugan',
       jurisdiction: 'Salem West Taluk',
@@ -25,7 +25,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'District Collector (Salem)', 
       user: 'col_salem', 
       canonical: 'collector_salem',
-      pass: 'Demo@ColSalem2026!', 
+      pass: import.meta.env.VITE_DEMO_PASSWORD || '', 
       role: 'COLLECTOR', 
       officer: 'R. Brindha Devi IAS',
       jurisdiction: 'Salem District Apex',
@@ -36,7 +36,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'State Apex / CS (Secretariat)', 
       user: 'apex_tn', 
       canonical: 'state_apex_officer',
-      pass: 'Demo@StateApex2026!', 
+      pass: import.meta.env.VITE_DEMO_PASSWORD || '', 
       role: 'STATE_APEX', 
       officer: 'Dr. K. Manivasan IAS',
       jurisdiction: 'Statewide Tamil Nadu',
@@ -47,7 +47,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'DVAC Auditor (Vigilance)', 
       user: 'dvac_auditor', 
       canonical: 'vigilance_officer',
-      pass: 'Demo@Vigilance2026!', 
+      pass: import.meta.env.VITE_DEMO_PASSWORD || '', 
       role: 'VIGILANCE', 
       officer: 'DVAC Audit Division',
       jurisdiction: 'Statutory Audit (Read-Only)',
@@ -58,7 +58,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'Field VAO (Kannankurichi)', 
       user: 'vao_kannan', 
       canonical: 'vao_kannankurichi',
-      pass: 'Demo@VaoKannan2026!', 
+      pass: import.meta.env.VITE_DEMO_PASSWORD || '', 
       role: 'VAO', 
       officer: 'K. Prakash',
       jurisdiction: 'Kannankurichi Village',
@@ -69,7 +69,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       label: 'GIS System Administrator', 
       user: 'admin', 
       canonical: 'admin_gis_officer',
-      pass: 'Demo@GisAdmin2026!', 
+      pass: import.meta.env.VITE_DEMO_PASSWORD || '', 
       role: 'ADMIN_GIS', 
       officer: 'GIS Operations Core',
       jurisdiction: 'System Core & Layers',
@@ -79,7 +79,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
   ] : [];
 
   const [username, setUsername] = useState(isDemo ? 'tah_salem_west' : '');
-  const [password, setPassword] = useState(isDemo ? 'Demo@TahSalem2026!' : '');
+  const [password, setPassword] = useState(import.meta.env.VITE_DEMO_PASSWORD || '');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activePreset, setActivePreset] = useState(isDemo ? 'tah_salem_west' : '');

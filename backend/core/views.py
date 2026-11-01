@@ -2,6 +2,7 @@ from rest_framework import viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.throttling import AnonRateThrottle
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Q
@@ -775,14 +776,21 @@ class DistrictLegalConfigViewSet(viewsets.ReadOnlyModelViewSet):
         return DistrictLegalConfig.objects.all()
 
 
+class NoticeVerifyRateThrottle(AnonRateThrottle):
+    rate = '30/min'
+    scope = 'notice_verify'
+
+
 class PublicNoticeVerifyView(APIView):
     """
     Public statutory notice verification endpoint (TD-04).
     Accepts a SHA-256 notice digest or generated PDF hash, verifying document authenticity,
     cadastral parcel context, issuing authority, and cryptographic hash chain status.
     Unauthenticated / public access allowed for citizen transparency and judicial scrutiny.
+    Enforces IP-based rate limiting and zero citizen PII leakage (no occupant names).
     """
     permission_classes = [AllowAny]
+    throttle_classes = [NoticeVerifyRateThrottle]
 
     def get(self, request, doc_hash):
         from .models import CaseAuditEvent
@@ -855,15 +863,19 @@ class PublicNoticeVerifyView(APIView):
                 break
             expected_prev = ev.current_hash
 
+        issue_date = meta.get('issue_date') if (audit_event and meta.get('issue_date')) else datetime.now().strftime("%d-%m-%Y")
+
         return Response({
             "verified": True,
             "statutory_status": "VALID_TAMPER_EVIDENT_DOCUMENT",
             "document_type": doc_type,
             "statute": "Tamil Nadu Land Encroachment Act III of 1905",
             "notice_number": notice_num or f"REV/{taluk.upper().replace(' ', '_')}/STATUTORY/{datetime.now().year}/{str(alert.id)[:8].upper()}",
+            "issue_date": issue_date,
             "sha256_digest": notice_hash,
             "pdf_sha256": pdf_hash,
             "case_id": str(alert.id),
+            "issuing_authority": f"Tahsildar & Executive Magistrate, {taluk} Taluk, {district} District",
             "cadastral_details": {
                 "district": district,
                 "taluk": taluk,
@@ -872,10 +884,9 @@ class PublicNoticeVerifyView(APIView):
                 "classification": parcel.classification or "Government Poramboke",
                 "encroached_sqft": int(alert.encroached_area_sqft or 850),
             },
-            "occupant": parcel.owner_name or "Unauthorized Occupant / Encroacher",
-            "issuing_authority": f"Tahsildar & Executive Magistrate, {taluk} Taluk, {district} District",
             "audit_chain_verified": chain_intact,
             "audit_events_count": len(chain_events),
+            "privacy_notice": "NO_PERSONAL_DATA: Citizen identities and personal identifiable information (PII) are withheld from public verification registries pursuant to statutory privacy policy.",
             "disclaimer": "Draft statutory notice for officer review & execution under Tamil Nadu Act III of 1905. Survey sketch is indicative and derived from satellite change-detection footprint. Timelines subject to legal confirmation."
         }, status=status.HTTP_200_OK)
 

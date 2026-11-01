@@ -212,10 +212,15 @@ export const PublicDocumentVerifyView = () => {
                 </div>
               </div>
 
-              {/* Occupant Notice */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs">
-                <span className="text-slate-400 block text-[10px] uppercase">Alleged Occupant / Encroacher</span>
-                <span className="font-bold text-slate-900 text-sm mt-0.5 block">{data.occupant}</span>
+              {/* Privacy Shield Notice (No Citizen PII) */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Statutory Privacy Policy</span>
+                  <span className="text-slate-700 text-xs font-medium">Citizen names & personal data withheld from public query registers.</span>
+                </div>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700">
+                  PII REDACTED
+                </span>
               </div>
 
               {/* Cryptographic SHA-256 Digest Section */}
@@ -280,3 +285,4 @@ export const PublicDocumentVerifyView = () => {
 };
 
 export default PublicDocumentVerifyView;
+

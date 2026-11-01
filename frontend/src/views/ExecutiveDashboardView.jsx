@@ -132,6 +132,9 @@ export const ExecutiveDashboardView = ({ onRefreshData }) => {
           <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
             <MapPin className="w-3.5 h-3.5 text-slate-400" />
             <span className="font-semibold text-slate-700">{roleConfig.jurisdiction}</span>
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200" title="Subordinate Taluk/Village hierarchy is prototype data; pending official MoPR/LGD certified export">
+              LGD: UNVERIFIED
+            </span>
             <span>•</span>
             <span>{roleConfig.desc}</span>
           </div>

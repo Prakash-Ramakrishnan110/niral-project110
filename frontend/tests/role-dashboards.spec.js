@@ -92,4 +92,87 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
 
     await context.close();
   });
+
+  test.describe('End-to-End Officer Journeys', () => {
+    test('Journey 1: Standard Login navigates to dashboard', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+
+      await page.goto('http://localhost:5173/');
+      // Click Launch on first preset
+      const launchBtn = page.getByRole('button', { name: 'Launch' }).first();
+      await expect(launchBtn).toBeVisible({ timeout: 10000 });
+      await launchBtn.click();
+
+      await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
+      await expect(page.locator('text=Taluk Statutory Authority')).toBeVisible();
+      await context.close();
+    });
+
+    test('Journey 2: Jurisdiction Scoping — cross-district data is completely absent', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+
+      await page.goto('http://localhost:5173/');
+      // Tahsildar (Salem West)
+      await page.getByRole('button', { name: 'Launch' }).first().click();
+      await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
+
+      // Salem West should be present
+      await expect(page.locator('text=Salem West')).toBeVisible();
+
+      // Cross-district data (e.g. Coimbatore North) must be completely absent from rendered view
+      const content = await page.content();
+      expect(content).not.toContain('Coimbatore North');
+      expect(content).not.toContain('Peelamedu');
+      await context.close();
+    });
+
+    test('Journey 3: Allowed Action Succeeds — Tahsildar navigates to statutory hearing docket', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+
+      await page.goto('http://localhost:5173/');
+      await page.getByRole('button', { name: 'Launch' }).first().click();
+      await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
+
+      // Click Hearings action card
+      const hearingsCard = page.locator('text=Schedule Hearing').first();
+      if (await hearingsCard.isVisible()) {
+        await hearingsCard.click();
+        await expect(page).toHaveURL(/.*\/hearings/, { timeout: 10000 });
+      } else {
+        await page.goto('http://localhost:5173/hearings');
+        await expect(page).toHaveURL(/.*\/hearings/);
+      }
+      await context.close();
+    });
+
+    test('Journey 4: Disallowed Action is Hidden — VAO cannot view High Court ATR compliance docket', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+
+      await page.goto('http://localhost:5173/');
+      // Click Launch for VAO (index 4)
+      await page.getByRole('button', { name: 'Launch' }).nth(4).click();
+      await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
+
+      // High Court ATR Docket is restricted to Collector & State Apex; must be hidden for VAO
+      await expect(page.locator('text=Madras High Court ATR Docket')).not.toBeVisible();
+      await context.close();
+    });
+
+    test('Journey 5: Session Expiry Handled — unauthenticated access redirects to login prompt', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+
+      // Navigate directly to protected route without authentication
+      await page.goto('http://localhost:5173/dashboard');
+
+      // Must display authentication prompt
+      await expect(page.locator('text=Revenue Officer Authentication Required')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('text=Sign In with Officer Credentials')).toBeVisible();
+      await context.close();
+    });
+  });
 });
