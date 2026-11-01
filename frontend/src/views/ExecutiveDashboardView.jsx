@@ -363,11 +363,11 @@ export const ExecutiveDashboardView = ({ onRefreshData }) => {
 
       {role === 'ADMIN_GIS' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-xs relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-600" />
-            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sentinel-2 Link</p>
-            <p className="text-2xl font-black text-emerald-700 mt-1">ACTIVE</p>
-            <p className="text-[10px] text-slate-400 mt-1">Copernicus 10m bands</p>
+          <div className="bg-white p-4 rounded-xl border border-amber-200 shadow-xs relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Detection Model</p>
+            <p className="text-base font-black text-amber-800 mt-1 font-mono">none-simulated</p>
+            <p className="text-[10px] text-slate-400 mt-1">Simulated alerts (demo mode)</p>
           </div>
           <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-xs relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1 bg-blue-600" />
@@ -804,39 +804,20 @@ export const ExecutiveDashboardView = ({ onRefreshData }) => {
           <div>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Satellite Coverage Gaps & Cadastral Health
+                Satellite Coverage Gap Monitor
               </h2>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                SENTINEL-2 CADENCE
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-300">
+                NOT AVAILABLE
               </span>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              Identifies taluks where cloud cover or revisit intervals have exceeded the 10-day operational threshold.
+              Continuous satellite revisit cadence monitoring across taluks is inactive until real Copernicus Sentinel-2 ingest runs exist.
             </p>
 
-            {coverageGaps.length === 0 ? (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>All taluks have clear satellite observations within the 10-day cadence window.</span>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {coverageGaps.map((gap, i) => (
-                  <div key={i} className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CloudOff className="w-4 h-4 text-amber-600 shrink-0" />
-                      <div>
-                        <p className="font-bold text-slate-900">{gap.taluk} Taluk ({gap.district})</p>
-                        <p className="text-[10px] text-slate-500">{gap.reason}</p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-extrabold text-amber-700">
-                      {gap.days_since_clear_observation != null ? `+${gap.days_since_clear_observation}d` : 'No pass'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-xs flex items-center gap-2">
+              <CloudOff className="w-4 h-4 text-slate-400 shrink-0" />
+              <span>Not available — no real imagery runs. Automated Sentinel-2 tile differencing pipeline is planned.</span>
+            </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-3 text-xs">

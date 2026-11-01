@@ -7,16 +7,9 @@ import {
 import { AuthAPI } from '../api/client';
 
 export default function LoginModal({ isOpen, onLoginSuccess }) {
-  const [username, setUsername] = useState('tah_salem_west');
-  const [password, setPassword] = useState('Demo@TahSalem2026!');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [activePreset, setActivePreset] = useState('tah_salem_west');
-  const [errorMessage, setErrorMessage] = useState('');
+  const isDemo = import.meta.env.VITE_DEMO === 'true';
 
-  if (!isOpen) return null;
-
-  const demoAccounts = [
+  const demoAccounts = isDemo ? [
     { 
       label: 'Tahsildar (Salem West)', 
       user: 'tah_salem_west', 
@@ -83,7 +76,16 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       badgeColor: 'border-purple-200 text-purple-700 bg-purple-50',
       description: 'GeoServer layer synchronizer, Sentinel-2 ingest pipeline, system maintenance'
     },
-  ];
+  ] : [];
+
+  const [username, setUsername] = useState(isDemo ? 'tah_salem_west' : '');
+  const [password, setPassword] = useState(isDemo ? 'Demo@TahSalem2026!' : '');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [activePreset, setActivePreset] = useState(isDemo ? 'tah_salem_west' : '');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  if (!isOpen) return null;
 
   const performLogin = async (targetUser, targetPass) => {
     setLoading(true);
@@ -178,8 +180,8 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
           {/* Live Telemetry Chips */}
           <div className="hidden sm:flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-[10px] text-slate-700 font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>SENTINEL-2 LINK: ACTIVE</span>
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>SATELLITE INGEST: SIMULATED (DEMO)</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-[10px] text-slate-700 font-mono">
               <Radio className="w-3 h-3 text-blue-600" />
@@ -191,75 +193,95 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
         {/* Dual Panel Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
           
-          {/* LEFT COLUMN: 1-Click Role Presets */}
+          {/* LEFT COLUMN: 1-Click Role Presets (Demo Mode Only) */}
           <div className="lg:col-span-7 p-6 sm:p-8 space-y-4 bg-slate-50/70">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-500" />
-                  Verified Officer Profiles (1-Click Launch)
-                </h2>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Click any role card below to instantly launch the secure command console:
-                </p>
-              </div>
-              <span className="hidden sm:inline-flex text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold">
-                PROVISIONED
-              </span>
-            </div>
-
-            {/* Role Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              {demoAccounts.map((acc) => {
-                const isSelected = activePreset === acc.user;
-                return (
-                  <div
-                    key={acc.user}
-                    onClick={() => handleSelectDemo(acc, false)}
-                    className={`relative p-3.5 rounded-xl border transition-all cursor-pointer group flex flex-col justify-between ${
-                      isSelected 
-                        ? 'bg-blue-50/80 border-blue-500 shadow-sm ring-1 ring-blue-500/30' 
-                        : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-xs'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${acc.badgeColor} border`}>
-                          {acc.role}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {acc.user}
-                        </span>
-                      </div>
-                      <div className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        {acc.label}
-                      </div>
-                      <div className="text-[10px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
-                        <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{acc.jurisdiction}</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-                      <span className="text-[10px] text-slate-500 truncate max-w-[120px]">
-                        {acc.officer}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelectDemo(acc, true);
-                        }}
-                        className="px-2.5 py-1 bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-blue-600 text-blue-700 hover:text-white rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 shadow-xs"
-                      >
-                        <span>Launch</span>
-                        <ArrowRight className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
+            {isDemo ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      Verified Officer Profiles (1-Click Launch)
+                    </h2>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Click any role card below to instantly launch the secure command console:
+                    </p>
                   </div>
-                );
-              })}
-            </div>
+                  <span className="hidden sm:inline-flex text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold">
+                    PROVISIONED
+                  </span>
+                </div>
+
+                {/* Role Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  {demoAccounts.map((acc) => {
+                    const isSelected = activePreset === acc.user;
+                    return (
+                      <div
+                        key={acc.user}
+                        onClick={() => handleSelectDemo(acc, false)}
+                        className={`relative p-3.5 rounded-xl border transition-all cursor-pointer group flex flex-col justify-between ${
+                          isSelected 
+                            ? 'bg-white border-blue-500 ring-2 ring-blue-500/20 shadow-md' 
+                            : 'bg-white/80 hover:bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border ${acc.badgeColor}`}>
+                              {acc.role}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {acc.user}
+                            </span>
+                          </div>
+                          <div className="font-bold text-slate-900 text-xs tracking-tight group-hover:text-blue-600 transition-colors">
+                            {acc.label}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                            {acc.jurisdiction}
+                          </p>
+                        </div>
+                        
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            {acc.officer}
+                          </span>
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectDemo(acc, true);
+                            }}
+                            className="px-2.5 py-1 bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-blue-600 text-blue-700 hover:text-white rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 shadow-xs"
+                          >
+                            <span>Launch</span>
+                            <ArrowRight className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="h-full flex flex-col justify-center items-center text-center p-8 space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shadow-xs">
+                  <ShieldCheck className="w-8 h-8 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    Statutory Revenue Officer Gateway
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                    Access to GEOMMAND enforcement commands is strictly restricted to commissioned Revenue Department officers under Tamil Nadu Act III of 1905.
+                  </p>
+                </div>
+                <div className="text-[11px] text-slate-400 border-t border-slate-200 pt-3 max-w-xs">
+                  Official state single sign-on (SSO) and biometric smart card authentication active.
+                </div>
+              </div>
+            )}
 
             {/* Security Compliance Notice */}
             <div className="p-3 rounded-xl bg-white border border-slate-200 text-[10px] text-slate-600 flex items-start gap-2.5 shadow-xs">
@@ -270,7 +292,6 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
               </div>
             </div>
           </div>
-
           {/* RIGHT COLUMN: Officer Sign In Form */}
           <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between bg-white">
             <div className="space-y-5">
@@ -320,7 +341,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex justify-between">
                     <span>Officer Security Key / Password</span>
-                    <span className="text-[10px] text-blue-600 font-mono font-bold">{password}</span>
+                    {isDemo && <span className="text-[10px] text-blue-600 font-mono font-bold">{password}</span>}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">

@@ -168,3 +168,4 @@ Counts verified by direct query against the active `land_db` PostgreSQL containe
 | **Cadastral Parcels** | **39** | `core_landparcel` | All 39 parcels located in Salem District (Waterbodies, Roads, Forest, Temples, Poramboke). |
 | **Encroachment Alerts** | **160** | `core_encroachmentalert` | Seeded alerts across the 39 Salem parcels. |
 | **Officer Accounts** | **19** | `auth_user` | Demo officer personas across Salem, Chennai, Coimbatore, and State Apex. |
+

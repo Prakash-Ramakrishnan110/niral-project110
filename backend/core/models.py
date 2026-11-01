@@ -297,7 +297,7 @@ class EncroachmentAlert(models.Model):
     # Detection Snapshots & Recall Control Checks (Section 7.1 - 7.2)
     snapshot_confidence = models.FloatField(null=True, blank=True, help_text="Model confidence score at time of detection")
     snapshot_lane = models.CharField(max_length=30, blank=True, null=True, help_text="HIGH, MEDIUM, or LOW lane at detection time")
-    snapshot_model_version = models.CharField(max_length=50, default='v1.0-sentinel2-resnet50', help_text="Model version identifier")
+    snapshot_model_version = models.CharField(max_length=50, default='none-simulated', help_text="Model version identifier")
     snapshot_scene_ids = models.JSONField(default=list, blank=True, help_text="Sentinel-2 or satellite scene identifiers used for detection")
     detected_area_sqm = models.FloatField(default=0.0, help_text="Detected change area in square meters")
     is_control_check = models.BooleanField(

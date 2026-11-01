@@ -223,7 +223,7 @@ class AccuracyLedgerService:
             ).order_by('-total')
 
             for g in groups:
-                name = g['alert__snapshot_model_version'] or 'v1.0-sentinel2-resnet50'
+                name = g['alert__snapshot_model_version'] or 'none-simulated'
                 n = g['total']
                 conf = g['confirmed']
                 if n < min_sample_size:
