@@ -313,22 +313,49 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _idCtrl = TextEditingController(text: 'TN-SLM-9922');
-  final _pwCtrl = TextEditingController(text: '••••••••');
+  final _idCtrl = TextEditingController(text: 'vao_kannankurichi');
+  final _pwCtrl = TextEditingController();
   bool _loading = false;
   String _selectedRole = 'VAO';
 
-    void _submit() async {
+  void _submit() async {
+    final username = _idCtrl.text.trim();
+    final password = _pwCtrl.text.trim();
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: kDanger,
+          content: Text('Please enter your officer username and password.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 700));
+    final success = await loginOfficer(username, password);
     if (!mounted) return;
-    widget.onLogin({
-      'name': _selectedRole == 'VAO' ? 'Prakash Ramakrishnan' : 'Mukesh S',
-      'role': _selectedRole,
-      'badge': _idCtrl.text.trim(),
-      'taluk': 'Salem West',
-      'district': 'Salem',
-    });
+    setState(() => _loading = false);
+
+    if (success && _currentOfficerProfile != null) {
+      final prof = _currentOfficerProfile!;
+      final fullName = "${prof['first_name'] ?? ''} ${prof['last_name'] ?? ''}".trim();
+      widget.onLogin({
+        'name': fullName.isNotEmpty ? fullName : prof['username'],
+        'role': prof['role'] ?? _selectedRole,
+        'badge': "TN-${prof['role'] ?? _selectedRole}-${prof['username']}",
+        'taluk': prof['taluk'] ?? 'Salem West',
+        'district': prof['district'] ?? 'Salem',
+        'village': prof['village'] ?? '',
+        'username': prof['username'],
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: kDanger,
+          content: Text('Authentication failed. Check credentials or network connectivity.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -483,7 +510,8 @@ class _LoginPageState extends State<LoginPage> {
                               onTap: () {
                                 setState(() {
                                   _selectedRole = 'VAO';
-                                  _idCtrl.text = 'TN-SLM-9922';
+                                  _idCtrl.text = 'vao_kannankurichi';
+                                  _pwCtrl.clear();
                                 });
                               },
                             ),
@@ -500,7 +528,8 @@ class _LoginPageState extends State<LoginPage> {
                               onTap: () {
                                 setState(() {
                                   _selectedRole = 'INSPECTOR';
-                                  _idCtrl.text = 'TN-SLM-RI-04';
+                                  _idCtrl.text = 'inspector_salem';
+                                  _pwCtrl.clear();
                                 });
                               },
                             ),
@@ -531,13 +560,13 @@ class _LoginPageState extends State<LoginPage> {
 
                       const SizedBox(height: 20),
 
-                      _fieldLabel('OFFICER BADGE ID'),
-                      _inputField(_idCtrl, 'TN-SLM-9922', LucideIcons.fingerprint),
+                      _fieldLabel('OFFICER USERNAME / BADGE ID'),
+                      _inputField(_idCtrl, 'e.g. vao_kannankurichi', LucideIcons.fingerprint),
 
                       const SizedBox(height: 16),
 
-                      _fieldLabel('SECURITY CLEARANCE PIN'),
-                      _inputField(_pwCtrl, '••••••••', LucideIcons.lock, obscure: true),
+                      _fieldLabel('SECURITY PASSWORD'),
+                      _inputField(_pwCtrl, 'Enter your password', LucideIcons.lock, obscure: true),
 
                       const SizedBox(height: 24),
 
@@ -833,29 +862,7 @@ class _ShellPageState extends State<ShellPage> {
           return seen.add(id);
         }).toList();
 
-        if (parsed.length > 3 && !parsed.any((a) => a['status'] == 'VAO_SUBMITTED')) {
-          parsed[1]['status'] = 'VAO_SUBMITTED';
-          parsed[1]['resolution_notes'] = 'Ground surveyed by VAO Prakash. Permanent structure encroaching 3.2m into canal poramboke.';
-          parsed[1]['verification'] = {
-            'officer_name': 'VAO Prakash Ramakrishnan',
-            'photos': [
-              'https://images.unsplash.com/photo-1541888946425-d0fbb18615f8?w=600&auto=format&fit=crop&q=80',
-              'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=600&auto=format&fit=crop&q=80',
-            ],
-            'remarks': 'Ground surveyed by VAO Prakash. Permanent structure encroaching 3.2m into canal poramboke.',
-            'action_plan': 'Issue Section 7 notice under Tamil Nadu Land Encroachment Act 1905.',
-          };
-          parsed[2]['status'] = 'VAO_SUBMITTED';
-          parsed[2]['resolution_notes'] = 'On-site verification by VAO Prakash. Commercial shed built over water catchment parcel 88/B.';
-          parsed[2]['verification'] = {
-            'officer_name': 'VAO Prakash Ramakrishnan',
-            'photos': [
-              'https://images.unsplash.com/photo-1584463699028-22345511b849?w=600&auto=format&fit=crop&q=80',
-            ],
-            'remarks': 'On-site verification by VAO Prakash. Commercial shed built over water catchment parcel 88/B.',
-            'action_plan': 'Immediate halt of commercial activities on catchment basin.',
-          };
-        }
+// Statutory honesty: alert statuses loaded directly from live API without client mock injection
 
         if (!mounted) return;
         setState(() {
@@ -2804,6 +2811,19 @@ class _ReportFormState extends State<_ReportForm> {
   }
 
   Future<void> _submit() async {
+    final notes = _notesCtrl.text.trim();
+    final plan = _planCtrl.text.trim();
+
+    if (notes.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: kDanger,
+          content: Text('Field remarks are mandatory (minimum 10 characters required documenting on-site findings).'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
     try {
       List<String> b64Images = [];
@@ -2812,66 +2832,76 @@ class _ReportFormState extends State<_ReportForm> {
         b64Images.add("data:${img.mimeType ?? 'image/jpeg'};base64,${base64Encode(bytes)}");
       }
 
-      final notes = _notesCtrl.text.trim();
-      final plan = _planCtrl.text.trim();
-
-      // Officer identity and status transition are enforced server-side via authenticated JWT.
+      // Officer identity, geofence (EPSG:32644 15m), and status transitions are strictly enforced server-side.
       final payload = {
         "alert": widget.alert['id'],
         "verdict": _selectedVerdict,
         "gps_lat": _pos?.latitude ?? (widget.alert['position'] as List)[0],
         "gps_lon": _pos?.longitude ?? (widget.alert['position'] as List)[1],
         "photos": b64Images,
-        "remarks": notes.isEmpty
-            ? (_selectedVerdict == 'ENCROACHMENT_CONFIRMED'
-                ? "[Type: $_selectedEncroachmentType] Field inspection completed."
-                : "[Verdict: $_selectedVerdict] Field inspection completed.")
-            : (_selectedVerdict == 'ENCROACHMENT_CONFIRMED'
-                ? "[Type: $_selectedEncroachmentType] $notes"
-                : notes),
+        "remarks": notes,
         "action_plan": plan,
-        "allow_geofence_override": true,
       };
 
-      await makeApiPost('/api/verifications/', payload);
+      final res = await makeApiPost('/api/verifications/', payload);
 
       if (!mounted) return;
-      if (_selectedVerdict == 'ENCROACHMENT_CONFIRMED') {
-        widget.alert['status'] = 'VAO_SUBMITTED';
-        widget.alert['encroachment_confirmed'] = true;
-      } else if (_selectedVerdict == 'FALSE_POSITIVE') {
-        widget.alert['status'] = 'FALSE_POSITIVE';
-        widget.alert['encroachment_confirmed'] = false;
+      if (res != null && (res.statusCode == 200 || res.statusCode == 201)) {
+        final resData = jsonDecode(res.body);
+        final newStatus = (resData is Map && resData['status'] != null)
+            ? resData['status'].toString()
+            : (_selectedVerdict == 'ENCROACHMENT_CONFIRMED' ? 'VAO_SUBMITTED' : (_selectedVerdict == 'FALSE_POSITIVE' ? 'FALSE_POSITIVE' : 'VAO_ASSIGNED'));
+
+        widget.alert['status'] = newStatus;
+        widget.alert['encroachment_confirmed'] = _selectedVerdict == 'ENCROACHMENT_CONFIRMED';
+        widget.alert['resolution_notes'] = notes;
+        widget.alert['verification'] = resData;
+        widget.alert['photos'] = b64Images;
+        Navigator.pop(context);
+        widget.onSuccess();
+
+        String snackText = _selectedVerdict == 'ENCROACHMENT_CONFIRMED'
+            ? 'VAO REPORT SUBMITTED: Encroachment confirmed. Forwarded for supervisory review.'
+            : (_selectedVerdict == 'FALSE_POSITIVE'
+                ? 'MARKED FALSE POSITIVE: Independent peer-audit queue triggered.'
+                : 'REVISIT SCHEDULED: Case placed on follow-up inspection list.');
+        Color snackBg = _selectedVerdict == 'ENCROACHMENT_CONFIRMED'
+            ? const Color(0xFF059669)
+            : (_selectedVerdict == 'FALSE_POSITIVE' ? const Color(0xFF64748B) : const Color(0xFFD97706));
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: snackBg,
+            content: Text(snackText),
+          ),
+        );
       } else {
-        widget.alert['status'] = 'VAO_ASSIGNED';
-        widget.alert['encroachment_confirmed'] = false;
+        String errorMsg = 'Failed to submit verification.';
+        if (res != null) {
+          try {
+            final errObj = jsonDecode(res.body);
+            errorMsg = errObj['error'] ?? errObj['detail'] ?? 'Submission error: HTTP ${res.statusCode}';
+          } catch (_) {
+            errorMsg = 'Server returned HTTP ${res.statusCode}';
+          }
+        } else {
+          errorMsg = 'Could not reach backend server. Check connection.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: kDanger,
+            content: Text(errorMsg),
+          ),
+        );
       }
-      widget.alert['resolution_notes'] = payload['remarks'];
-      widget.alert['verification'] = payload;
-      widget.alert['photos'] = b64Images;
-      Navigator.pop(context);
-      widget.onSuccess();
-
-      String snackText = _selectedVerdict == 'ENCROACHMENT_CONFIRMED'
-          ? 'VAO REPORT SUBMITTED: Encroachment confirmed. Forwarded for supervisory review.'
-          : _selectedVerdict == 'FALSE_POSITIVE'
-              ? 'DISMISSED AS FALSE ALARM: No encroachment found on-site.'
-              : 'MARKED FOR REVISIT: Requires resurvey / boundary verification.';
-      Color snackBg = _selectedVerdict == 'ENCROACHMENT_CONFIRMED'
-          ? const Color(0xFF2563EB)
-          : _selectedVerdict == 'FALSE_POSITIVE'
-              ? const Color(0xFF475569)
-              : const Color(0xFFD97706);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: snackBg,
-          content: Text(snackText),
-        ),
-      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Notice: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: kDanger,
+          content: Text('Submission error: $e'),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -3591,23 +3621,39 @@ class _InspectorReviewModalState extends State<_InspectorReviewModal> {
     setState(() => _loading = true);
     try {
       final alertId = widget.alert['id'];
-      final notes = _reviewCtrl.text.trim().isNotEmpty
-          ? _reviewCtrl.text.trim()
-          : 'FMB cadastral map boundary discrepancy. Property is within legal patta boundary.';
-      final officerName = widget.user['name'] ?? 'Revenue Inspector';
+      final notes = _reviewCtrl.text.trim();
+      if (notes.length < 10) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: kDanger,
+            content: Text('Discrepancy justification notes are mandatory (min 10 chars).'),
+          ),
+        );
+        return;
+      }
+      final officerName = widget.user['name'] ?? widget.user['username'] ?? 'Revenue Inspector';
 
-      await makeApiPost('/api/alerts/$alertId/reject_boundary/', {
+      final res = await makeApiPost('/api/alerts/$alertId/reject_boundary/', {
         'role': 'INSPECTOR',
         'officer_name': officerName,
         'reason': notes,
       });
 
       if (!mounted) return;
-      widget.alert['status'] = 'REJECTED_BOUNDARY';
-      widget.alert['resolution_notes'] = notes;
-
-      Navigator.pop(context);
-      widget.onSuccess();
+      if (res != null && (res.statusCode == 200 || res.statusCode == 201)) {
+        widget.alert['status'] = 'REJECTED_BOUNDARY';
+        widget.alert['resolution_notes'] = notes;
+        Navigator.pop(context);
+        widget.onSuccess();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: kDanger,
+            content: Text('Failed to submit boundary rejection to server.'),
+          ),
+        );
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -3632,7 +3678,7 @@ class _InspectorReviewModalState extends State<_InspectorReviewModal> {
     final verification = widget.alert['verification'];
     final officerName = (verification is Map && verification['officer_name'] != null && verification['officer_name'].toString().isNotEmpty)
         ? verification['officer_name'].toString()
-        : 'VAO Prakash Ramakrishnan';
+        : 'Assigned VAO';
     final vRemarks = (verification is Map && verification['remarks'] != null && verification['remarks'].toString().isNotEmpty)
         ? verification['remarks'].toString()
         : null;
@@ -4151,7 +4197,7 @@ class _StatutoryActionModalState extends State<_StatutoryActionModal> {
     setState(() => _loading = true);
     final alertId = widget.alert['id'];
     final role = (widget.user['role'] ?? 'TAHSILDAR').toString().toUpperCase();
-    final officerName = widget.user['name'] ?? 'Tahsildar Salem West';
+    final officerName = widget.user['name'] ?? widget.user['username'] ?? 'Tahsildar';
     try {
       if (targetAction == 'ISSUE_SEC_7') {
         final encroacher = _encroacherCtrl.text.trim().isEmpty ? 'Unauthorized Occupant' : _encroacherCtrl.text.trim();
@@ -4222,22 +4268,15 @@ class _StatutoryActionModalState extends State<_StatutoryActionModal> {
         }
       }
       widget.onSuccess();
-    } catch (_) {
-      // Offline fallback
-      if (targetAction == 'ISSUE_SEC_7') {
-        widget.alert['status'] = 'SECTION_7_ISSUED';
-        if (mounted) setState(() => _currentStatus = 'SECTION_7_ISSUED');
-      } else if (targetAction == 'ISSUE_SEC_6') {
-        widget.alert['status'] = 'SECTION_6_ORDERED';
-        if (mounted) setState(() => _currentStatus = 'SECTION_6_ORDERED');
-      } else if (targetAction == 'CANCEL_LEGAL') {
-        widget.alert['status'] = 'CANCELLED_LEGAL';
-        if (mounted) setState(() => _currentStatus = 'CANCELLED_LEGAL');
-      } else if (targetAction == 'COMPLETE_RESTORE') {
-        widget.alert['status'] = 'RESOLVED';
-        if (mounted) setState(() => _currentStatus = 'RESOLVED');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: kDanger,
+            content: Text('Action failed: $e. Check network or server logs.'),
+          ),
+        );
       }
-      widget.onSuccess();
     } finally {
       if (mounted) setState(() => _loading = false);
     }
