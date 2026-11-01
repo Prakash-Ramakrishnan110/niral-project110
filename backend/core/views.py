@@ -490,23 +490,67 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
                 "error": f"Invalid verdict '{verdict}'. Allowed values: {', '.join(valid_verdicts)}."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Geofence check: verify officer GPS within parcel boundary or 500m buffer
+        # Geofence check: verify officer GPS within parcel boundary using EPSG:32644 (metres)
         gps_lat = request.data.get('gps_lat')
         gps_lon = request.data.get('gps_lon')
+        dist_meters = None
         if gps_lat is not None and gps_lon is not None and alert.parcel and alert.parcel.geom:
             from django.contrib.gis.geos import Point
+            from django.conf import settings
             officer_point = Point(float(gps_lon), float(gps_lat), srid=4326)
-            dist_deg = officer_point.distance(alert.parcel.geom)
-            # ~0.005 degrees is approx 550m
-            if dist_deg > 0.005 and not request.data.get('allow_geofence_override'):
-                return Response({
-                    "error": "Geofence Check Failed: Device GPS location is outside parcel boundary (>500m). Set allow_geofence_override=true with remarks if physical obstruction prevented approach."
-                }, status=status.HTTP_400_BAD_REQUEST)
+            officer_point_m = officer_point.transform(32644, clone=True)
+            parcel_geom_m = alert.parcel.geom.transform(32644, clone=True)
+            dist_meters = round(officer_point_m.distance(parcel_geom_m), 2)
+            
+            tolerance_meters = getattr(settings, 'GEOFENCE_TOLERANCE_METERS', 15.0)
+            
+            if dist_meters > tolerance_meters:
+                # Check for audited supervisor override
+                supervisor_override = request.data.get('supervisor_override', False)
+                supervisor_reason = (request.data.get('supervisor_override_reason') or '').strip()
+                
+                # Check if current user is an authorized supervisor
+                user_role = getattr(getattr(request.user, 'profile', None), 'role', '')
+                is_supervisor = user_role in ['TAHSILDAR', 'COLLECTOR', 'ADMIN_GIS', 'RDO'] or request.user.is_staff or request.user.is_superuser
+                
+                if not supervisor_override:
+                    return Response({
+                        "error": f"Geofence Check Failed: Device GPS location is {dist_meters:.1f}m from parcel boundary, exceeding statutory limit of {tolerance_meters:.1f}m. On-site verification requires physical presence within {tolerance_meters:.1f}m."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                if not is_supervisor:
+                    return Response({
+                        "error": "Geofence Check Failed: Geofence override is restricted to authorized supervisors (Tahsildar, Collector, RDO, Admin). Field VAO cannot unilaterally override physical presence requirement."
+                    }, status=status.HTTP_403_FORBIDDEN)
+                    
+                if len(supervisor_reason) < 15:
+                    return Response({
+                        "error": "Geofence Check Failed: Supervisor override requires a detailed statutory justification (minimum 15 characters) documenting the physical obstacle or security rationale."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Record audit trail for supervisor override
+                from core.models import CaseAuditEvent
+                CaseAuditEvent.objects.create(
+                    alert=alert,
+                    actor=request.user,
+                    actor_role=user_role or 'SUPERVISOR',
+                    action='GEOFENCE_SUPERVISOR_OVERRIDE',
+                    reason=supervisor_reason,
+                    metadata={
+                        'distance_meters': dist_meters,
+                        'tolerance_meters': tolerance_meters,
+                        'gps_lat': float(gps_lat),
+                        'gps_lon': float(gps_lon),
+                    }
+                )
 
         # Prepare verified data payload
         data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
         data['officer_name'] = officer_display
         data['verdict'] = verdict
+        if dist_meters is not None:
+            data['distance_to_parcel_meters'] = dist_meters
+            data['geofence_ok'] = dist_meters <= getattr(settings, 'GEOFENCE_TOLERANCE_METERS', 15.0)
         data.pop('status', None)  # Client status override stripped
 
         existing = FieldVerification.objects.filter(alert=alert).first()

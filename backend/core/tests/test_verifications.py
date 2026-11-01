@@ -123,7 +123,7 @@ class FieldVerificationWorkflowTests(SafeAPITestCase):
         self.assertEqual(self.alert.status, "VAO_ASSIGNED")
 
     def test_geofence_violation_blocks_submission(self):
-        """GPS coordinate far outside parcel (>500m) returns 400 Bad Request."""
+        """GPS coordinate far outside parcel (>15m) returns 400, and requires audited supervisor override."""
         url = '/api/verifications/'
         payload = {
             "alert": str(self.alert.id),
@@ -135,12 +135,38 @@ class FieldVerificationWorkflowTests(SafeAPITestCase):
         res = self.client.post(url, payload, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Geofence Check Failed", res.data.get("error", ""))
+        self.assertIn("statutory limit of 15.0m", res.data.get("error", ""))
 
-        # With explicit override flag, submission succeeds
-        payload["allow_geofence_override"] = True
-        payload["remarks"] = "Physical flooding prevented approach within 500m"
+        # VAO attempting to override unilaterally is rejected with 403 Forbidden
+        payload["supervisor_override"] = True
+        payload["supervisor_override_reason"] = "Physical flooding prevented approach within 15m"
+        res_vao_override = self.client.post(url, payload, format='json')
+        self.assertEqual(res_vao_override.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("restricted to authorized supervisors", res_vao_override.data.get("error", ""))
+
+        # Switch to supervisor credentials
+        supervisor_user = User.objects.create_user(username='tah_sup', first_name='Tahsildar', last_name='Sup', password='TestPass@2026!')
+        UserProfile.objects.create(user=supervisor_user, role='TAHSILDAR', district='Salem', taluk='Salem West')
+        sup_token = RefreshToken.for_user(supervisor_user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {sup_token}')
+
+        # Supervisor with short reason (<15 chars) is rejected
+        payload["supervisor_override_reason"] = "Flooded area"
+        res_short = self.client.post(url, payload, format='json')
+        self.assertEqual(res_short.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("minimum 15 characters", res_short.data.get("error", ""))
+
+        # Supervisor with detailed justification succeeds and creates CaseAuditEvent
+        payload["supervisor_override_reason"] = "Severe monsoon flash flood inundated approach road; remote boundary triangulation verified."
         res_override = self.client.post(url, payload, format='json')
         self.assertEqual(res_override.status_code, status.HTTP_201_CREATED)
+
+        from core.models import CaseAuditEvent
+        audit = CaseAuditEvent.objects.filter(alert=self.alert, action='GEOFENCE_SUPERVISOR_OVERRIDE').first()
+        self.assertIsNotNone(audit)
+        self.assertEqual(audit.actor, supervisor_user)
+        self.assertEqual(audit.actor_role, 'TAHSILDAR')
+        self.assertIn("Severe monsoon", audit.reason)
 
     def test_cross_jurisdiction_verification_forbidden(self):
         """VAO assigned to Salem West cannot verify an alert in Coimbatore."""
