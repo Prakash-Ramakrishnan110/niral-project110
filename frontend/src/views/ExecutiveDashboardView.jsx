@@ -80,7 +80,7 @@ export const ExecutiveDashboardView = ({ onRefreshData }) => {
           badge: 'STATE APEX / SECRETARIAT',
           badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           desc: 'Statewide cadastral oversight across 38 districts, inter-district enforcement comparisons, and waterbody protection monitoring.',
-          jurisdiction: 'Statewide Tamil Nadu (38 Districts, 315 Taluks)',
+          jurisdiction: 'Statewide Tamil Nadu (38 Districts)',
         };
       case 'VIGILANCE':
         return {
