@@ -99,3 +99,4 @@ class Command(BaseCommand):
             f"  Total base64 photos migrated: {total_photos_migrated}\n"
             f"  Mode: {'SIMULATION ONLY (No writes committed)' if dry_run else 'COMMITTED TO DATABASE'}"
         ))
+

@@ -105,7 +105,9 @@ class PhotoIntegrityService:
         dist_to_parcel = round(photo_pt.distance(parcel_m), 2)
         dist_to_device = round(photo_pt.distance(device_pt), 2)
 
-        mismatch = dist_to_device > 50.0  # Flag if camera EXIF differs by >50m from device GPS
+        from django.conf import settings
+        exif_limit = getattr(settings, 'PHOTO_EXIF_MISMATCH_LIMIT_METERS', 50.0)
+        mismatch = dist_to_device > exif_limit
 
         return {
             "exif_verified": True,
@@ -116,3 +118,4 @@ class PhotoIntegrityService:
             "dist_to_device_meters": dist_to_device,
             "location_mismatch": mismatch,
         }
+

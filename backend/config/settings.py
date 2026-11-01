@@ -205,3 +205,11 @@ MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', '')
 MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', '')
 MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', '')
 MINIO_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'geommand-evidence')
+
+
+# ── Spatial Geofence & Evidence Verification Tolerances ───────────────────────
+# Tolerance for physical officer device presence relative to cadastral parcel boundary (metric EPSG:32644)
+GEOFENCE_TOLERANCE_METERS = float(os.environ.get('GEOFENCE_TOLERANCE_METERS', 15.0))
+
+# Maximum permitted distance discrepancy between photo embedded EXIF GPS and officer device GPS
+PHOTO_EXIF_MISMATCH_LIMIT_METERS = float(os.environ.get('PHOTO_EXIF_MISMATCH_LIMIT_METERS', 50.0))

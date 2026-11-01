@@ -102,7 +102,12 @@ class LegalNoticePDFGenerator:
         occupant = parcel.owner_name or "Unauthorized Occupant / Encroacher"
         notice_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC7/{datetime.now().year}/{str(alert.id)[:8].upper()}"
         issue_date = datetime.now().strftime("%d-%m-%Y")
-        reply_deadline = (datetime.now() + timedelta(days=15)).strftime("%d-%m-%Y")
+        from core.models import DistrictLegalConfig, StatutoryNoticeAuthority
+        district_cfg = DistrictLegalConfig.get_config_for_district(district)
+        reply_window = district_cfg.section7_reply_window_days if district_cfg else 15
+        reply_deadline = (datetime.now() + timedelta(days=reply_window)).strftime("%d-%m-%Y")
+        auth_s7 = StatutoryNoticeAuthority.objects.filter(action='ISSUE_SECTION_7', is_allowed=True).first()
+        sig_designation = f"{auth_s7.role.upper()} & EXECUTIVE AUTHORITY [UNVERIFIED]" if auth_s7 else "STATUTORY AUTHORITY PENDING OFFICIAL DESIGNATION" 
 
         # Cryptographic Document Fingerprint & Scannable QR Code (TD-04)
         notice_digest = cls.compute_notice_digest(alert, section='7')
@@ -284,7 +289,7 @@ class LegalNoticePDFGenerator:
                     small_text
                 ),
                 Paragraph(
-                    f"<b>TAHSILDAR & EXECUTIVE MAGISTRATE</b><br/>"
+                    f"<b>{sig_designation}</b><br/>"
                     f"{taluk.upper()} TALUK, {district.upper()} DISTRICT<br/><br/>"
                     f"<i>[Draft Notice – For Officer Review & Execution]</i>",
                     ParagraphStyle('Sig', parent=body_text, alignment=2)
@@ -364,6 +369,11 @@ class LegalNoticePDFGenerator:
         occupant = parcel.owner_name or "Unauthorized Occupant / Encroacher"
         warrant_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC6_WARRANT/{datetime.now().year}/{str(alert.id)[:8].upper()}"
         issue_date = datetime.now().strftime("%d-%m-%Y")
+        from core.models import DistrictLegalConfig, StatutoryNoticeAuthority
+        district_cfg = DistrictLegalConfig.get_config_for_district(district)
+        vacate_window = district_cfg.section6_vacate_window_days if district_cfg else 7
+        auth_s6 = StatutoryNoticeAuthority.objects.filter(action='PASS_SECTION_6_ORDER', is_allowed=True).first()
+        sig_designation_s6 = f"{auth_s6.role.upper()} & EXECUTIVE AUTHORITY [UNVERIFIED]" if auth_s6 else "STATUTORY AUTHORITY PENDING OFFICIAL DESIGNATION"
 
         # Cryptographic Document Fingerprint & Scannable QR Code (TD-04)
         notice_digest = cls.compute_notice_digest(alert, section='6')
@@ -520,7 +530,7 @@ class LegalNoticePDFGenerator:
                     small_text
                 ),
                 Paragraph(
-                    f"<b>TAHSILDAR & EXECUTIVE MAGISTRATE</b><br/>"
+                    f"<b>{sig_designation_s6}</b><br/>"
                     f"{taluk.upper()} TALUK, {district.upper()} DISTRICT<br/><br/>"
                     f"<i>[Draft Eviction Warrant – For Officer Review & Execution]</i>",
                     ParagraphStyle('Sig', parent=body_text, alignment=2)

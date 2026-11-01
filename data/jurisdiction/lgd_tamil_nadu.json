@@ -1,4 +1,10 @@
 {
+  "_provenance": {
+    "status": "UNVERIFIED - PROTOTYPE SEED DATA",
+    "description": "38 Districts match standard MoPR LGD codes. Subordinate Taluk and Village hierarchies in Salem/Coimbatore were synthetically seeded for prototyping and are UNVERIFIED pending certified Revenue Department export.",
+    "certified_lgd_export_imported": false,
+    "last_reviewed": "2026-11-01"
+  },
   "state": {
     "code": "TN",
     "lgd_code": 33,

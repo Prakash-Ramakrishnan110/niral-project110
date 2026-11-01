@@ -162,3 +162,4 @@ class GeofenceAndPhotoIntegrityTests(TestCase):
         self.assertTrue(audit['exif_verified'])
         self.assertTrue(audit['location_mismatch'])
         self.assertGreater(audit['dist_to_device_meters'], 50.0)
+

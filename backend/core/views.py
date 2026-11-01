@@ -531,7 +531,7 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
                 
                 if not supervisor_override:
                     return Response({
-                        "error": f"Geofence Check Failed: Device GPS location is {dist_meters:.1f}m from parcel boundary, exceeding statutory limit of {tolerance_meters:.1f}m. On-site verification requires physical presence within {tolerance_meters:.1f}m."
+                        "error": f"Physical Geofence Check Failed: Device GPS location is {dist_meters:.1f}m from parcel boundary, exceeding statutory limit of {tolerance_meters:.1f}m. On-site verification requires physical presence within {tolerance_meters:.1f}m."
                     }, status=status.HTTP_400_BAD_REQUEST)
                 
                 if not is_supervisor:
@@ -573,7 +573,7 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
                         actor=request.user,
                         actor_role=officer_display,
                         action='PHOTO_GPS_MISMATCH_DETECTED',
-                        reason=f"Photo EXIF GPS location diverged by {audit.get('dist_to_device_meters', 0)}m from device location.",
+                        reason=f"Photo EXIF Integrity Check Failed: Photo GPS location differs by {audit.get('dist_to_device_meters', 0)}m from device location, exceeding limit of {getattr(settings, 'PHOTO_EXIF_MISMATCH_LIMIT_METERS', 50.0):.1f}m.",
                         metadata=audit,
                     )
 
@@ -898,6 +898,14 @@ class PublicNoticeVerifyView(APIView):
 
         issue_date = meta.get('issue_date') if (audit_event and meta.get('issue_date')) else datetime.now().strftime("%d-%m-%Y")
 
+        from core.models import StatutoryNoticeAuthority
+        statutory_action = 'PASS_SECTION_6_ORDER' if 'Section 6' in doc_type else 'ISSUE_SECTION_7'
+        configured_auth = StatutoryNoticeAuthority.objects.filter(action=statutory_action, is_allowed=True).first()
+        if configured_auth:
+            issuing_authority_str = f"{configured_auth.role.capitalize()} & Executive Authority, {taluk} Taluk, {district} District [UNVERIFIED DELEGATION]"
+        else:
+            issuing_authority_str = f"Statutory Authority Pending Legal Designation, {taluk} Taluk, {district} District"
+
         return Response({
             "verified": True,
             "statutory_status": "VALID_TAMPER_EVIDENT_DOCUMENT",
@@ -908,7 +916,7 @@ class PublicNoticeVerifyView(APIView):
             "sha256_digest": notice_hash,
             "pdf_sha256": pdf_hash,
             "case_id": str(alert.id),
-            "issuing_authority": f"Tahsildar & Executive Magistrate, {taluk} Taluk, {district} District",
+            "issuing_authority": issuing_authority_str,
             "cadastral_details": {
                 "district": district,
                 "taluk": taluk,
