@@ -560,6 +560,23 @@ class FieldVerificationViewSet(viewsets.ModelViewSet):
                     }
                 )
 
+        # Photo EXIF Integrity & Geofence Re-check (M1-04)
+        from .services.photo_integrity import PhotoIntegrityService
+        photos_list = request.data.get('photos', [])
+        if isinstance(photos_list, list) and alert.parcel and alert.parcel.geom and gps_lat is not None and gps_lon is not None:
+            for p in photos_list:
+                audit = PhotoIntegrityService.verify_photo(p, alert.parcel.geom, float(gps_lat), float(gps_lon))
+                if audit.get('location_mismatch'):
+                    from core.models import CaseAuditEvent
+                    CaseAuditEvent.objects.create(
+                        alert=alert,
+                        actor=request.user,
+                        actor_role=officer_display,
+                        action='PHOTO_GPS_MISMATCH_DETECTED',
+                        reason=f"Photo EXIF GPS location diverged by {audit.get('dist_to_device_meters', 0)}m from device location.",
+                        metadata=audit,
+                    )
+
         # Prepare verified data payload
         data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
         data['officer_name'] = officer_display
