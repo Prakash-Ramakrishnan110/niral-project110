@@ -13,6 +13,7 @@ const RehabilitationView = lazy(() => import('./views/RehabilitationView'));
 const TacticalMapView = lazy(() => import('./views/TacticalMapView'));
 const VAOMobileView = lazy(() => import('./views/VAOMobileView'));
 const HighCourtATRView = lazy(() => import('./views/HighCourtATRView').then(m => ({ default: m.HighCourtATRView })));
+const PublicDocumentVerifyView = lazy(() => import('./views/PublicDocumentVerifyView'));
 
 function RouteLoading() {
   return (
@@ -82,39 +83,51 @@ export default function App() {
 
         {/* MAIN BODY ROUTED VIEWS */}
         <main className="flex-1">
-          {currentUser ? (
-            <Suspense fallback={<RouteLoading />}>
-              <Routes key={currentUser?.id || 'guest'}>
-                <Route path="/dashboard" element={<ExecutiveDashboardView onRefreshData={fetchCurrentUser} />} />
-                <Route path="/cases" element={<WorkQueueView />} />
-                <Route path="/court-stays" element={<CourtStaysView />} />
-                <Route path="/hearings" element={<HearingsView />} />
-                <Route path="/rehabilitation" element={<RehabilitationView />} />
-                <Route path="/map" element={<TacticalMapView />} />
-                <Route path="/field-queue" element={<VAOMobileView />} />
-                <Route path="/atr" element={<HighCourtATRView alerts={[]} onRefresh={fetchCurrentUser} />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </Suspense>
-          ) : (
-            <div className="max-w-2xl mx-auto py-20 px-4 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto mb-4 shadow-xs">
-                <span className="font-extrabold text-2xl font-mono">🔒</span>
-              </div>
-              <h2 className="text-xl font-extrabold text-slate-900 mb-2">
-                Revenue Officer Authentication Required
-              </h2>
-              <p className="text-xs text-slate-500 max-w-md mx-auto mb-6">
-                Access to the GEOMMAND statutory enforcement console requires authenticated Revenue Officer credentials under the Tamil Nadu Land Encroachment Act III of 1905.
-              </p>
-              <button
-                onClick={() => setLoginModalOpen(true)}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-all cursor-pointer"
-              >
-                Sign In with Officer Credentials
-              </button>
-            </div>
-          )}
+          <Suspense fallback={<RouteLoading />}>
+            <Routes key={currentUser?.id || 'guest'}>
+              {/* Public Notice Verification Route (TD-04) */}
+              <Route path="/verify/:hash" element={<PublicDocumentVerifyView />} />
+
+              {/* Default Index Route */}
+              <Route
+                path="/"
+                element={
+                  currentUser ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <div className="max-w-2xl mx-auto py-20 px-4 text-center">
+                      <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto mb-4 shadow-xs">
+                        <span className="font-extrabold text-2xl font-mono">🔒</span>
+                      </div>
+                      <h2 className="text-xl font-extrabold text-slate-900 mb-2">
+                        Revenue Officer Authentication Required
+                      </h2>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto mb-6">
+                        Access to the GEOMMAND statutory enforcement console requires authenticated Revenue Officer credentials under the Tamil Nadu Land Encroachment Act III of 1905.
+                      </p>
+                      <button
+                        onClick={() => setLoginModalOpen(true)}
+                        className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-all cursor-pointer"
+                      >
+                        Sign In with Officer Credentials
+                      </button>
+                    </div>
+                  )
+                }
+              />
+
+              {/* Authenticated Officer Console Routes */}
+              <Route path="/dashboard" element={currentUser ? <ExecutiveDashboardView onRefreshData={fetchCurrentUser} /> : <Navigate to="/" replace />} />
+              <Route path="/cases" element={currentUser ? <WorkQueueView /> : <Navigate to="/" replace />} />
+              <Route path="/court-stays" element={currentUser ? <CourtStaysView /> : <Navigate to="/" replace />} />
+              <Route path="/hearings" element={currentUser ? <HearingsView /> : <Navigate to="/" replace />} />
+              <Route path="/rehabilitation" element={currentUser ? <RehabilitationView /> : <Navigate to="/" replace />} />
+              <Route path="/map" element={currentUser ? <TacticalMapView /> : <Navigate to="/" replace />} />
+              <Route path="/field-queue" element={currentUser ? <VAOMobileView /> : <Navigate to="/" replace />} />
+              <Route path="/atr" element={currentUser ? <HighCourtATRView alerts={[]} onRefresh={fetchCurrentUser} /> : <Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to={currentUser ? "/dashboard" : "/"} replace />} />
+            </Routes>
+          </Suspense>
         </main>
 
         {/* FOOTER */}

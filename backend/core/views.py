@@ -1,7 +1,7 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Q
@@ -773,4 +773,109 @@ class DistrictLegalConfigViewSet(viewsets.ReadOnlyModelViewSet):
             if qs.exists():
                 return qs
         return DistrictLegalConfig.objects.all()
+
+
+class PublicNoticeVerifyView(APIView):
+    """
+    Public statutory notice verification endpoint (TD-04).
+    Accepts a SHA-256 notice digest or generated PDF hash, verifying document authenticity,
+    cadastral parcel context, issuing authority, and cryptographic hash chain status.
+    Unauthenticated / public access allowed for citizen transparency and judicial scrutiny.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, doc_hash):
+        from .models import CaseAuditEvent
+        query_hash = str(doc_hash).strip().lower()
+        if len(query_hash) != 64:
+            return Response({
+                "verified": False,
+                "error": "INVALID_HASH_FORMAT",
+                "message": "Document verification digest must be a 64-character hexadecimal SHA-256 string.",
+                "requested_hash": query_hash
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Lookup in CaseAuditEvent metadata (notice_hash or pdf_sha256)
+        audit_event = CaseAuditEvent.objects.filter(
+            Q(metadata__notice_hash=query_hash) | Q(metadata__pdf_sha256__iexact=query_hash)
+        ).select_related('alert', 'alert__parcel').first()
+
+        alert = None
+        doc_type = "Section 7 Show-Cause Notice"
+        notice_num = None
+        pdf_hash = None
+        notice_hash = query_hash
+
+        if audit_event and audit_event.alert:
+            alert = audit_event.alert
+            meta = audit_event.metadata or {}
+            doc_type = "Section 6 Eviction Warrant" if 'SECTION_6' in audit_event.action else "Section 7 Show-Cause Notice"
+            notice_num = meta.get('notice_number')
+            pdf_hash = meta.get('pdf_sha256')
+            notice_hash = meta.get('notice_hash', query_hash)
+        else:
+            # 2. Check if query_hash matches compute_notice_digest on any alert
+            for candidate in EncroachmentAlert.objects.select_related('parcel').all()[:200]:
+                if LegalNoticePDFGenerator.compute_notice_digest(candidate, '7') == query_hash:
+                    alert = candidate
+                    doc_type = "Section 7 Show-Cause Notice"
+                    parcel = alert.parcel
+                    taluk = parcel.taluk or "Salem West"
+                    notice_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC7/{datetime.now().year}/{str(alert.id)[:8].upper()}"
+                    break
+                elif LegalNoticePDFGenerator.compute_notice_digest(candidate, '6') == query_hash:
+                    alert = candidate
+                    doc_type = "Section 6 Eviction Warrant"
+                    parcel = alert.parcel
+                    taluk = parcel.taluk or "Salem West"
+                    notice_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC6_WARRANT/{datetime.now().year}/{str(alert.id)[:8].upper()}"
+                    break
+
+        if not alert:
+            return Response({
+                "verified": False,
+                "error": "DOCUMENT_NOT_FOUND_OR_TAMPERED",
+                "message": "The cryptographic document digest could not be verified against any statutory notice in the GEOMMAND registry.",
+                "requested_hash": query_hash
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        parcel = alert.parcel
+        district = parcel.district or "Salem"
+        taluk = parcel.taluk or "Salem West"
+        village = parcel.village_name or "Kannankurichi"
+        survey_full = f"{parcel.survey_number}/{parcel.subdivision or '1'}"
+
+        # Verify audit chain integrity for this case
+        chain_events = list(CaseAuditEvent.objects.filter(alert=alert).order_by('created_at', 'id'))
+        chain_intact = True
+        expected_prev = '0' * 64
+        for ev in chain_events:
+            if ev.previous_event_hash != expected_prev or ev.current_hash != ev.compute_event_hash(expected_prev):
+                chain_intact = False
+                break
+            expected_prev = ev.current_hash
+
+        return Response({
+            "verified": True,
+            "statutory_status": "VALID_TAMPER_EVIDENT_DOCUMENT",
+            "document_type": doc_type,
+            "statute": "Tamil Nadu Land Encroachment Act III of 1905",
+            "notice_number": notice_num or f"REV/{taluk.upper().replace(' ', '_')}/STATUTORY/{datetime.now().year}/{str(alert.id)[:8].upper()}",
+            "sha256_digest": notice_hash,
+            "pdf_sha256": pdf_hash,
+            "case_id": str(alert.id),
+            "cadastral_details": {
+                "district": district,
+                "taluk": taluk,
+                "village": village,
+                "survey_number": survey_full,
+                "classification": parcel.classification or "Government Poramboke",
+                "encroached_sqft": int(alert.encroached_area_sqft or 850),
+            },
+            "occupant": parcel.owner_name or "Unauthorized Occupant / Encroacher",
+            "issuing_authority": f"Tahsildar & Executive Magistrate, {taluk} Taluk, {district} District",
+            "audit_chain_verified": chain_intact,
+            "audit_events_count": len(chain_events),
+            "disclaimer": "Draft statutory notice for officer review & execution under Tamil Nadu Act III of 1905. Survey sketch is indicative and derived from satellite change-detection footprint. Timelines subject to legal confirmation."
+        }, status=status.HTTP_200_OK)
 

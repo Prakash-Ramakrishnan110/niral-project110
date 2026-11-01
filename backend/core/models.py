@@ -410,6 +410,7 @@ class CaseAuditEvent(models.Model):
     """
     Immutable audit log for state machine transitions and statutory compliance actions.
     Records transition actor, from/to states, rationale, and metadata.
+    Enforces a cryptographic SHA-256 hash chain linking each event to its chronological predecessor.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     alert = models.ForeignKey(EncroachmentAlert, on_delete=models.CASCADE, related_name='audit_events')
@@ -427,6 +428,41 @@ class CaseAuditEvent(models.Model):
 
     def __str__(self):
         return f"{self.alert_id} | {self.from_state} -> {self.to_state} by {self.actor or 'System'}"
+
+    @property
+    def previous_event_hash(self) -> str:
+        return (self.metadata or {}).get('previous_event_hash', '0' * 64)
+
+    @property
+    def current_hash(self) -> str:
+        return (self.metadata or {}).get('current_hash', '')
+
+    def compute_event_hash(self, prev_hash: str) -> str:
+        import hashlib, json
+        canonical = {
+            'id': str(self.id),
+            'alert_id': str(self.alert_id),
+            'actor_id': self.actor_id,
+            'actor_role': self.actor_role or '',
+            'action': self.action or '',
+            'from_state': self.from_state or '',
+            'to_state': self.to_state or '',
+            'reason': self.reason or '',
+            'previous_event_hash': prev_hash,
+        }
+        serialized = json.dumps(canonical, sort_keys=True)
+        return hashlib.sha256(serialized.encode('utf-8')).hexdigest()
+
+    def save(self, *args, **kwargs):
+        if self.metadata is None:
+            self.metadata = {}
+        if not self.metadata.get('current_hash'):
+            # Fetch chronologically preceding audit event for this alert
+            prev = CaseAuditEvent.objects.filter(alert_id=self.alert_id).exclude(id=self.id).order_by('created_at', 'id').last()
+            prev_hash = prev.current_hash if (prev and prev.current_hash) else ('0' * 64)
+            self.metadata['previous_event_hash'] = prev_hash
+            self.metadata['current_hash'] = self.compute_event_hash(prev_hash)
+        super().save(*args, **kwargs)
 
 
 class IdempotencyKeyRecord(models.Model):

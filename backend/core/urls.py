@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     LandParcelViewSet, EncroachmentAlertViewSet, 
     FieldVerificationViewSet, RegistryProposalViewSet, DistrictLegalConfigViewSet,
-    TNGISProxyView, SmartAlertView, HighCourtATRView
+    TNGISProxyView, SmartAlertView, HighCourtATRView, PublicNoticeVerifyView
 )
 from .auth_views import (
     LoginView, CustomTokenRefreshView, LogoutView, CurrentUserView
@@ -37,4 +37,8 @@ urlpatterns = [
     path('tngis/<str:action>/', TNGISProxyView.as_view(), name='tngis-proxy'),
     path('smart-alert/', SmartAlertView.as_view(), name='smart-alert'),
     path('compliance/high-court-atr/', HighCourtATRView.as_view(), name='high-court-atr'),
+
+    # Public Statutory Document Verification Endpoints (TD-04)
+    path('notices/verify/<str:doc_hash>/', PublicNoticeVerifyView.as_view(), name='public-notice-verify'),
+    path('v1/verify/<str:doc_hash>/', PublicNoticeVerifyView.as_view(), name='public-notice-verify-v1'),
 ]

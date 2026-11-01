@@ -7,7 +7,7 @@ import {
 import { AuthAPI } from '../api/client';
 
 export default function LoginModal({ isOpen, onLoginSuccess }) {
-  const isDemo = import.meta.env.VITE_DEMO === 'true';
+  const isDemo = import.meta.env.VITE_DEMO === 'true' || import.meta.env.DEV;
 
   const demoAccounts = isDemo ? [
     { 

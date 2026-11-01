@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
+import fs from 'fs';
 
 const FORBIDDEN_STRINGS = [
   '100% of village parcels every 5 days',
@@ -55,4 +57,39 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
       }
     });
   }
+
+  test('renders public statutory notice verification page for valid SHA-256 digest', async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    // Query recorded valid hash
+    const validHash = '45fb94cbf2c2ae05c6f62b5f386384e96414a3c327191851468f9965abaf6830';
+    await page.goto(`http://localhost:5173/verify/${validHash}`);
+
+    // Wait for verified badge
+    await expect(page.locator('text=Authentic Document')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Audit Chain Intact')).toBeVisible();
+    await expect(page.locator('text=Section 7 Show-Cause Notice')).toBeVisible();
+    await expect(page.locator('text=235/3B')).toBeVisible();
+    await expect(page.locator('text=Statutory Disclaimer')).toBeVisible();
+
+    const verifyScreenshot = path.join(process.cwd(), '..', 'public_document_verification.png');
+    await page.screenshot({ path: verifyScreenshot, fullPage: true });
+    expect(fs.existsSync(verifyScreenshot)).toBeTruthy();
+
+    await context.close();
+  });
+
+  test('renders tamper warning for unknown/invalid document digest', async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    const invalidHash = 'a'.repeat(64);
+    await page.goto(`http://localhost:5173/verify/${invalidHash}`);
+
+    await expect(page.locator('text=Document Digest Not Found or Tampered')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Verification Failed')).toBeVisible();
+
+    await context.close();
+  });
 });

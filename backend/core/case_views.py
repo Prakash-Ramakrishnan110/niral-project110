@@ -348,10 +348,12 @@ class CaseViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             pdf_bytes = LegalNoticePDFGenerator.generate_section_7_pdf(alert)
             sha256 = LegalNoticePDFGenerator.compute_sha256(pdf_bytes)
+            digest = LegalNoticePDFGenerator.compute_notice_digest(alert, '7')
 
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="section-7-notice-{alert.id}.pdf"'
             response['X-Document-SHA256'] = sha256
+            response['X-Notice-Digest'] = digest
             response['X-Legal-Status'] = 'DRAFT_PENDING_LEGAL_REVIEW'
             response['X-Cadastral-Disclaimer'] = 'INDICATIVE_POLYGON_DERIVED'
             return response
@@ -375,10 +377,12 @@ class CaseViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             pdf_bytes = LegalNoticePDFGenerator.generate_section_6_pdf(alert)
             sha256 = LegalNoticePDFGenerator.compute_sha256(pdf_bytes)
+            digest = LegalNoticePDFGenerator.compute_notice_digest(alert, '6')
 
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="section-6-warrant-{alert.id}.pdf"'
             response['X-Document-SHA256'] = sha256
+            response['X-Notice-Digest'] = digest
             response['X-Legal-Status'] = 'DRAFT_PENDING_LEGAL_REVIEW'
             response['X-Cadastral-Disclaimer'] = 'INDICATIVE_POLYGON_DERIVED'
             return response

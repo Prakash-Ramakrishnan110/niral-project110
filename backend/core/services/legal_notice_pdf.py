@@ -6,12 +6,15 @@ Embeds the official Automated FMB Encroachment Sketch and Survey Measurement Lad
 """
 
 import io
+import json
 import hashlib
 from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.barcode.qr import QrCodeWidget
 from .fmb_sketch_generator import FMBSketchGenerator
 
 
@@ -26,10 +29,24 @@ def _draw_draft_watermark(canvas, document):
     canvas.restoreState()
 
 
+def _build_qr_code(url: str, size: float = 65.0) -> Drawing:
+    """Builds a scalable ReportLab Drawing containing a 2D QR Code."""
+    qr = QrCodeWidget(url)
+    bounds = qr.getBounds()
+    w = bounds[2] - bounds[0]
+    h = bounds[3] - bounds[1]
+    scale_w = size / w if w > 0 else 1.0
+    scale_h = size / h if h > 0 else 1.0
+    drawing = Drawing(size, size, transform=[scale_w, 0, 0, scale_h, 0, 0])
+    drawing.add(qr)
+    return drawing
+
+
 class LegalNoticePDFGenerator:
     """
     Generates draft statutory legal notices under Tamil Nadu Act III of 1905
     for officer review, verification, and sworn execution.
+    Embeds cryptographic SHA-256 notice digests and machine-scannable QR verification codes.
     """
 
     @staticmethod
@@ -38,9 +55,32 @@ class LegalNoticePDFGenerator:
         return hashlib.sha256(data).hexdigest().upper()
 
     @classmethod
-    def generate_section_7_pdf(cls, alert) -> bytes:
+    def compute_notice_digest(cls, alert, section: str = '7') -> str:
+        """
+        Computes deterministic SHA-256 cryptographic digest of statutory notice parameters.
+        Consistent and verifiable across officer reviews and citizen QR scans.
+        """
+        parcel = alert.parcel
+        canonical = {
+            'statute': 'Tamil Nadu Land Encroachment Act III of 1905',
+            'section': f'Section {section}',
+            'alert_id': str(alert.id),
+            'survey_number': f"{parcel.survey_number}/{parcel.subdivision or '1'}",
+            'district': (parcel.district or 'Salem').upper(),
+            'taluk': (parcel.taluk or 'Salem West').upper(),
+            'village': (parcel.village_name or 'Kannankurichi').upper(),
+            'classification': parcel.classification or 'Government Poramboke',
+            'encroached_sqft': int(alert.encroached_area_sqft or 850),
+            'occupant': (parcel.owner_name or 'Unauthorized Occupant').upper(),
+        }
+        raw = json.dumps(canonical, sort_keys=True)
+        return hashlib.sha256(raw.encode('utf-8')).hexdigest().lower()
+
+    @classmethod
+    def generate_section_7_pdf(cls, alert, base_verify_url: str = None) -> bytes:
         """
         Builds a Section 7 Show-Cause Notice PDF buffer for the provided EncroachmentAlert.
+        Embeds a machine-scannable QR code and cryptographic SHA-256 digest for TD-04 verification.
         """
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -63,6 +103,12 @@ class LegalNoticePDFGenerator:
         notice_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC7/{datetime.now().year}/{str(alert.id)[:8].upper()}"
         issue_date = datetime.now().strftime("%d-%m-%Y")
         reply_deadline = (datetime.now() + timedelta(days=15)).strftime("%d-%m-%Y")
+
+        # Cryptographic Document Fingerprint & Scannable QR Code (TD-04)
+        notice_digest = cls.compute_notice_digest(alert, section='7')
+        host_url = base_verify_url or 'http://localhost:5173'
+        verify_url = f"{host_url.rstrip('/')}/verify/{notice_digest}"
+        qr_drawing = _build_qr_code(verify_url, size=64)
 
         styles = getSampleStyleSheet()
 
@@ -226,32 +272,72 @@ class LegalNoticePDFGenerator:
         elements.append(ladder_table)
         elements.append(Spacer(1, 14))
 
-        # 8. Signature & Evidence Block
+        # 8. Signature & Evidence Block with Scannable QR Verification (TD-04)
         sig_data = [
             [
-                Paragraph("<b>Evidence Verification:</b><br/>• Sentinel-2 Multispectral Change Analysis<br/>• Tamil Nilam Cadastral Boundary Overlap<br/>• Field Officer GPS Geofenced Inspection Report<br/>• Notice ID: " + str(notice_num), small_text),
-                Paragraph(f"<b>TAHSILDAR & EXECUTIVE MAGISTRATE</b><br/>{taluk.upper()} TALUK, {district.upper()} DISTRICT<br/><br/><i>[Draft Notice – For Officer Review & Execution]</i>", ParagraphStyle('Sig', parent=body_text, alignment=2))
+                qr_drawing,
+                Paragraph(
+                    f"<b>Cryptographic Verification (TD-04):</b><br/>"
+                    f"• Document SHA-256 Digest:<br/><font name='Courier' size='6.5'><b>{notice_digest}</b></font><br/>"
+                    f"• Scan QR code or verify online at:<br/><font color='#1D4ED8' size='7.5'><u>{verify_url}</u></font><br/>"
+                    f"• Notice ID: <b>{notice_num}</b>",
+                    small_text
+                ),
+                Paragraph(
+                    f"<b>TAHSILDAR & EXECUTIVE MAGISTRATE</b><br/>"
+                    f"{taluk.upper()} TALUK, {district.upper()} DISTRICT<br/><br/>"
+                    f"<i>[Draft Notice – For Officer Review & Execution]</i>",
+                    ParagraphStyle('Sig', parent=body_text, alignment=2)
+                )
             ]
         ]
-        sig_table = Table(sig_data, colWidths=[300, 220])
+        sig_table = Table(sig_data, colWidths=[70, 240, 210])
         sig_table.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
-            ('TOPPADDING', (0,0), (-1,-1), 6),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-            ('BACKGROUND', (0,0), (0,0), colors.HexColor('#F8FAFC')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 4),
+            ('RIGHTPADDING', (0,0), (-1,-1), 4),
+            ('BACKGROUND', (0,0), (1,0), colors.HexColor('#F8FAFC')),
         ]))
         elements.append(KeepTogether(sig_table))
 
         doc.build(elements, onFirstPage=_draw_draft_watermark, onLaterPages=_draw_draft_watermark)
         buffer.seek(0)
-        return buffer.getvalue()
+        pdf_bytes = buffer.getvalue()
+
+        # Record generated notice event into immutable audit chain
+        try:
+            from core.models import CaseAuditEvent
+            pdf_hash = cls.compute_sha256(pdf_bytes).lower()
+            CaseAuditEvent.objects.create(
+                alert=alert,
+                action='STATUTORY_NOTICE_7_GENERATED',
+                from_state=alert.status,
+                to_state=alert.status,
+                reason=f"Generated Section 7 Show-Cause Notice PDF. Digest: {notice_digest}",
+                metadata={
+                    'doc_type': 'SECTION_7_NOTICE',
+                    'notice_number': notice_num,
+                    'notice_hash': notice_digest,
+                    'pdf_sha256': pdf_hash,
+                    'verify_url': verify_url,
+                    'issue_date': issue_date,
+                    'reply_deadline': reply_deadline,
+                }
+            )
+        except Exception:
+            pass
+
+        return pdf_bytes
 
     @classmethod
-    def generate_section_6_pdf(cls, alert) -> bytes:
+    def generate_section_6_pdf(cls, alert, base_verify_url: str = None) -> bytes:
         """
         Builds a Section 6 Eviction Warrant PDF buffer for the provided EncroachmentAlert.
         Enforces statutory guards (VULNERABLE_HOUSING and COURT_STAY_HOLD must not be ordered).
+        Embeds a machine-scannable QR code and cryptographic SHA-256 digest for TD-04 verification.
         """
         if alert.structure_category == 'VULNERABLE_HOUSING':
             raise ValueError("Statutory Violation: Cannot generate Section 6 Eviction Warrant for VULNERABLE_HOUSING. Case must be routed to TNUHDB.")
@@ -278,6 +364,12 @@ class LegalNoticePDFGenerator:
         occupant = parcel.owner_name or "Unauthorized Occupant / Encroacher"
         warrant_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC6_WARRANT/{datetime.now().year}/{str(alert.id)[:8].upper()}"
         issue_date = datetime.now().strftime("%d-%m-%Y")
+
+        # Cryptographic Document Fingerprint & Scannable QR Code (TD-04)
+        notice_digest = cls.compute_notice_digest(alert, section='6')
+        host_url = base_verify_url or 'http://localhost:5173'
+        verify_url = f"{host_url.rstrip('/')}/verify/{notice_digest}"
+        qr_drawing = _build_qr_code(verify_url, size=64)
 
         styles = getSampleStyleSheet()
 
@@ -416,23 +508,61 @@ class LegalNoticePDFGenerator:
         elements.append(fmb_drawing)
         elements.append(Spacer(1, 8))
 
-        # 7. Signature & Execution Block
+        # 7. Signature & Execution Block with Scannable QR Verification (TD-04)
         sig_data = [
             [
-                Paragraph("<b>Enforcement Directives:</b><br/>• Village Administrative Officer (VAO): Handover possession<br/>• Revenue Inspector (RI): Supervise structural clearance<br/>• Law Enforcement: Maintain public order under Police Bandobast<br/>• Warrant ID: " + str(warrant_num), small_text),
-                Paragraph(f"<b>TAHSILDAR & EXECUTIVE MAGISTRATE</b><br/>{taluk.upper()} TALUK, {district.upper()} DISTRICT<br/><br/><i>[Draft Eviction Warrant – For Officer Review & Execution]</i>", ParagraphStyle('Sig', parent=body_text, alignment=2))
+                qr_drawing,
+                Paragraph(
+                    f"<b>Cryptographic Verification (TD-04):</b><br/>"
+                    f"• Warrant SHA-256 Digest:<br/><font name='Courier' size='6.5'><b>{notice_digest}</b></font><br/>"
+                    f"• Scan QR code or verify online at:<br/><font color='#1D4ED8' size='7.5'><u>{verify_url}</u></font><br/>"
+                    f"• Warrant ID: <b>{warrant_num}</b>",
+                    small_text
+                ),
+                Paragraph(
+                    f"<b>TAHSILDAR & EXECUTIVE MAGISTRATE</b><br/>"
+                    f"{taluk.upper()} TALUK, {district.upper()} DISTRICT<br/><br/>"
+                    f"<i>[Draft Eviction Warrant – For Officer Review & Execution]</i>",
+                    ParagraphStyle('Sig', parent=body_text, alignment=2)
+                )
             ]
         ]
-        sig_table = Table(sig_data, colWidths=[300, 220])
+        sig_table = Table(sig_data, colWidths=[70, 240, 210])
         sig_table.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
-            ('TOPPADDING', (0,0), (-1,-1), 6),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-            ('BACKGROUND', (0,0), (0,0), colors.HexColor('#F8FAFC')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 4),
+            ('RIGHTPADDING', (0,0), (-1,-1), 4),
+            ('BACKGROUND', (0,0), (1,0), colors.HexColor('#F8FAFC')),
         ]))
         elements.append(KeepTogether(sig_table))
 
         doc.build(elements, onFirstPage=_draw_draft_watermark, onLaterPages=_draw_draft_watermark)
         buffer.seek(0)
-        return buffer.getvalue()
+        pdf_bytes = buffer.getvalue()
+
+        # Record generated warrant event into immutable audit chain
+        try:
+            from core.models import CaseAuditEvent
+            pdf_hash = cls.compute_sha256(pdf_bytes).lower()
+            CaseAuditEvent.objects.create(
+                alert=alert,
+                action='STATUTORY_WARRANT_6_GENERATED',
+                from_state=alert.status,
+                to_state=alert.status,
+                reason=f"Generated Section 6 Eviction Warrant PDF. Digest: {notice_digest}",
+                metadata={
+                    'doc_type': 'SECTION_6_WARRANT',
+                    'notice_number': warrant_num,
+                    'notice_hash': notice_digest,
+                    'pdf_sha256': pdf_hash,
+                    'verify_url': verify_url,
+                    'issue_date': issue_date,
+                }
+            )
+        except Exception:
+            pass
+
+        return pdf_bytes
