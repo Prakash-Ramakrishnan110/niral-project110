@@ -357,6 +357,8 @@ class CaseViewSet(viewsets.ReadOnlyModelViewSet):
             response['X-Legal-Status'] = 'DRAFT_PENDING_LEGAL_REVIEW'
             response['X-Cadastral-Disclaimer'] = 'INDICATIVE_POLYGON_DERIVED'
             return response
+        except ValueError as ve:
+            return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as ex:
             return Response({"error": f"Failed to generate Section 7 PDF: {str(ex)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

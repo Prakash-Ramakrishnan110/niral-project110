@@ -877,4 +877,30 @@ class PublicNoticeVerifyView(APIView):
                 "verified": False,
                 "error": "DOCUMENT_NOT_FOUND_OR_TAMPERED",
                 "message": "The cryptographic document digest could not be verified against any statutory notice in the GEOMMAND registry.",
+                "requested_hash": query_hash
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        meta = (audit_event.metadata or {}) if audit_event else {}
+        issue_date = meta.get('issue_date') or datetime.now().strftime("%Y-%m-%d")
+
+        # Determine issuing office without defaulting to Tahsildar
+        issuing_office = meta.get('issuing_authority') or meta.get('issuing_office')
+        if not issuing_office:
+            from core.models import StatutoryNoticeAuthority
+            statutory_action = 'PASS_SECTION_6_ORDER' if 'Section 6' in doc_type else 'ISSUE_SECTION_7'
+            configured_auth = StatutoryNoticeAuthority.objects.filter(action=statutory_action, is_allowed=True).first()
+            if configured_auth:
+                issuing_office = f"Office of the {configured_auth.role.capitalize()}, {alert.parcel.taluk or 'Taluk'}"
+            else:
+                issuing_office = "Unconfigured Statutory Authority / Delegation Unverified"
+
+        return Response({
+            "verified": True,
+            "document_type": doc_type,
+            "issue_date": issue_date,
+            "issuing_office": issuing_office,
+            "sha256_digest": notice_hash,
+            "pdf_sha256": pdf_hash,
+            "hash_coverage": "SHA-256 cryptographic digest of canonical statutory notice metadata recorded in official case audit ledger."
+        }, status=status.HTTP_200_OK)
  

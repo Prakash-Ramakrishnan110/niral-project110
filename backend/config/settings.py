@@ -162,7 +162,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/minute',
-        'login': '10/minute',
+        'login': os.environ.get('LOGIN_THROTTLE_RATE', '60/minute' if DEBUG else '10/minute'),
     },
 }
 

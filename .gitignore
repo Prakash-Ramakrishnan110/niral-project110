@@ -37,6 +37,7 @@ config.bat
 .env.production
 .env.docker
 backend/.env
+frontend/.env
 
 # Media / uploaded files
 backend/media/

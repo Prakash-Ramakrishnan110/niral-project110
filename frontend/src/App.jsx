@@ -55,9 +55,13 @@ export default function App() {
     return unsubscribe;
   }, []);
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (user) => {
     setLoginModalOpen(false);
-    fetchCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+    } else {
+      fetchCurrentUser();
+    }
   };
 
   if (loadingUser) {

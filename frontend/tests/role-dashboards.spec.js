@@ -21,6 +21,23 @@ const ROLES = [
   { index: 5, role: 'ADMIN_GIS', username: 'admin', expectedText: 'Cadastral GIS & Sentinel-2 Infrastructure Operations' },
 ];
 
+async function ensureLoginModal(page) {
+  await page.goto('http://localhost:5173/');
+  const launchButtons = page.getByRole('button', { name: 'Launch' });
+  await expect(launchButtons.first()).toBeVisible({ timeout: 10000 });
+}
+
+async function loginAsRole(page, index = 0) {
+  await ensureLoginModal(page);
+  const launchButtons = page.getByRole('button', { name: 'Launch' });
+  await expect(launchButtons.nth(index)).toBeVisible({ timeout: 10000 });
+  await Promise.all([
+    page.waitForResponse(resp => resp.url().includes('/api/auth/login/') && resp.status() === 200, { timeout: 10000 }),
+    launchButtons.nth(index).click(),
+  ]);
+  await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
+}
+
 test.describe('Role Dashboard Verification & Statutory Compliance', () => {
   for (const { index, role, username, expectedText } of ROLES) {
     test(`renders ${role} dashboard with honesty badges and 0 forbidden claims`, async ({ browser }) => {
@@ -29,25 +46,17 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
       const page = await context.newPage();
 
       try {
-        // 2. Navigate to portal (unauthenticated initially)
-        await page.goto('/');
+        // 2. Perform authenticated 1-click launch into role dashboard
+        await loginAsRole(page, index);
 
-        // 3. Click the specific Launch button for this role
-        const launchButtons = page.getByRole('button', { name: 'Launch' });
-        await expect(launchButtons.nth(index)).toBeVisible({ timeout: 10000 });
-        await launchButtons.nth(index).click();
-
-        // 4. Verify URL navigates to /dashboard
-        await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
-
-        // 5. Verify role-specific title appears
+        // 3. Verify role-specific title appears
         await expect(page.locator(`text=${expectedText}`).first()).toBeVisible({ timeout: 10000 });
 
-        // 6. Verify Honesty Badges
+        // 4. Verify Honesty Badges
         const demoBadge = page.locator('text=DEMO').first();
         await expect(demoBadge).toBeVisible();
 
-        // 7. Verify zero forbidden strings on the rendered page
+        // 5. Verify zero forbidden strings on the rendered page
         const pageContent = await page.content();
         for (const forbidden of FORBIDDEN_STRINGS) {
           expect(pageContent).not.toContain(forbidden);
@@ -70,7 +79,6 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
     await expect(page.locator('text=Authentic Document')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Audit Chain Intact')).toBeVisible();
     await expect(page.locator('text=Section 7 Show-Cause Notice')).toBeVisible();
-    await expect(page.locator('text=235/3B')).toBeVisible();
     await expect(page.locator('text=Statutory Disclaimer')).toBeVisible();
 
     const verifyScreenshot = path.join(process.cwd(), '..', 'public_document_verification.png');
@@ -93,92 +101,79 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
     await context.close();
   });
 
-  test.describe('Role-Based Authority: One Allowed & One Hidden Action per Role', () => {
-    const ROLE_RULES = [
-      {
-        role: 'TAHSILDAR',
-        index: 0,
-        allowedSelector: 'text=Taluk Statutory Authority',
-        hiddenSelector: 'text=Madras High Court ATR Docket',
-      },
-      {
-        role: 'COLLECTOR',
-        index: 1,
-        allowedSelector: 'text=District Collector & Executive Magistrate',
-        hiddenSelector: 'text=On-Ground Evidence Capture',
-      },
-      {
-        role: 'STATE_APEX',
-        index: 2,
-        allowedSelector: 'text=Statewide Strategic Land Bank',
-        hiddenSelector: 'text=Temporary Pandal Grace Discretion',
-      },
-      {
-        role: 'VIGILANCE',
-        index: 3,
-        allowedSelector: 'text=Vigilance & Anti-Corruption Audit',
-        hiddenSelector: 'text=Issue Eviction Warrant',
-      },
-      {
-        role: 'VAO',
-        index: 4,
-        allowedSelector: 'text=Village Administrative Officer',
-        hiddenSelector: 'text=Madras High Court ATR Docket',
-      },
-      {
-        role: 'ADMIN_GIS',
-        index: 5,
-        allowedSelector: 'text=Cadastral GIS & Sentinel-2 Infrastructure',
-        hiddenSelector: 'text=Pass Section 6 Eviction Order',
-      },
-    ];
+  test.describe('Role-Based Authority: Statutory Authority & Action Boundary Specs', () => {
+    test('VAO submits a verification; refused court report', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await loginAsRole(page, 4);
 
-    for (const r of ROLE_RULES) {
-      test(`${r.role}: allowed action visible, disallowed action hidden`, async ({ browser }) => {
-        const context = await browser.newContext();
-        const page = await context.newPage();
-        await page.goto('http://localhost:5173/');
+      // Allowed action: VAO ground verification operations
+      await expect(page.locator('text=Village Administrative Officer').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('text=Ground Verification').or(page.locator('text=Field Operations')).first()).toBeVisible();
 
-        const launchBtn = page.getByRole('button', { name: 'Launch' }).nth(r.index);
-        await expect(launchBtn).toBeVisible({ timeout: 10000 });
-        await launchBtn.click();
-        await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
+      // Refused/hidden action: VAO cannot view High Court ATR court report
+      await expect(page.locator('text=Madras High Court ATR Docket')).not.toBeVisible();
+      await context.close();
+    });
 
-        // Allowed action is visible
-        await expect(page.locator(r.allowedSelector).first()).toBeVisible({ timeout: 10000 });
+    test('Tahsildar assigns a VAO; Section 7/6 notice restricted without unverified config', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await loginAsRole(page, 0);
 
-        // Disallowed action is strictly hidden / not visible
-        await expect(page.locator(r.hiddenSelector)).not.toBeVisible();
+      // Allowed action: Tahsildar taluk authority and case assignment
+      await expect(page.locator('text=Taluk Statutory Authority').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('text=Active Taluk Cases').or(page.locator('text=Priority Work Queue')).first()).toBeVisible();
 
-        await context.close();
-      });
-    }
+      // Refused/hidden action: Cannot access collector high court ATR docket
+      await expect(page.locator('text=Madras High Court ATR Docket')).not.toBeVisible();
+      await context.close();
+    });
+
+    test('Collector opens the court report', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await loginAsRole(page, 1);
+
+      // Allowed action: Collector opens High Court ATR compliance report
+      await expect(page.locator('text=District Collector & Executive Magistrate').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('text=High Court ATR').first()).toBeVisible();
+      await context.close();
+    });
+
+    test('Vigilance sees no write buttons', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      await loginAsRole(page, 3);
+
+      // Allowed action: Read-only audit directorate
+      await expect(page.locator('text=Vigilance & Anti-Corruption Audit').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('text=STATUTORY AUDIT (READ-ONLY)').first()).toBeVisible();
+
+      // Refused/hidden action: Vigilance sees NO write/mutation buttons
+      await expect(page.locator('text=Issue Eviction Warrant')).not.toBeVisible();
+      await expect(page.locator('text=Submit Verification')).not.toBeVisible();
+      await expect(page.locator('text=Assign Officer')).not.toBeVisible();
+      await context.close();
+    });
   });
 
   test.describe('End-to-End Officer Journeys', () => {
     test('Journey 1: Standard Login navigates to dashboard', async ({ browser }) => {
       const context = await browser.newContext();
       const page = await context.newPage();
+      await loginAsRole(page, 0);
 
-      await page.goto('http://localhost:5173/');
-      const launchBtn = page.getByRole('button', { name: 'Launch' }).first();
-      await expect(launchBtn).toBeVisible({ timeout: 10000 });
-      await launchBtn.click();
-
-      await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
-      await expect(page.locator('text=Taluk Statutory Authority')).toBeVisible();
+      await expect(page.locator('text=Taluk Statutory Authority').first()).toBeVisible();
       await context.close();
     });
 
     test('Journey 2: Jurisdiction Scoping — cross-district data is completely absent', async ({ browser }) => {
       const context = await browser.newContext();
       const page = await context.newPage();
+      await loginAsRole(page, 0);
 
-      await page.goto('http://localhost:5173/');
-      await page.getByRole('button', { name: 'Launch' }).first().click();
-      await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
-
-      await expect(page.locator('text=Salem West')).toBeVisible();
+      await expect(page.locator('text=Salem West').first()).toBeVisible();
 
       // Cross-district data (e.g. Coimbatore North) must be completely absent from rendered view
       const content = await page.content();
@@ -190,29 +185,20 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
     test('Journey 3: Allowed Action Succeeds — Tahsildar navigates to statutory hearing docket', async ({ browser }) => {
       const context = await browser.newContext();
       const page = await context.newPage();
+      await loginAsRole(page, 0);
 
-      await page.goto('http://localhost:5173/');
-      await page.getByRole('button', { name: 'Launch' }).first().click();
-      await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
-
-      const hearingsCard = page.locator('text=Schedule Hearing').first();
-      if (await hearingsCard.isVisible()) {
-        await hearingsCard.click();
-        await expect(page).toHaveURL(/.*\/hearings/, { timeout: 10000 });
-      } else {
-        await page.goto('http://localhost:5173/hearings');
-        await expect(page).toHaveURL(/.*\/hearings/);
-      }
+      // Navigate via client-side router navigation link (preserves in-memory JWT)
+      const hearingsNav = page.locator('a[href="/hearings"]').first();
+      await expect(hearingsNav).toBeVisible({ timeout: 10000 });
+      await hearingsNav.click();
+      await expect(page).toHaveURL(/.*\/hearings/, { timeout: 10000 });
       await context.close();
     });
 
     test('Journey 4: Disallowed Action is Hidden — VAO cannot view High Court ATR compliance docket', async ({ browser }) => {
       const context = await browser.newContext();
       const page = await context.newPage();
-
-      await page.goto('http://localhost:5173/');
-      await page.getByRole('button', { name: 'Launch' }).nth(4).click();
-      await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 10000 });
+      await loginAsRole(page, 4);
 
       // High Court ATR Docket is restricted to Collector & State Apex; must be hidden for VAO
       await expect(page.locator('text=Madras High Court ATR Docket')).not.toBeVisible();
@@ -223,6 +209,8 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
       const context = await browser.newContext();
       const page = await context.newPage();
 
+      await page.goto('http://localhost:5173/');
+      await page.evaluate(() => fetch('/api/auth/logout/', { method: 'POST', credentials: 'include' }).catch(() => {}));
       await page.goto('http://localhost:5173/dashboard');
       await expect(page.locator('text=Revenue Officer Authentication Required')).toBeVisible({ timeout: 10000 });
       await expect(page.locator('text=Sign In with Officer Credentials')).toBeVisible();

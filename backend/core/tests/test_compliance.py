@@ -12,7 +12,7 @@ Covers:
 import io
 from django.contrib.gis.geos import Point, Polygon, MultiPolygon
 from rest_framework import status
-from core.models import LandParcel, EncroachmentAlert
+from core.models import LandParcel, EncroachmentAlert, DistrictLegalConfig
 from core.services.high_court_compliance import HighCourtComplianceGenerator
 from core.services.legal_notice_pdf import LegalNoticePDFGenerator
 from .base import SafeAPITestCase
@@ -48,6 +48,9 @@ class JudicialComplianceAndLegalSafetyTests(SafeAPITestCase):
 
         cbe_poly = Polygon(((76.95, 11.00), (76.96, 11.00), (76.96, 11.01), (76.95, 11.01), (76.95, 11.00)))
         salem_poly = Polygon(((78.15, 11.65), (78.16, 11.65), (78.16, 11.66), (78.15, 11.66), (78.15, 11.65)))
+
+        DistrictLegalConfig.objects.create(district='Coimbatore', section7_reply_window_days=15, section6_vacate_window_days=7)
+        DistrictLegalConfig.objects.create(district='Salem', section7_reply_window_days=15, section6_vacate_window_days=7)
 
         # 1. Coimbatore: Waterbody parcel with active alert
         self.cbe_waterbody = LandParcel.objects.create(

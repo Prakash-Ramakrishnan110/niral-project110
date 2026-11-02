@@ -80,6 +80,13 @@ class ProductionEndpointsTests(TestCase):
             version=1
         )
 
+        from core.models import DistrictLegalConfig
+        self.legal_config_salem = DistrictLegalConfig.objects.create(
+            district='Salem',
+            section7_reply_window_days=15,
+            section6_vacate_window_days=7
+        )
+
         self.alert_stay = EncroachmentAlert.objects.create(
             parcel=self.p_knk,
             status=EncroachmentAlert.STATE_COURT_STAY_HOLD,
@@ -309,5 +316,5 @@ class ProductionEndpointsTests(TestCase):
 
         self.client.force_authenticate(user=self.u_tah_slmw)
         resp = self.client.get(f'/api/cases/{self.alert_1.id}/documents/section-7/')
-        self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('No statutory legal configuration found', resp.data['error'])

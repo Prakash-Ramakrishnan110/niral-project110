@@ -24,8 +24,7 @@ class TrustAndVerificationTests(TestCase):
         self.legal_config = DistrictLegalConfig.objects.create(
             district='Salem',
             section7_reply_window_days=15,
-            section6_vacate_window_days=7,
-            statutory_notice_authority='Tahsildar'
+            section6_vacate_window_days=7
         )
         self.user = User.objects.create_user(username='test_tahsildar', password='Password123!')
         poly = Polygon(((78.14, 11.64), (78.16, 11.64), (78.16, 11.66), (78.14, 11.66), (78.14, 11.64)))
@@ -154,7 +153,7 @@ class TrustAndVerificationTests(TestCase):
         self.assertIn('/verify/', audit_ev.metadata['verify_url'])
 
     def test_public_verify_endpoint_valid_digest(self):
-        """Public endpoint GET /api/notices/verify/<hash>/ verifies valid document with zero PII."""
+        """Public endpoint GET /api/notices/verify/<hash>/ verifies valid document with ONLY permitted trust fields."""
         # Generate notice to register it
         LegalNoticePDFGenerator.generate_section_7_pdf(self.alert)
         digest = LegalNoticePDFGenerator.compute_notice_digest(self.alert, '7')
@@ -163,24 +162,57 @@ class TrustAndVerificationTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
-        self.assertTrue(data['verified'])
-        self.assertEqual(data['statutory_status'], 'RECORDED_IN_AUDIT_LOG')
-        self.assertEqual(data['document_status'], 'RECORDED_IN_AUDIT_LOG')
-        self.assertIn('issue_date', data)
-        self.assertIn('issuing_authority', data)
-        self.assertEqual(data['cadastral_details']['survey_number'], '101/1A')
-        self.assertEqual(data['cadastral_details']['district'], 'Salem')
-        self.assertTrue(data['audit_chain_verified'])
 
-        # Strict Privacy Shield assertion: Zero Citizen PII
+        # Strict response key boundary check: ONLY verified, document_type, issue_date, issuing_office, and hash fields
+        expected_keys = {'verified', 'document_type', 'issue_date', 'issuing_office', 'sha256_digest', 'pdf_sha256', 'hash_coverage'}
+        self.assertEqual(set(data.keys()), expected_keys)
+
+        self.assertTrue(data['verified'])
+        self.assertIn('Section 7', data['document_type'])
+        self.assertIn('issue_date', data)
+        self.assertIn('issuing_office', data)
+        self.assertEqual(data['sha256_digest'], digest)
+        self.assertIsNotNone(data['pdf_sha256'])
+
+        # Cadastral details strictly removed
+        self.assertNotIn('cadastral_details', data)
+        self.assertNotIn('district', data)
+        self.assertNotIn('survey_number', data)
+        self.assertNotIn('subdivision', data)
         self.assertNotIn('occupant', data)
         self.assertNotIn('owner_name', data)
-        self.assertIn('privacy_notice', data)
+
+        # Hash coverage must NOT contain survey/area wording
+        self.assertNotIn('survey', data['hash_coverage'].lower())
+        self.assertNotIn('area', data['hash_coverage'].lower())
 
         # Test alternative v1 alias
         v1_url = f'/api/v1/verify/{digest}/'
         v1_resp = self.client.get(v1_url)
         self.assertEqual(v1_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(v1_resp.json().keys()), expected_keys)
+
+    def test_public_verify_unconfigured_authority_does_not_default_to_tahsildar(self):
+        """When authority is unconfigured, issuing_office must never state Tahsildar."""
+        # Ensure StatutoryNoticeAuthority has no active config
+        from core.models import StatutoryNoticeAuthority
+        StatutoryNoticeAuthority.objects.all().delete()
+
+        # Create alert in unconfigured authority context
+        digest = LegalNoticePDFGenerator.compute_notice_digest(self.alert, '7')
+        # Manually register audit event without authority in metadata
+        CaseAuditEvent.objects.create(
+            alert=self.alert,
+            actor=self.user,
+            action='STATUTORY_NOTICE_7_GENERATED',
+            metadata={'notice_hash': digest, 'issue_date': '2026-11-01'}
+        )
+
+        url = f'/api/v1/verify/{digest}/'
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertNotIn('Tahsildar', res.json()['issuing_office'])
+        self.assertIn('Unconfigured', res.json()['issuing_office'])
 
     def test_public_verify_endpoint_invalid_or_tampered_digest(self):
         """Public endpoint returns 404 for unknown or tampered digest."""
