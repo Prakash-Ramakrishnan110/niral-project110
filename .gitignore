@@ -43,3 +43,5 @@ frontend/.env
 backend/media/
 *.pdf
 frontend/dist/
+
+invoice_*.html
