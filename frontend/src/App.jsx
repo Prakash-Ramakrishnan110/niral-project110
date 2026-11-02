@@ -15,6 +15,17 @@ const VAOMobileView = lazy(() => import('./views/VAOMobileView'));
 const HighCourtATRView = lazy(() => import('./views/HighCourtATRView').then(m => ({ default: m.HighCourtATRView })));
 const PublicDocumentVerifyView = lazy(() => import('./views/PublicDocumentVerifyView'));
 
+// Role Navigation Target Views
+const DistrictComparisonView = lazy(() => import('./views/DistrictComparisonView'));
+const AuditTrailView = lazy(() => import('./views/AuditTrailView'));
+const PeerAuditsView = lazy(() => import('./views/PeerAuditsView'));
+const Star3FreezesView = lazy(() => import('./views/Star3FreezesView'));
+const EvictionExecutionView = lazy(() => import('./views/EvictionExecutionView'));
+const OfflineSyncView = lazy(() => import('./views/OfflineSyncView'));
+const CadastralLayersView = lazy(() => import('./views/CadastralLayersView'));
+const OfficerAssignmentsView = lazy(() => import('./views/OfficerAssignmentsView'));
+const SuppressionAuditsView = lazy(() => import('./views/SuppressionAuditsView'));
+
 function RouteLoading() {
   return (
     <div className="flex flex-col items-center justify-center p-12">
@@ -128,7 +139,20 @@ export default function App() {
               <Route path="/rehabilitation" element={currentUser ? <RehabilitationView /> : <Navigate to="/" replace />} />
               <Route path="/map" element={currentUser ? <TacticalMapView /> : <Navigate to="/" replace />} />
               <Route path="/field-queue" element={currentUser ? <VAOMobileView /> : <Navigate to="/" replace />} />
-              <Route path="/atr" element={currentUser ? <HighCourtATRView alerts={[]} onRefresh={fetchCurrentUser} /> : <Navigate to="/" replace />} />
+              <Route path="/atr" element={currentUser ? <HighCourtATRView onRefresh={fetchCurrentUser} /> : <Navigate to="/" replace />} />
+
+              {/* Role Specialized Nav Routes */}
+              <Route path="/districts" element={currentUser ? <DistrictComparisonView /> : <Navigate to="/" replace />} />
+              <Route path="/audit" element={currentUser ? <AuditTrailView /> : <Navigate to="/" replace />} />
+              <Route path="/peer-audits" element={currentUser ? <PeerAuditsView /> : <Navigate to="/" replace />} />
+              <Route path="/star3-freezes" element={currentUser ? <Star3FreezesView /> : <Navigate to="/" replace />} />
+              <Route path="/evictions" element={currentUser ? <EvictionExecutionView /> : <Navigate to="/" replace />} />
+              <Route path="/offline-sync" element={currentUser ? <OfflineSyncView /> : <Navigate to="/" replace />} />
+              <Route path="/cadastral-layers" element={currentUser ? <CadastralLayersView /> : <Navigate to="/" replace />} />
+              <Route path="/officer-assignments" element={currentUser ? <OfficerAssignmentsView /> : <Navigate to="/" replace />} />
+              <Route path="/suppression-audits" element={currentUser ? <SuppressionAuditsView /> : <Navigate to="/" replace />} />
+
+              {/* Fallback */}
               <Route path="*" element={<Navigate to={currentUser ? "/dashboard" : "/"} replace />} />
             </Routes>
           </Suspense>

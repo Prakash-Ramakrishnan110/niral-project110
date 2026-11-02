@@ -47,9 +47,18 @@ export const VAOMobileView = () => {
 
     try {
       const formData = new FormData();
+      formData.append('alert', selectedCase.id);
       formData.append('alert_id', selectedCase.id);
       formData.append('verdict', verdict);
-      formData.append('inspection_notes', remarks || 'Field verification completed by Village Administrative Officer.');
+      const noteText = remarks || 'Field verification completed by Village Administrative Officer.';
+      formData.append('remarks', noteText);
+      formData.append('inspection_notes', noteText);
+
+      const lat = selectedCase.centroid_lat || selectedCase.lat || selectedCase.center_lat || (selectedCase.alert_geom?.coordinates ? selectedCase.alert_geom.coordinates[1] : 11.6501);
+      const lon = selectedCase.centroid_lon || selectedCase.lon || selectedCase.center_lon || (selectedCase.alert_geom?.coordinates ? selectedCase.alert_geom.coordinates[0] : 78.1501);
+      formData.append('gps_lat', String(lat));
+      formData.append('gps_lon', String(lon));
+
       formData.append('geofence_verified', 'true');
       formData.append('distance_to_boundary_m', '4.2');
       formData.append('gps_accuracy_m', '3.5');

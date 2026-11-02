@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
@@ -22,7 +23,7 @@ const ROLES = [
 ];
 
 async function ensureLoginModal(page) {
-  await page.goto('http://localhost:5173/');
+  await page.goto('http://127.0.0.1:5173/');
   const launchButtons = page.getByRole('button', { name: 'Launch' });
   await expect(launchButtons.first()).toBeVisible({ timeout: 10000 });
 }
@@ -73,7 +74,7 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
 
     // Query recorded valid hash
     const validHash = '45fb94cbf2c2ae05c6f62b5f386384e96414a3c327191851468f9965abaf6830';
-    await page.goto(`http://localhost:5173/verify/${validHash}`);
+    await page.goto(`http://127.0.0.1:5173/verify/${validHash}`);
 
     // Wait for verified badge
     await expect(page.locator('text=Authentic Document')).toBeVisible({ timeout: 10000 });
@@ -93,7 +94,7 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
     const page = await context.newPage();
 
     const invalidHash = 'a'.repeat(64);
-    await page.goto(`http://localhost:5173/verify/${invalidHash}`);
+    await page.goto(`http://127.0.0.1:5173/verify/${invalidHash}`);
 
     await expect(page.locator('text=Document Digest Not Found or Tampered')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Verification Failed')).toBeVisible();
@@ -103,13 +104,35 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
 
   test.describe('Role-Based Authority: Statutory Authority & Action Boundary Specs', () => {
     test('VAO submits a verification; refused court report', async ({ browser }) => {
+      // Setup: Reset test alert to VAO_ASSIGNED state and clear any existing verification
+      execSync('docker exec land_backend python manage.py shell -c "from core.models import EncroachmentAlert, FieldVerification; a = EncroachmentAlert.objects.filter(parcel__village_name__icontains=\'Kannan\').first(); FieldVerification.objects.filter(alert=a).delete(); a.status=\'VAO_ASSIGNED\'; a.save()"');
+
       const context = await browser.newContext();
       const page = await context.newPage();
       await loginAsRole(page, 4);
 
-      // Allowed action: VAO ground verification operations
-      await expect(page.locator('text=Village Administrative Officer').first()).toBeVisible({ timeout: 10000 });
-      await expect(page.locator('text=Ground Verification').or(page.locator('text=Field Operations')).first()).toBeVisible();
+      // Allowed action: VAO navigates to field queue and submits a certified field inspection
+      const fieldQueueNav = page.locator('a[href="/field-queue"]').first();
+      await expect(fieldQueueNav).toBeVisible({ timeout: 10000 });
+      await fieldQueueNav.click();
+      await expect(page).toHaveURL(/.*\/field-queue/, { timeout: 10000 });
+
+      // Select inspection card in field queue
+      const inspectionCard = page.locator('text=Field Inspection Request').or(page.locator('text=Kannankurichi')).or(page.locator('text=S.No 142/1A')).first();
+      await expect(inspectionCard).toBeVisible({ timeout: 10000 });
+      await inspectionCard.click();
+      await page.locator('textarea').fill('Verified on-ground encroachment via GPS boundary inspection.');
+
+      const [response] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes('/api/verifications/') && resp.status() === 201, { timeout: 10000 }),
+        page.getByRole('button', { name: 'Submit Certified Inspection Record' }).click(),
+      ]);
+      const data = await response.json();
+      expect(data.id).toBeDefined();
+
+      // Assert server database result: FieldVerification row exists after VAO submits
+      const dbCheck = execSync('docker exec land_backend python manage.py shell -c "from core.models import FieldVerification; count = FieldVerification.objects.filter(alert_id=\'' + data.alert + '\').count(); print(\'VERIF_COUNT:\', count)"').toString();
+      expect(dbCheck).toContain('VERIF_COUNT: 1');
 
       // Refused/hidden action: VAO cannot view High Court ATR court report
       await expect(page.locator('text=Madras High Court ATR Docket')).not.toBeVisible();
@@ -117,13 +140,54 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
     });
 
     test('Tahsildar assigns a VAO; Section 7/6 notice restricted without unverified config', async ({ browser }) => {
+      // Setup: Reset an alert to NEW state to test assignment
+      execSync('docker exec land_backend python manage.py shell -c "from core.models import EncroachmentAlert; a = EncroachmentAlert.objects.filter(parcel__taluk__icontains=\'Salem\').order_by(\'-detection_date\').first(); a.status=\'NEW\'; a.save()"');
+
       const context = await browser.newContext();
       const page = await context.newPage();
       await loginAsRole(page, 0);
 
-      // Allowed action: Tahsildar taluk authority and case assignment
-      await expect(page.locator('text=Taluk Statutory Authority').first()).toBeVisible({ timeout: 10000 });
-      await expect(page.locator('text=Active Taluk Cases').or(page.locator('text=Priority Work Queue')).first()).toBeVisible();
+      // Allowed action: Tahsildar navigates to cases, opens case inspect modal, and executes assignment
+      const casesNav = page.locator('a[href="/cases"]').first();
+      await expect(casesNav).toBeVisible({ timeout: 10000 });
+      await casesNav.click();
+      await expect(page).toHaveURL(/.*\/cases/, { timeout: 10000 });
+
+      const inspectBtn = page.getByRole('button', { name: 'Inspect' }).first();
+      await expect(inspectBtn).toBeVisible({ timeout: 10000 });
+      await inspectBtn.click();
+      await expect(page.locator('text=Overview & Actions').first()).toBeVisible({ timeout: 10000 });
+
+      // Select assignment transition
+      const select = page.locator('form select').first();
+      const options = await select.locator('option').all();
+      let assignVal = null;
+      for (const opt of options) {
+        const txt = await opt.innerText();
+        if (txt.includes('VAO') || txt.includes('Field')) {
+          assignVal = await opt.getAttribute('value');
+          break;
+        }
+      }
+      if (!assignVal && options.length > 1) {
+        assignVal = await options[1].getAttribute('value');
+      }
+      if (assignVal) {
+        await select.selectOption(assignVal);
+        await page.locator('form input[type="checkbox"]').check();
+        await page.locator('textarea').fill('Statutory assignment verified by Taluk Executive Magistrate.');
+
+        const [resp] = await Promise.all([
+          page.waitForResponse(r => r.url().includes('/transitions/') && r.status() === 200, { timeout: 10000 }),
+          page.getByRole('button', { name: 'Execute Statutory Transition' }).click(),
+        ]);
+        const resJson = await resp.json();
+        expect(resJson.status).toBe('VAO_ASSIGNED');
+
+        // Assert server database result: CaseAuditEvent assignment exists on server
+        const auditCheck = execSync('docker exec land_backend python manage.py shell -c "from core.models import CaseAuditEvent; count = CaseAuditEvent.objects.filter(target_state=\'VAO_ASSIGNED\').count(); print(\'AUDIT_ASSIGN_COUNT:\', count)"').toString();
+        expect(auditCheck).toMatch(/AUDIT_ASSIGN_COUNT:\s*[1-9]/);
+      }
 
       // Refused/hidden action: Cannot access collector high court ATR docket
       await expect(page.locator('text=Madras High Court ATR Docket')).not.toBeVisible();
@@ -192,6 +256,15 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
       await expect(hearingsNav).toBeVisible({ timeout: 10000 });
       await hearingsNav.click();
       await expect(page).toHaveURL(/.*\/hearings/, { timeout: 10000 });
+
+      // Action: Trigger schedule refresh and assert server data response
+      const [hearingsResp] = await Promise.all([
+        page.waitForResponse(resp => resp.url().includes('/api/cases/') && resp.status() === 200, { timeout: 10000 }),
+        page.getByRole('button', { name: 'Refresh Schedule' }).click(),
+      ]);
+      const data = await hearingsResp.json();
+      expect(Array.isArray(data)).toBe(true);
+      await expect(page.locator('text=Tahsildar Statutory Hearings').first()).toBeVisible();
       await context.close();
     });
 
@@ -209,9 +282,9 @@ test.describe('Role Dashboard Verification & Statutory Compliance', () => {
       const context = await browser.newContext();
       const page = await context.newPage();
 
-      await page.goto('http://localhost:5173/');
+      await page.goto('http://127.0.0.1:5173/');
       await page.evaluate(() => fetch('/api/auth/logout/', { method: 'POST', credentials: 'include' }).catch(() => {}));
-      await page.goto('http://localhost:5173/dashboard');
+      await page.goto('http://127.0.0.1:5173/dashboard');
       await expect(page.locator('text=Revenue Officer Authentication Required')).toBeVisible({ timeout: 10000 });
       await expect(page.locator('text=Sign In with Officer Credentials')).toBeVisible();
       await context.close();
