@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { 
-  Shield, Lock, User, AlertCircle, CheckCircle2, ChevronRight, KeyRound, 
-  Zap, Radio, Eye, EyeOff, ShieldCheck, MapPin, 
-  ArrowRight, Landmark, Building2, Gavel, Scale, FileText
+  Shield, Lock, User, AlertCircle, ChevronRight, KeyRound, 
+  Zap, Eye, EyeOff, ShieldCheck, ArrowRight, Check
 } from 'lucide-react';
 import { AuthAPI } from '../api/client';
 
@@ -24,8 +23,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       role: 'TAHSILDAR', 
       officer: 'S. Murugan',
       jurisdiction: 'Salem West Taluk',
-      badgeColor: 'border-blue-400/50 text-blue-300 bg-blue-950/80',
-      description: 'Accepts inspections, issues statutory Section 7 & 6 notices, manages local encroachment'
+      badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
     },
     { 
       label: 'District Collector (Salem)', 
@@ -35,8 +33,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       role: 'COLLECTOR', 
       officer: 'R. Brindha Devi IAS',
       jurisdiction: 'Salem District Apex',
-      badgeColor: 'border-indigo-400/50 text-indigo-300 bg-indigo-950/80',
-      description: 'District authority over all taluks, issues final Section 6 eviction orders, High Court ATR'
+      badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     },
     { 
       label: 'State Apex / CS (Secretariat)', 
@@ -46,8 +43,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       role: 'STATE_APEX', 
       officer: 'Dr. K. Manivasan IAS',
       jurisdiction: 'Statewide Tamil Nadu',
-      badgeColor: 'border-emerald-400/50 text-emerald-300 bg-emerald-950/80',
-      description: 'Secretariat oversight across 38 districts, statewide land bank protection metrics'
+      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     },
     { 
       label: 'DVAC Auditor (Vigilance)', 
@@ -57,8 +53,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       role: 'VIGILANCE', 
       officer: 'DVAC Audit Division',
       jurisdiction: 'Statutory Audit (Read-Only)',
-      badgeColor: 'border-amber-400/50 text-amber-300 bg-amber-950/80',
-      description: 'Independent audit trail monitoring, anti-corruption registry verification'
+      badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
     },
     { 
       label: 'Field VAO (Kannankurichi)', 
@@ -68,8 +63,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       role: 'VAO', 
       officer: 'K. Prakash',
       jurisdiction: 'Kannankurichi Village',
-      badgeColor: 'border-cyan-400/50 text-cyan-300 bg-cyan-950/80',
-      description: 'Ground verification, drone survey telemetry, physical inspection reports'
+      badgeColor: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     },
     { 
       label: 'GIS System Administrator', 
@@ -79,8 +73,7 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
       role: 'ADMIN_GIS', 
       officer: 'GIS Operations Core',
       jurisdiction: 'System Core & Layers',
-      badgeColor: 'border-purple-400/50 text-purple-300 bg-purple-950/80',
-      description: 'GeoServer layer synchronizer, Sentinel-2 ingest pipeline, system maintenance'
+      badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
     },
   ] : [];
 
@@ -99,12 +92,10 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
 
     const cleanUser = (targetUser || '').trim();
     try {
-      // First attempt with given username
       let data = null;
       try {
         data = await AuthAPI.login(cleanUser, targetPass);
       } catch (firstErr) {
-        // Fallback to canonical or alias if 401
         const matched = demoAccounts.find(d => d.user === cleanUser || d.canonical === cleanUser);
         if (matched) {
           const fallbackUser = cleanUser === matched.user ? matched.canonical : matched.user;
@@ -151,102 +142,94 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950 flex items-center justify-center p-3 sm:p-5 lg:p-6 min-h-screen">
-      {/* Main Solid Container (No transparency anywhere) */}
-      <div className="relative w-full max-w-6xl rounded-2xl bg-white border border-slate-700 shadow-2xl overflow-hidden my-auto">
+    <div className="fixed inset-0 z-50 bg-white flex items-center justify-center p-4 sm:p-6 overflow-hidden select-none">
+      {/* Clean, Non-Scrollable, Professional Split Card */}
+      <div className="w-full max-w-5xl bg-white border border-slate-200 rounded-2xl shadow-xl flex flex-col overflow-hidden max-h-[95vh]">
         
-        {/* Top Header Banner (Opaque Solid) */}
-        <div className="bg-slate-900 text-white px-6 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center space-x-3.5">
-            <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-md border border-blue-400">
-              <Shield className="w-6 h-6" />
+        {/* Top Header */}
+        <div className="px-6 py-3.5 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-600 text-white rounded-lg shadow-xs">
+              <Shield className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
                   Government of Tamil Nadu
                 </span>
-                <span className="text-[9px] px-2 py-0.5 font-mono font-bold rounded bg-slate-800 text-blue-300 border border-slate-700">
-                  v2.5 TACTICAL
+                <span className="text-[9px] px-1.5 py-0.2 font-mono font-semibold rounded bg-slate-100 text-slate-600 border border-slate-200">
+                  TN Act III of 1905
                 </span>
               </div>
-              <h1 className="text-base sm:text-lg font-black text-white tracking-wide uppercase font-jakarta flex items-center gap-2">
-                GEOMMAND <span className="text-slate-500 font-light">|</span> <span className="text-slate-300 font-medium text-xs sm:text-sm">Land Intelligence & Enforcement Directorate</span>
+              <h1 className="text-base font-extrabold text-slate-900 tracking-tight">
+                GEOMMAND <span className="text-slate-300 font-light mx-1">|</span> <span className="text-slate-600 font-normal text-sm">Land Intelligence & Enforcement</span>
               </h1>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-[10px] text-amber-300 font-mono">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span>SATELLITE INGEST: SIMULATED (DEMO)</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-[10px] text-slate-300 font-mono">
-              <Radio className="w-3 h-3 text-blue-400" />
-              <span>SALEM SECTOR 04</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Secure Gateway
+            </span>
           </div>
         </div>
 
-        {/* Two-Column Split: Left Side = Demo Accounts, Right Side = Manual Login */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
+        {/* Split Body: Left = Demo Accounts, Right = Manual Form */}
+        <div className="grid grid-cols-1 md:grid-cols-12 flex-1 overflow-hidden divide-y md:divide-y-0 md:divide-x divide-slate-200">
           
-          {/* LEFT SIDE: DEMO ACCOUNTS (Solid Dark Slate Background) */}
-          <div className="lg:col-span-7 bg-slate-900 p-5 sm:p-7 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+          {/* LEFT: DEMO ACCOUNTS */}
+          <div className="md:col-span-7 p-5 lg:p-6 flex flex-col justify-between bg-slate-50/50 overflow-hidden">
+            <div>
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
-                    <Zap className="w-4 h-4 text-amber-400" />
-                    <span>Quick Demo Profiles (1-Click Launch)</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Select any statutory officer account below to test enforcement workflows:
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    Demo Accounts
+                  </h2>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Click a profile to auto-fill or launch directly:
                   </p>
                 </div>
-                <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
-                  6 ACTIVE
+                <span className="text-[10px] text-slate-400 font-mono">
+                  6 Roles Available
                 </span>
               </div>
 
-              {/* 6 Demo Officer Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 2-column grid of 6 compact accounts */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {demoAccounts.map((acc) => {
                   const isSelected = activePreset === acc.user;
                   return (
                     <div
                       key={acc.user}
                       onClick={() => handleSelectDemo(acc, false)}
-                      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`p-3 rounded-xl border transition-all cursor-pointer bg-white flex flex-col justify-between ${
                         isSelected 
-                          ? 'bg-slate-800 border-blue-500 ring-2 ring-blue-500 shadow-lg' 
-                          : 'bg-slate-850 hover:bg-slate-800 border-slate-750 hover:border-slate-600'
+                          ? 'border-blue-600 ring-1 ring-blue-600 shadow-sm' 
+                          : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
                       }`}
-                      style={{ backgroundColor: isSelected ? '#1e293b' : '#0f172a' }}
                     >
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border ${acc.badgeColor}`}>
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${acc.badgeColor}`}>
                             {acc.role}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
+                          <span className="text-[9px] text-slate-400 font-mono truncate">
                             @{acc.user}
                           </span>
                         </div>
-                        <div className="font-bold text-white text-xs tracking-tight hover:text-blue-400 transition-colors">
+                        <div className="font-semibold text-slate-900 text-xs truncate">
                           {acc.label}
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1 font-medium">
+                        <div className="text-[11px] text-slate-500 truncate mt-0.5">
                           {acc.officer} • {acc.jurisdiction}
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                          {acc.description}
-                        </p>
                       </div>
 
-                      <div className="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between">
-                        <span className="text-[9px] text-slate-400 font-mono">
-                          {isSelected ? '✓ Selected' : 'Click to fill'}
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {isSelected ? 'Selected' : 'Click to fill'}
                         </span>
                         <button 
                           type="button"
@@ -254,10 +237,10 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
                             e.stopPropagation();
                             handleSelectDemo(acc, true);
                           }}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-500 border border-blue-400 text-white rounded-lg text-[10px] font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
                         >
                           <span>Launch</span>
-                          <ArrowRight className="w-3 h-3" />
+                          <ArrowRight className="w-2.5 h-2.5" />
                         </button>
                       </div>
                     </div>
@@ -266,48 +249,42 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
               </div>
             </div>
 
-            {/* Legal Notice at base of left column */}
-            <div className="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800 text-[10px] text-slate-400 flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="text-slate-200 font-bold">Statutory Governance: </span>
-                Demonstration profiles simulate live authority delegation in Salem District under Tamil Nadu Act III of 1905 and Madras High Court directives.
-              </div>
+            {/* Micro disclaimer */}
+            <div className="mt-3 text-[10px] text-slate-400 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>Simulated demo authority for Salem District testing.</span>
             </div>
           </div>
 
-          {/* RIGHT SIDE: MANUAL LOGIN (Solid Crisp White Background) */}
-          <div className="lg:col-span-5 bg-white p-6 sm:p-8 flex flex-col justify-between">
-            <div className="space-y-5">
-              <div className="pb-2 border-b border-slate-200">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900">
-                  <Lock className="w-4 h-4 text-blue-600" />
-                  <span>Manual Officer Authentication</span>
-                </div>
+          {/* RIGHT: MANUAL LOGIN */}
+          <div className="md:col-span-5 p-5 lg:p-6 flex flex-col justify-between bg-white overflow-hidden">
+            <div>
+              <div className="mb-4">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-blue-600" />
+                  Manual Login
+                </h2>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Sign in manually using your assigned departmental officer credentials:
+                  Sign in with official revenue officer credentials:
                 </p>
               </div>
 
               {/* Error Message Alert */}
               {errorMessage && (
-                <div className="p-3.5 rounded-xl bg-red-50 border border-red-300 text-red-800 text-xs flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Authentication Failed: </span>
-                    {errorMessage}
-                  </div>
+                <div className="p-3 mb-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <span className="font-medium">{errorMessage}</span>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Username Input */}
+              <form onSubmit={handleSubmit} className="space-y-3.5">
+                {/* Username */}
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-600 mb-1">
                     Officer Username
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <User className="w-4 h-4" />
                     </div>
                     <input
@@ -318,25 +295,25 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
                         setErrorMessage('');
                       }}
                       placeholder="e.g. tah_salem_west"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all font-medium"
+                      className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
                     />
                   </div>
                 </div>
 
-                {/* Password Input */}
+                {/* Password */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                      Security Key / Password
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                      Password
                     </label>
                     {isDemo && password && (
-                      <span className="text-[10px] text-blue-600 font-mono font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                        Preset Loaded
+                      <span className="text-[10px] text-blue-600 font-mono font-medium">
+                        (preset loaded)
                       </span>
                     )}
                   </div>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <KeyRound className="w-4 h-4" />
                     </div>
                     <input
@@ -347,12 +324,12 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
                         setErrorMessage('');
                       }}
                       placeholder="••••••••••••"
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all font-medium"
+                      className="w-full pl-9 pr-9 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700 cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -363,16 +340,16 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold rounded-xl shadow-md text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                  className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer mt-2"
                 >
                   {loading ? (
                     <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Verifying Officer Cryptographic Key...</span>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Authenticating...</span>
                     </div>
                   ) : (
                     <>
-                      <span>Sign In to GEOMMAND Console</span>
+                      <span>Sign In</span>
                       <ChevronRight className="w-4 h-4" />
                     </>
                   )}
@@ -380,29 +357,25 @@ export default function LoginModal({ isOpen, onLoginSuccess }) {
               </form>
             </div>
 
-            {/* Bottom Security Seals */}
-            <div className="mt-6 pt-4 border-t border-slate-200 space-y-2 text-[10px] text-slate-600">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Cyber Defense Protocol:</span>
-                <span className="text-emerald-700 font-mono font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">TNeGA_DEFENSE_v4</span>
+            {/* Bottom Security Info */}
+            <div className="pt-3 border-t border-slate-100 text-[10px] text-slate-400 space-y-1">
+              <div className="flex justify-between">
+                <span>Security Shield:</span>
+                <span className="font-mono text-slate-600">TNeGA Defense Active</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Axes Access Protection:</span>
-                <span className="text-blue-700 font-mono font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">5-Attempt Lockout Active</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Statutory Mandate:</span>
-                <span className="text-slate-700 font-mono font-semibold">TN Land Encroachment Act 1905</span>
+              <div className="flex justify-between">
+                <span>Rate Limiting:</span>
+                <span className="font-mono text-slate-600">5-Attempt Axes Lockout</span>
               </div>
             </div>
           </div>
 
         </div>
 
-        {/* Global Solid Footer Ribbon */}
-        <div className="bg-slate-900 text-slate-400 px-6 py-2.5 border-t border-slate-800 flex flex-wrap items-center justify-between text-[10px] font-mono">
-          <span className="text-slate-300">HIGH COURT OF MADRAS ATR COMPLIANCE ACTIVE</span>
-          <span className="hidden sm:inline text-slate-400">TAMIL NADU REVENUE & DISASTER MANAGEMENT DEPARTMENT</span>
+        {/* Global Footer Ribbon */}
+        <div className="px-6 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-mono shrink-0">
+          <span>HIGH COURT ATR COMPLIANCE DIRECTIVE ACTIVE</span>
+          <span className="hidden sm:inline">TAMIL NADU REVENUE DEPARTMENT</span>
         </div>
       </div>
     </div>
