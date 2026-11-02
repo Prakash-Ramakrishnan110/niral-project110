@@ -147,8 +147,78 @@ class DistrictLegalConfig(models.Model):
         return f"Legal Config ({self.district or 'Statewide Default'})"
 
 
-# Alias for LaneConfig
-LaneConfig = DistrictLegalConfig
+class LaneConfig(models.Model):
+    """
+    Dedicated priority lane configuration and statutory sampling model (M2 Step 1).
+    Decoupled from DistrictLegalConfig so districts without legal config still have calibrated lanes.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    district = models.ForeignKey(
+        'core.District',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='lane_configs',
+        help_text="District or NULL for state-wide default"
+    )
+    high_min = models.FloatField(
+        default=0.80,
+        help_text="initial, to be calibrated"
+    )
+    medium_min = models.FloatField(
+        default=0.50,
+        help_text="initial, to be calibrated"
+    )
+    fast_lane_audit_pct = models.FloatField(
+        default=20.0,
+        help_text="initial, to be calibrated"
+    )
+    min_sample_size = models.IntegerField(
+        default=30,
+        help_text="initial, to be calibrated"
+    )
+    recheck_days_low = models.IntegerField(
+        default=30,
+        help_text="initial, to be calibrated"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(medium_min__gte=0.0) & models.Q(medium_min__lt=models.F('high_min')) & models.Q(high_min__lte=1.0),
+                name='check_lane_threshold_bounds'
+            ),
+        ]
+
+    def __str__(self):
+        dist_name = self.district.name_en if self.district else "Statewide Default"
+        return f"LaneConfig({dist_name}: High>={self.high_min}, Med>={self.medium_min})"
+
+    @classmethod
+    def get_config_for_district(cls, district=None):
+        if district:
+            if hasattr(district, 'id'):
+                cfg = cls.objects.filter(district=district).first()
+            else:
+                cfg = cls.objects.filter(district__name_en__iexact=str(district).strip()).first()
+            if cfg:
+                return cfg
+        state_cfg = cls.objects.filter(district__isnull=True).first()
+        if state_cfg:
+            return state_cfg
+        return cls(district=None)
+
+    def classify(self, confidence):
+        """Returns 'HIGH' / 'MEDIUM' / 'LOW' for a confidence score using THIS row's thresholds."""
+        if confidence is None:
+            return 'LOW'
+        if confidence >= self.high_min:
+            return 'HIGH'
+        if confidence >= self.medium_min:
+            return 'MEDIUM'
+        return 'LOW'
 
 
 class EncroachmentAlert(models.Model):
@@ -339,6 +409,15 @@ class EncroachmentAlert(models.Model):
         return False
 
     def save(self, *args, **kwargs):
+        # Detection-time snapshot (frozen at creation): confidence and lane use the LaneConfig in
+        # force at that moment, so later threshold changes never re-lane existing alerts.
+        # snapshot_model_version / snapshot_scene_ids are supplied by the detector.
+        if self._state.adding and not self.snapshot_lane:
+            _district = getattr(getattr(self, 'parcel', None), 'district', None)
+            _lane_cfg = LaneConfig.get_config_for_district(_district)
+            if self.snapshot_confidence is None:
+                self.snapshot_confidence = self.confidence_score
+            self.snapshot_lane = _lane_cfg.classify(self.snapshot_confidence)
         if not self.tier or not self.sla_deadline:
             district = getattr(getattr(self, 'parcel', None), 'district', None)
             cfg = DistrictLegalConfig.get_config_for_district(district)

@@ -29,6 +29,27 @@ services:
       db:
         condition: service_healthy
 
+  # Isolated backend for Playwright. Own database (land_records_e2e), own port, started only with
+  # `--profile e2e`. Same image as `backend`; never shares data with land_records.
+  backend_e2e:
+    image: land-project-backend:latest
+    container_name: land_backend_e2e
+    profiles: ["e2e"]
+    env_file:
+      - .env.docker
+    environment:
+      DB_NAME: land_records_e2e
+      GEOMMAND_ENV: demo
+      TEST_LOGIN_THROTTLE_RATE: 1000/minute
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
   geoserver:
     image: docker.osgeo.org/geoserver:2.24.1
     container_name: land_geoserver

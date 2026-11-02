@@ -189,3 +189,36 @@ class AccuracyLedgerTests(TestCase):
         self.assertTrue(len(gaps) > 0)
         self.assertEqual(gaps[0]['gap_status'], 'COVERAGE_GAP')
 
+    def test_synthetic_alerts_excluded_from_accuracy_ledger(self):
+        """Synthetic alerts (is_synthetic=True) must be strictly excluded from verified accuracy ledger."""
+        pt = Point(78.151, 11.651, srid=4326)
+
+        # Create 35 synthetic verifications
+        for i in range(35):
+            alert = EncroachmentAlert.objects.create(
+                parcel=self.parcel,
+                alert_geom=pt,
+                confidence_score=0.95,
+                snapshot_lane='HIGH',
+                snapshot_confidence=0.95,
+                status='INSPECTOR_APPROVED',
+                is_synthetic=True,
+            )
+            FieldVerification.objects.create(
+                alert=alert,
+                verifier=self.user,
+                officer_assignment=self.assignment,
+                officer_name='Synthetic Tester',
+                verdict='ENCROACHMENT_CONFIRMED',
+                gps_lat=11.651,
+                gps_lon=78.151,
+                snapshot_lane='HIGH',
+                snapshot_confidence=0.95,
+            )
+
+        summary = AccuracyLedgerService.get_lane_accuracy_summary(district='Salem', min_sample_size=30)
+        high_lane = summary['lanes']['HIGH']
+
+        # Zero real alerts exist, so count must be 0 and status INSUFFICIENT_DATA
+        self.assertEqual(high_lane['sample_size_n'], 0)
+        self.assertEqual(high_lane['status'], 'INSUFFICIENT_DATA')

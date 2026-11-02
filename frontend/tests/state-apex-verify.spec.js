@@ -8,7 +8,7 @@ test('State Apex Navigation & ATR Status Verification', async ({ page }) => {
   });
 
   // 1. Visit root and log in as State Apex (index 2)
-  await page.goto('http://127.0.0.1:5173/');
+  await page.goto('/');
   const launchButtons = page.getByRole('button', { name: 'Launch' });
   await expect(launchButtons.nth(2)).toBeVisible({ timeout: 10000 });
 
@@ -53,3 +53,4 @@ test('State Apex Navigation & ATR Status Verification', async ({ page }) => {
 
   console.log('ALL STATE APEX ROUTES VERIFIED. Console error count:', errors.length);
 });
+

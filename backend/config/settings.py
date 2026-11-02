@@ -162,7 +162,13 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/minute',
-        'login': os.environ.get('LOGIN_THROTTLE_RATE', '60/minute' if DEBUG else '10/minute'),
+        # Production value is fixed at 10/minute. The override is honoured ONLY when
+        # GEOMMAND_ENV is 'demo' or 'test' (Playwright / local demos); it is ignored otherwise.
+        'login': (
+            os.environ.get('TEST_LOGIN_THROTTLE_RATE', '10/minute')
+            if os.environ.get('GEOMMAND_ENV') in ('demo', 'test')
+            else '10/minute'
+        ),
     },
 }
 

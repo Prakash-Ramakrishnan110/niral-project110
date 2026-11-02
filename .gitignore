@@ -45,3 +45,6 @@ backend/media/
 frontend/dist/
 
 invoice_*.html
+
+backups/
+*.dump

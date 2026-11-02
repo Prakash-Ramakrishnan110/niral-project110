@@ -862,14 +862,14 @@ class PublicNoticeVerifyView(APIView):
                     doc_type = "Section 7 Show-Cause Notice"
                     parcel = alert.parcel
                     taluk = parcel.taluk or "Salem West"
-                    notice_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC7/{datetime.now().year}/{str(alert.id)[:8].upper()}"
+                    notice_num = None  # no recorded notice number; never synthesize one from the current clock
                     break
                 elif LegalNoticePDFGenerator.compute_notice_digest(candidate, '6') == query_hash:
                     alert = candidate
                     doc_type = "Section 6 Eviction Warrant"
                     parcel = alert.parcel
                     taluk = parcel.taluk or "Salem West"
-                    notice_num = f"REV/{taluk.upper().replace(' ', '_')}/SEC6_WARRANT/{datetime.now().year}/{str(alert.id)[:8].upper()}"
+                    notice_num = None  # no recorded notice number; never synthesize one from the current clock
                     break
 
         if not alert:
@@ -881,7 +881,11 @@ class PublicNoticeVerifyView(APIView):
             }, status=status.HTTP_404_NOT_FOUND)
 
         meta = (audit_event.metadata or {}) if audit_event else {}
-        issue_date = meta.get('issue_date') or datetime.now().strftime("%Y-%m-%d")
+        issue_date = meta.get('issue_date')
+        if not issue_date and audit_event and getattr(audit_event, 'created_at', None):
+            issue_date = audit_event.created_at.strftime("%Y-%m-%d")
+        if not issue_date:
+            issue_date = "not recorded"
 
         # Determine issuing office without defaulting to Tahsildar
         issuing_office = meta.get('issuing_authority') or meta.get('issuing_office')

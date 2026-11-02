@@ -46,7 +46,14 @@ class AccuracyLedgerService:
     LANE_LOW = 'LOW'
 
     @classmethod
-    def get_district_config(cls, district=None) -> DistrictLegalConfig:
+    def get_district_config(cls, district=None):
+        from core.models import LaneConfig, DistrictLegalConfig
+        try:
+            cfg = LaneConfig.get_config_for_district(district)
+            if cfg and (cfg.id or cfg.district_id):
+                return cfg
+        except Exception:
+            pass
         return DistrictLegalConfig.get_config_for_district(district)
 
     @classmethod
@@ -61,11 +68,14 @@ class AccuracyLedgerService:
         Below min_sample_size (default from DistrictLegalConfig, proposal 30), shows 'Insufficient data'.
         """
         cfg = cls.get_district_config(district)
-        min_n = min_sample_size if min_sample_size is not None else cfg.min_sample_size_accuracy
+        min_n = min_sample_size if min_sample_size is not None else getattr(cfg, 'min_sample_size', getattr(cfg, 'min_sample_size_accuracy', 30))
+        high_min = getattr(cfg, 'high_min', getattr(cfg, 'tier1_confidence_min', 0.80))
+        medium_min = getattr(cfg, 'medium_min', getattr(cfg, 'tier2_confidence_min', 0.50))
 
-        # Base query of primary field verifications (excluding control checks from accuracy ledger)
+        # Base query of primary field verifications (excluding control checks and synthetic alerts from accuracy ledger)
         qs = FieldVerification.objects.filter(
             alert__is_control_check=False,
+            alert__is_synthetic=False,
             audit_of__isnull=True
         ).select_related('alert', 'alert__parcel')
 
@@ -76,9 +86,9 @@ class AccuracyLedgerService:
 
         lanes_summary = {}
         lane_definitions = [
-            (cls.LANE_HIGH, cfg.tier1_confidence_min, 1.0),
-            (cls.LANE_MEDIUM, cfg.tier2_confidence_min, cfg.tier1_confidence_min),
-            (cls.LANE_LOW, 0.0, cfg.tier2_confidence_min),
+            (cls.LANE_HIGH, high_min, 1.0),
+            (cls.LANE_MEDIUM, medium_min, high_min),
+            (cls.LANE_LOW, 0.0, medium_min),
         ]
 
         total_verified_all = qs.count()

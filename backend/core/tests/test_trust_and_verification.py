@@ -135,9 +135,12 @@ class TrustAndVerificationTests(TestCase):
         # Maliciously tamper with historic reason directly in DB without recalculating hash
         CaseAuditEvent.objects.filter(id=e1.id).update(reason='TAMPERED REASON BY ADVERSARY')
 
+        err = StringIO()
         with self.assertRaises(CommandError) as ctx:
-            call_command('verify_audit_chain')
+            call_command('verify_audit_chain', stderr=err)
         self.assertIn("Audit chain verification failed", str(ctx.exception))
+        self.assertIn("FAILED: 1 tamper violation(s) detected", err.getvalue())
+        self.assertIn("Tamper detected", err.getvalue())
 
     def test_pdf_qr_and_digest_generation(self):
         """LegalNoticePDFGenerator embeds QR code and records document generation in audit chain."""
@@ -213,6 +216,32 @@ class TrustAndVerificationTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertNotIn('Tahsildar', res.json()['issuing_office'])
         self.assertIn('Unconfigured', res.json()['issuing_office'])
+
+    def test_public_verify_issue_date_uses_audit_timestamp_or_not_recorded(self):
+        """Verify endpoint uses audit event saved timestamp or 'not recorded', never datetime.now()."""
+        digest = 'b' * 64
+        # Case 1: Audit event has no issue_date in metadata, falls back to audit_event.created_at
+        ev = CaseAuditEvent.objects.create(
+            alert=self.alert,
+            actor=self.user,
+            action='STATUTORY_NOTICE_7_GENERATED',
+            metadata={'notice_hash': digest}
+        )
+        expected_date = ev.created_at.strftime("%Y-%m-%d")
+
+        url = f'/api/v1/verify/{digest}/'
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.json()['issue_date'], expected_date)
+
+        # Case 2: Candidate alert matches computed digest without an audit event -> returns 'not recorded'
+        digest2 = LegalNoticePDFGenerator.compute_notice_digest(self.alert, '7')
+        # Ensure no audit event exists with this hash
+        CaseAuditEvent.objects.filter(alert=self.alert).delete()
+        url2 = f'/api/v1/verify/{digest2}/'
+        res2 = self.client.get(url2)
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertEqual(res2.json()['issue_date'], 'not recorded')
 
     def test_public_verify_endpoint_invalid_or_tampered_digest(self):
         """Public endpoint returns 404 for unknown or tampered digest."""

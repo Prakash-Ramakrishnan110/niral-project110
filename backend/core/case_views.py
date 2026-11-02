@@ -105,7 +105,10 @@ class CaseViewSet(viewsets.ReadOnlyModelViewSet):
     def _serialize_case_summary(self, alert, user):
         """Serializes alert for list view, including computed allowed_actions."""
         parcel = alert.parcel
+        centroid = parcel.geom.centroid if parcel and parcel.geom else None
         return {
+            "centroid_lat": centroid.y if centroid else None,
+            "centroid_lon": centroid.x if centroid else None,
             "id": alert.id,
             "parcel_id": str(parcel.id) if parcel else None,
             "survey_number": parcel.survey_number if parcel else "Unknown",

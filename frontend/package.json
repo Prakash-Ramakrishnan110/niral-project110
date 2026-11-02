@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "lint:forbidden": "node scripts/lint_forbidden.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test -c playwright.e2e.config.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.3",
