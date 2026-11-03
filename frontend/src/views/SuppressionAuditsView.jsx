@@ -53,15 +53,15 @@ export const SuppressionAuditsView = () => {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider rounded-md flex items-center gap-1.5">
-              <ShieldAlert className="w-3.5 h-3.5" /> DVAC Vigilance Directorate
+              <ShieldAlert className="w-3.5 h-3.5" /> Vigilance & Audit Directorate
             </span>
-            <span className="text-[11px] text-slate-500 font-mono">STATUTORY INACTION & SUPPRESSION SURVEILLANCE</span>
+            <span className="text-[11px] text-slate-500 font-mono">STATUTORY SLA WATCHDOG & INACTION AUDIT</span>
           </div>
           <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
-            Administrative Suppression & SLA Delay Surveillance Directorate
+            Administrative SLA Delay & Inaction Audit Directorate
           </h1>
           <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-            Independent statutory scrutiny detecting intentional procedural delay, overdue notices, or administrative suppression under Tamil Nadu Act III of 1905.
+            Independent statutory scrutiny detecting overdue notices and procedural delays (implements the project's workflow design; legal timelines, authority and wording unverified).
           </p>
         </div>
       </div>

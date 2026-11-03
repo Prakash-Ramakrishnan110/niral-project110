@@ -97,7 +97,7 @@ Defined in `backend/core/urls.py` and routed through `/api/`:
   - `WorkQueueView` (`/cases`) — Filterable case queue with priority lane badges, SLA timers, and detail drawer.
   - `CourtStaysView` (`/stays`) — Injunction tracker with court writ numbers and compliance holds.
   - `HearingsView` (`/hearings`) — Section 7 inquiry tracker, representation records, and ex-parte logs.
-  - `RehabilitationView` (`/rehabilitation`) — TNUHDB welfare routing for vulnerable dwelling cases.
+  - `RehabilitationView` (`/rehabilitation`) — Welfare routing proposal for vulnerable dwelling cases (implements the project's workflow design; legal timelines, authority and wording unverified).
   - `TacticalMapView` (`/map`) — Interactive Leaflet cadastral map with certified/indicative boundary toggles.
   - `HighCourtATRView` (`/atr`) — Compliance Action Taken Report generator with draft disclaimers.
   - `VAOMobileView` (`/mobile-preview`) — Interactive emulator for ground verification workflow.

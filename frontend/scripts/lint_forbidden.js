@@ -23,6 +23,26 @@ const FORBIDDEN_RULES = [
     regex: /automated penalties/i,
     message: 'Forbidden claim: "automated penalties". Statutory enforcement requires due process under Act III of 1905.',
   },
+  {
+    regex: /strictly models the Act/i,
+    message: 'Forbidden claim: "strictly models the Act". Use: "implements the project\'s workflow design; legal timelines, authority and wording unverified".',
+  },
+  {
+    regex: /battle-tested/i,
+    message: 'Forbidden claim: "battle-tested". Use: "implements the project\'s workflow design; legal timelines, authority and wording unverified".',
+  },
+  {
+    regex: /handles TNUHDB/i,
+    message: 'Forbidden claim: "handles TNUHDB". Use: "implements the project\'s workflow design; legal timelines, authority and wording unverified".',
+  },
+  {
+    regex: /cryptographic trust engine/i,
+    message: 'Forbidden claim: "cryptographic trust engine". Use: "implements the project\'s workflow design; legal timelines, authority and wording unverified".',
+  },
+  {
+    regex: /DVAC suppression surveillance/i,
+    message: 'Forbidden claim: "DVAC suppression surveillance". Use: "STATUTORY SLA WATCHDOG & INACTION AUDIT".',
+  },
 ];
 
 let errorsFound = 0;

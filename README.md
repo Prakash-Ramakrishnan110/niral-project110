@@ -4,7 +4,7 @@
 [![Niral Thiruvizha 2026](https://img.shields.io/badge/Hackathon-Niral_Thiruvizha_2026-orange.svg)](https://naanmudhalvan.tn.gov.in/)
 [![Spatial Stack](https://img.shields.io/badge/Spatial-PostgreSQL_|_PostGIS_|_GeoServer-green.svg)](https://postgis.net/)
 
-> **Periodic space-to-ground monitoring pipeline supporting revenue officers in detecting possible construction on government poramboke lands, waterbodies, and highway margins across Tamil Nadu under statutory due process (TN Act III of 1905).**
+> **Periodic space-to-ground monitoring pipeline supporting revenue officers in detecting possible construction on government poramboke lands, waterbodies, and highway margins across Tamil Nadu under statutory due process (TN Act III of 1905). Note: implements the project's workflow design; legal timelines, authority and wording unverified.**
 
 ---
 

@@ -56,7 +56,7 @@
   | **AI/ML Stack** | TensorFlow, OpenCV | Image preprocessing, contour analysis & change detection model |
   | **GIS & Satellite Stack** | Google Earth Engine, QGIS | Cloud satellite data processing, vector mapping & FMB layers |
 * **Speaker Script (20s):**
-  > "Our architecture is built on a battle-tested, enterprise-ready stack: React.js and Tailwind CSS with a Flutter mobile app on the front, powered by Django REST Framework and PostgreSQL/PostGIS for spatial queries. For detection, we combine TensorFlow and OpenCV for computer vision, backed by Google Earth Engine and QGIS for satellite processing."
+  > "Our architecture implements the project's workflow design; legal timelines, authority and wording unverified. It utilizes React.js and Tailwind CSS with a Flutter mobile app on the front, powered by Django REST Framework and PostgreSQL/PostGIS for spatial queries. For detection, we combine TensorFlow and OpenCV for computer vision, backed by Google Earth Engine and QGIS for satellite processing."
 
 ---
 
