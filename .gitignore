@@ -8,7 +8,6 @@ build/
 __pycache__/
 .DS_Store
 .idea/
-.vscode/
 *.log
 frontend/node_modules/
 backend/venv/
@@ -32,9 +31,6 @@ frontend/patch_*.cjs
 config.bat
 
 # Environment variable files — NEVER commit secrets
-.env
-.env.local
-.env.production
 .env.docker
 backend/.env
 frontend/.env

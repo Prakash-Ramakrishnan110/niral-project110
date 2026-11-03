@@ -809,6 +809,75 @@ class DistrictLegalConfigViewSet(viewsets.ReadOnlyModelViewSet):
         return DistrictLegalConfig.objects.all()
 
 
+class WatchZoneViewSet(viewsets.ModelViewSet):
+    """
+    Watch Zone management endpoint (Step 2 / M3).
+    Handles listing, creation, and inspection of persistent spatial watch zones.
+    When cadence is unconfigured for a district, explicitly returns a descriptive warning:
+    "cadence not configured for this district; department must set it", rather than an empty list.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        from core.models import WatchZone, District, DistrictLegalConfig
+        from core.services.watch_zone_service import resolve_district_cadence
+
+        district_param = request.query_params.get('district', '').strip()
+        target_dist = None
+        if district_param:
+            target_dist = District.objects.filter(
+                Q(name_en__iexact=district_param) | Q(code__iexact=district_param)
+            ).first()
+        elif hasattr(request.user, 'officer_assignment') and request.user.officer_assignment.district:
+            target_dist = request.user.officer_assignment.district
+
+        cadence_configured = False
+        cadence_days = None
+        message = None
+
+        if target_dist:
+            try:
+                cadence_days = resolve_district_cadence(target_dist)
+                cadence_configured = True
+            except ValueError:
+                cadence_configured = False
+                cadence_days = None
+                message = "cadence not configured for this district; department must set it"
+        else:
+            message = "cadence not configured for this district; department must set it"
+
+        zones_qs = WatchZone.objects.select_related('district', 'taluk', 'owner_assignment').all()
+        if target_dist:
+            zones_qs = zones_qs.filter(district=target_dist)
+
+        zone_data = [
+            {
+                "id": str(z.id),
+                "name_en": z.name_en,
+                "name_ta": z.name_ta,
+                "category": z.category,
+                "priority": z.priority,
+                "cadence_days": z.cadence_days,
+                "approval_status": z.approval_status,
+                "is_active": z.is_active,
+                "valid_from": z.valid_from.isoformat() if z.valid_from else None,
+                "valid_to": z.valid_to.isoformat() if z.valid_to else None,
+                "reason": z.reason,
+                "district": z.district.name_en if z.district else None,
+            }
+            for z in zones_qs
+        ]
+
+        return Response({
+            "district": target_dist.name_en if target_dist else (district_param or None),
+            "cadence_configured": cadence_configured,
+            "cadence_days": cadence_days,
+            "message": message,
+            "results": zone_data
+        })
+
+
+
 class NoticeVerifyRateThrottle(AnonRateThrottle):
     rate = '30/min'
     scope = 'notice_verify'

@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     LandParcelViewSet, EncroachmentAlertViewSet, 
     FieldVerificationViewSet, RegistryProposalViewSet, DistrictLegalConfigViewSet,
+    WatchZoneViewSet,
     TNGISProxyView, SmartAlertView, HighCourtATRView, PublicNoticeVerifyView
 )
 from .auth_views import (
@@ -22,6 +23,7 @@ router.register(r'alerts', EncroachmentAlertViewSet)
 router.register(r'verifications', FieldVerificationViewSet)
 router.register(r'registry-proposals', RegistryProposalViewSet)
 router.register(r'config/legal', DistrictLegalConfigViewSet, basename='district-legal-config')
+router.register(r'watch-zones', WatchZoneViewSet, basename='watch-zones')
 
 
 urlpatterns = [

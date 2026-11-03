@@ -6,12 +6,13 @@ import {
   CloudOff, ShieldAlert, ChevronRight, Eye, Camera, Landmark,
   Database, Lock, MapPin, Building, Award, Activity, CheckSquare
 } from 'lucide-react';
-import { DashboardAPI, CaseAPI } from '../api/client';
+import { DashboardAPI, CaseAPI, WatchZonesAPI } from '../api/client';
 import CaseDetailModal from '../components/CaseDetailModal';
 
 export const ExecutiveDashboardView = ({ onRefreshData }) => {
   const [summary, setSummary] = useState(null);
   const [actionableCases, setActionableCases] = useState([]);
+  const [watchZoneData, setWatchZoneData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
@@ -27,6 +28,15 @@ export const ExecutiveDashboardView = ({ onRefreshData }) => {
       // Load actionable cases quick list
       const casesData = await CaseAPI.getCases({ is_actionable: 'true' });
       setActionableCases(Array.isArray(casesData) ? casesData.slice(0, 6) : (casesData?.results?.slice(0, 6) || []));
+
+      // Load district watch zone cadence status
+      try {
+        const districtName = data?.scope?.district || 'Salem';
+        const wzData = await WatchZonesAPI.getWatchZones(districtName);
+        setWatchZoneData(wzData);
+      } catch (wzErr) {
+        console.warn('Watch zone cadence query error:', wzErr);
+      }
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Failed to load executive summary.');
     } finally {
@@ -155,6 +165,24 @@ export const ExecutiveDashboardView = ({ onRefreshData }) => {
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           {error}
+        </div>
+      )}
+
+      {/* Watch Zone Cadence Status Warning */}
+      {watchZoneData?.cadence_configured === false && (
+        <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs flex items-start gap-3 shadow-xs">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <span className="font-bold uppercase tracking-wider text-[11px] block text-amber-900">
+              Watch Zone Scheduler Status ({watchZoneData.district || 'District'}):
+            </span>
+            <span className="font-semibold text-amber-800 mt-0.5 block">
+              {watchZoneData.message || 'cadence not configured for this district; department must set it'}
+            </span>
+            <span className="text-[11px] text-amber-700 mt-0.5 block">
+              Automated review scheduler requires an explicit cadence in DistrictLegalConfig. Automated tasks will not run for this district until configured.
+            </span>
+          </div>
         </div>
       )}
 
