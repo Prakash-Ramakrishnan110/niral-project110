@@ -353,4 +353,12 @@ export const LandAPI = {
   },
 };
 
+export const WatchZonesAPI = {
+  async getWatchZones(district = '') {
+    const params = district ? { district } : {};
+    const res = await apiClient.get('/watch-zones/', { params });
+    return res.data;
+  },
+};
+
 export default LandAPI;
