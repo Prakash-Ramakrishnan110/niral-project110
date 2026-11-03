@@ -77,7 +77,7 @@ class AccuracyLedgerService:
             alert__is_control_check=False,
             alert__is_synthetic=False,
             audit_of__isnull=True
-        ).select_related('alert', 'alert__parcel')
+        ).exclude(remarks__icontains='[TEST_ARTIFACT]').select_related('alert', 'alert__parcel')
 
         if district:
             qs = qs.filter(alert__parcel__district__iexact=district.strip())
@@ -163,7 +163,7 @@ class AccuracyLedgerService:
         qs = FieldVerification.objects.filter(
             alert__is_control_check=False,
             audit_of__isnull=True
-        ).select_related('alert', 'alert__parcel')
+        ).exclude(remarks__icontains='[TEST_ARTIFACT]').select_related('alert', 'alert__parcel')
 
         results = []
 
