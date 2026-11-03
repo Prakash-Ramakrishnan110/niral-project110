@@ -219,3 +219,35 @@ GEOFENCE_TOLERANCE_METERS = float(os.environ.get('GEOFENCE_TOLERANCE_METERS', 15
 
 # Maximum permitted distance discrepancy between photo embedded EXIF GPS and officer device GPS
 PHOTO_EXIF_MISMATCH_LIMIT_METERS = float(os.environ.get('PHOTO_EXIF_MISMATCH_LIMIT_METERS', 50.0))
+
+# ── Celery & Redis Configuration ─────────────────────────────────────────────
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://:landredispass2026@redis:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://:landredispass2026@redis:6379/0')
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = False
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+
+if 'test' in sys.argv or os.environ.get('GEOMMAND_ENV') == 'test':
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+
+# Celery Beat Periodic Task Schedules (Asia/Kolkata)
+CELERY_BEAT_SCHEDULE = {
+    'watch-zone-cadence-evaluator-daily': {
+        'task': 'core.tasks.task_run_watch_zone_cadence_evaluator',
+        'schedule': 86400.0,  # Runs daily at start of day
+    },
+    'low-lane-recheck-watchdog-daily': {
+        'task': 'core.tasks.task_run_low_lane_recheck_watchdog',
+        'schedule': 86400.0,
+    },
+    'sla-compliance-watchdog-hourly': {
+        'task': 'core.tasks.task_run_sla_compliance_watchdog',
+        'schedule': 3600.0,
+    },
+}
+
+# Pinned Area Quota per District (sq. meters)
+PINNED_AREA_MAX_DISTRICT_SQM = float(os.environ.get('PINNED_AREA_MAX_DISTRICT_SQM', 10_000_000.0))  # 10 sq km
+

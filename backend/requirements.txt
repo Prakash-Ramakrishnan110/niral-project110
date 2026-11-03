@@ -12,3 +12,6 @@ django-axes==8.3.1
 pypdf==6.21.2
 # GeoDjango dependencies (usually installed via system packages in Docker)
 boto3==1.43.123
+celery>=5.4.0
+redis>=5.0.0
+
