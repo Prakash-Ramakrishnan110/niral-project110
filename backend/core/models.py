@@ -117,6 +117,11 @@ class DistrictLegalConfig(models.Model):
         default=30,
         help_text="Observation window days for low lane watching"
     )
+    watch_zone_cadence_days = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Per-district cadence in days with no hidden default; demo seeds are labelled proposal, for the department to set"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -950,5 +955,251 @@ class StatutoryNoticeAuthority(models.Model):
     def __str__(self):
         status = "ALLOWED" if self.is_allowed else "DENIED"
         return f"[{status}] {self.role} -> {self.action}"
+
+
+# ==============================================================================
+# WATCH ZONES, RISK SCORING & REVIEW SCHEDULER (STEP 2)
+# ==============================================================================
+
+class WatchZone(models.Model):
+    """
+    Geographic or parcel-based watch zone for proactive periodic surveillance.
+    Zone priority (1-3) is separate from statutory land classification (A-D).
+    Cadence is a per-district setting with no hidden default.
+    """
+    CATEGORY_CHOICES = [
+        ('waterbody', 'Waterbody / Riverbed'),
+        ('canal', 'Irrigation Canal / Channel'),
+        ('highway_margin', 'Highway Margin / Road Poramboke'),
+        ('past_encroachment', 'Past Encroachment Site'),
+        ('urban_fringe', 'Rapid Urban Fringe'),
+        ('complaint', 'Citizen / Department Complaint'),
+        ('other', 'Other Critical Poramboke'),
+    ]
+
+    PRIORITY_CHOICES = [
+        (1, 'Priority 1 - High Frequency'),
+        (2, 'Priority 2 - Medium Frequency'),
+        (3, 'Priority 3 - Standard Frequency'),
+    ]
+
+    APPROVAL_CHOICES = [
+        ('PENDING_APPROVAL', 'Pending Officer Approval'),
+        ('APPROVED', 'Approved & Active'),
+        ('REJECTED', 'Rejected'),
+        ('RETIRED', 'Retired'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name_en = models.CharField(max_length=200)
+    name_ta = models.CharField(max_length=200)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+
+    # Geometry or parcel set
+    geom = models.MultiPolygonField(srid=4326, null=True, blank=True)
+    parcels = models.ManyToManyField(LandParcel, blank=True, related_name='watch_zones')
+
+    reason = models.TextField()
+    priority = models.IntegerField(choices=PRIORITY_CHOICES, default=2)
+
+    # Cadence: Per-district setting with no hidden default; demo seeds are labelled "proposal, for the department to set"
+    cadence_days = models.IntegerField(
+        help_text="Per-district setting with no hidden default; demo seeds are labelled 'proposal, for the department to set'"
+    )
+
+    # Optional lane-threshold override
+    lane_threshold_override = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Optional threshold overrides for priority lanes within this zone"
+    )
+
+    # Owner assignment and jurisdiction scoping
+    owner_assignment = models.ForeignKey(
+        OfficerAssignment,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='owned_watch_zones'
+    )
+    district = models.ForeignKey(
+        District,
+        on_delete=models.CASCADE,
+        related_name='watch_zones'
+    )
+    taluk = models.ForeignKey(
+        Taluk,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='watch_zones'
+    )
+
+    # Active and lifecycle flags
+    is_active = models.BooleanField(default=True)
+    approval_status = models.CharField(max_length=30, choices=APPROVAL_CHOICES, default='APPROVED')
+    valid_from = models.DateField(default=timezone.now)
+    valid_to = models.DateField(null=True, blank=True)
+    version = models.IntegerField(default=1)
+
+    # Quota accounting (in square meters)
+    pinned_area_sqm = models.FloatField(default=0.0)
+
+    # Pinning officer attribution
+    pinned_by = models.ForeignKey(
+        'auth.User',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pinned_zones'
+    )
+    pinned_by_role = models.CharField(max_length=50, blank=True, default='')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['priority', '-created_at']
+
+    def __str__(self):
+        return f"WatchZone [{self.category}] {self.name_en} (P{self.priority}, {self.cadence_days}d)"
+
+
+class WatchZoneAuditEvent(models.Model):
+    """
+    Immutable audit ledger for WatchZone lifecycle actions:
+    pinning, scope modification, retirement, and approval flows.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    zone = models.ForeignKey(WatchZone, on_delete=models.CASCADE, related_name='audit_events')
+    actor = models.ForeignKey('auth.User', null=True, blank=True, on_delete=models.SET_NULL, related_name='zone_audit_events')
+    actor_role = models.CharField(max_length=50, blank=True, default='')
+    action = models.CharField(max_length=80)
+    from_status = models.CharField(max_length=50, blank=True, default='')
+    to_status = models.CharField(max_length=50, blank=True, default='')
+    reason = models.TextField(blank=True, default='')
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"ZoneAudit {self.zone_id} | {self.action} by {self.actor_role or self.actor}"
+
+
+class WatchSubscription(models.Model):
+    """
+    Subscription binding an officer/user to automated review task alerts for a watch zone.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    zone = models.ForeignKey(WatchZone, on_delete=models.CASCADE, related_name='subscriptions')
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='watch_subscriptions')
+    role = models.CharField(max_length=50, blank=True, default='')
+    channel = models.CharField(max_length=50, default='SANDBOX_NOTIFICATION')
+    is_active = models.BooleanField(default=True)
+    subscribed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('zone', 'user')
+        ordering = ['-subscribed_at']
+
+    def __str__(self):
+        return f"Subscription {self.user.username} -> {self.zone.name_en}"
+
+
+class ParcelRisk(models.Model):
+    """
+    Deterministic rule-based risk score (v1) for cadastral parcels.
+    Combines: land class, past alerts, nearby construction, distance to built-up area, complaints, zone membership.
+    Weights in configuration; the factor breakdown is stored and displayed.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    parcel = models.OneToOneField(LandParcel, on_delete=models.CASCADE, related_name='risk_profile')
+    score = models.FloatField(help_text="Calculated risk score between 0.0 and 1.0")
+    factor_breakdown = models.JSONField(
+        default=dict,
+        help_text="Rule-based factors: land_class, past_alerts, nearby_construction, distance_to_built_up, complaints, zone_membership"
+    )
+    formula_version = models.CharField(max_length=50, default='v1-rule-based')
+    calculated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-score']
+
+    def __str__(self):
+        return f"ParcelRisk {self.parcel.survey_number} -> score={self.score:.3f} ({self.formula_version})"
+
+
+class ParcelCheck(models.Model):
+    """
+    Observation check history on a parcel from satellite imagery or field visits.
+    A cloudy scene is recorded as NO_CLEAR_OBSERVATION and does NOT count as 'checked clear'.
+    """
+    METHOD_CHOICES = [
+        ('SATELLITE', 'Satellite Observation'),
+        ('FIELD', 'Ground Field Verification'),
+    ]
+
+    RESULT_CHOICES = [
+        ('CLEAR', 'Clear (No Activity Observed)'),
+        ('ALERT', 'Alert Flagged (Encroachment Detected)'),
+        ('NO_CLEAR_OBSERVATION', 'No Clear Observation (Cloud / Obscured / Pending Revisit)'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    parcel = models.ForeignKey(LandParcel, on_delete=models.CASCADE, related_name='checks')
+    zone = models.ForeignKey(WatchZone, null=True, blank=True, on_delete=models.SET_NULL, related_name='checks')
+    checked_at = models.DateTimeField()
+    method = models.CharField(max_length=20, choices=METHOD_CHOICES)
+    result = models.CharField(max_length=30, choices=RESULT_CHOICES)
+    scene_ids = models.JSONField(default=list, help_text="Satellite scene identifiers used in the observation")
+    verification_link = models.CharField(max_length=500, blank=True, default='')
+    notes = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-checked_at']
+
+    def __str__(self):
+        return f"ParcelCheck {self.parcel.survey_number} | {self.method} -> {self.result} ({self.checked_at.date()})"
+
+
+class ReviewTask(models.Model):
+    """
+    Automated review task generated by Celery beat scheduler when:
+    1. A watch zone periodic cadence check is due.
+    2. A low-lane alert observation window elapses (recheck_days_low).
+    3. An SLA timeline is overdue.
+    """
+    TASK_TYPE_CHOICES = [
+        ('ZONE_CADENCE_REVIEW', 'Watch Zone Periodic Review Due'),
+        ('LOW_LANE_RECHECK', 'Low Lane Periodic Recheck (LaneConfig)'),
+        ('SLA_OVERDUE_REVIEW', 'Statutory SLA Overdue Review'),
+    ]
+
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Review'),
+        ('COMPLETED', 'Completed'),
+        ('ESCALATED', 'Escalated'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    zone = models.ForeignKey(WatchZone, null=True, blank=True, on_delete=models.CASCADE, related_name='review_tasks')
+    parcel = models.ForeignKey(LandParcel, null=True, blank=True, on_delete=models.CASCADE, related_name='review_tasks')
+    alert = models.ForeignKey(EncroachmentAlert, null=True, blank=True, on_delete=models.SET_NULL, related_name='review_tasks')
+    task_type = models.CharField(max_length=50, choices=TASK_TYPE_CHOICES)
+    due_date = models.DateField(help_text="Calculated statutory or cadence review due date")
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PENDING')
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['due_date', '-created_at']
+
+    def __str__(self):
+        target = self.zone.name_en if self.zone else (f"Alert {self.alert_id}" if self.alert else f"Parcel {self.parcel_id}")
+        return f"ReviewTask [{self.task_type}] {target} (Due: {self.due_date}) [{self.status}]"
 
 
