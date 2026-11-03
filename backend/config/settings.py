@@ -246,6 +246,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.task_run_sla_compliance_watchdog',
         'schedule': 3600.0,
     },
+    'flush-expired-tokens-daily': {
+        'task': 'core.tasks.task_flush_expired_tokens',
+        'schedule': 86400.0,  # Runs daily to purge expired JWT outstanding tokens
+    },
 }
 
 # Pinned Area Quota per District (sq. meters)

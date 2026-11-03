@@ -77,3 +77,32 @@ def task_run_sla_compliance_watchdog(self):
         if cache:
             cache.delete(lock_id)
 
+
+@shared_task(bind=True, max_retries=1)
+def task_flush_expired_tokens(self):
+    """
+    Periodic Celery Beat maintenance task:
+    Deletes expired JWT outstanding tokens (flushexpiredtokens) to maintain database hygiene.
+    Protected by lock.
+    """
+    from django.core.management import call_command
+    import io
+
+    lock_id = "lock_task_flush_expired_tokens"
+    acquire_lock = cache.add(lock_id, "true", timeout=60 * 5) if cache else True
+
+    if not acquire_lock:
+        logger.warning("Token flush task is already executing. Skipping iteration.")
+        return {'status': 'locked'}
+
+    try:
+        out = io.StringIO()
+        call_command('flushexpiredtokens', stdout=out)
+        result_text = out.getvalue().strip() or "flushed"
+        logger.info(f"flushexpiredtokens completed: {result_text}")
+        return {'status': 'success', 'result': result_text}
+    finally:
+        if cache:
+            cache.delete(lock_id)
+
+

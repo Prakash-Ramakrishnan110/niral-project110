@@ -43,6 +43,8 @@ frontend/.env
 backend/media/
 *.pdf
 frontend/dist/
+celerybeat-schedule*
+backend/celerybeat-schedule*
 
 invoice_*.html
 
